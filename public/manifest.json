@@ -1,0 +1,16 @@
+{
+  "name": "Chakancha Global",
+  "short_name": "Chakancha",
+  "description": "Premium tea from Nandi Hills. AI-first tea discovery platform.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FDFDFB",
+  "theme_color": "#2D5016",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}

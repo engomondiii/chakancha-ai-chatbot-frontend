@@ -1,0 +1,179 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   PromptInput.module.css
+   All values hardcoded — no CSS variable dependencies.
+   ChatGPT-style glass-morphism input designed for the Nandi Hills hero.
+───────────────────────────────────────────────────────────────────────────── */
+
+/* ── Form shell ──────────────────────────────────────────────────────────── */
+.form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Input wrapper — glass card ──────────────────────────────────────────── */
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 16px 16px 16px 20px;
+
+  /* Glass-morphism */
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 16px;
+
+  box-shadow:
+    0 4px 32px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+
+  transition:
+    background  200ms ease,
+    border-color 200ms ease,
+    box-shadow  200ms ease;
+}
+
+.inputWrapper:hover {
+  background: rgba(255, 255, 255, 0.24);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+/* Focused state — bright white border + tea-green glow */
+.inputWrapper.focused {
+  background: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 255, 255, 0.70);
+  box-shadow:
+    0 4px 32px rgba(0, 0, 0, 0.18),
+    0 0 0 3px rgba(45, 80, 22, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* ── Sparkle icon ────────────────────────────────────────────────────────── */
+.iconLeft {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding-bottom: 1px; /* optical alignment with text baseline */
+}
+
+/* ── Textarea ────────────────────────────────────────────────────────────── */
+.textarea {
+  flex: 1;
+  min-height: 26px;
+  max-height: 160px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.55;
+  color: #ffffff;
+
+  resize: none;
+  overflow-y: auto;
+
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.textarea::placeholder {
+  color: rgba(255, 255, 255, 0.50);
+  font-weight: 400;
+}
+
+.textarea::-webkit-scrollbar       { width: 4px; }
+.textarea::-webkit-scrollbar-track { background: transparent; }
+.textarea::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+/* ── Submit button ───────────────────────────────────────────────────────── */
+.submitButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+
+  /* Disabled / empty state */
+  background-color: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* Active state — has content */
+.submitButton.submitActive {
+  background-color: #2D5016;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(45, 80, 22, 0.4);
+}
+
+.submitButton.submitActive:hover {
+  background-color: #4A7C2C;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(45, 80, 22, 0.45);
+}
+
+.submitButton.submitActive:active {
+  transform: translateY(0);
+}
+
+.submitButton:disabled {
+  cursor: default;
+}
+
+.submitButton:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.7);
+  outline-offset: 2px;
+}
+
+/* ── Helper text ─────────────────────────────────────────────────────────── */
+.helperText {
+  margin: 0;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.45);
+  text-align: center;
+  letter-spacing: 0.01em;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .inputWrapper {
+    padding: 14px 14px 14px 16px;
+    gap: 10px;
+    border-radius: 14px;
+  }
+
+  .textarea {
+    font-size: 16px; /* prevents iOS zoom */
+  }
+
+  .submitButton {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+  }
+
+  .helperText { font-size: 11px; }
+}
+
+@media (max-width: 479px) {
+  .inputWrapper { padding: 12px 12px 12px 14px; }
+}

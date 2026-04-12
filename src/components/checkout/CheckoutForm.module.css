@@ -1,0 +1,169 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   CheckoutForm.module.css
+───────────────────────────────────────────────────────────────────────────── */
+
+.form {
+  display:        flex;
+  flex-direction: column;
+  gap:            var(--spacing-2xl);
+}
+
+/* ── Step indicator ──────────────────────────────────────────────────────── */
+.stepper {
+  display:     flex;
+  align-items: center;
+  gap:         0;
+}
+
+.stepItem {
+  display:        flex;
+  flex-direction: column;
+  align-items:    center;
+  gap:            6px;
+  flex-shrink:    0;
+}
+
+.stepDot {
+  width:            28px;
+  height:           28px;
+  border-radius:    50%;
+  display:          flex;
+  align-items:      center;
+  justify-content:  center;
+  font-family:      var(--font-sans);
+  font-size:        12px;
+  font-weight:      700;
+  background-color: var(--color-warm-cream);
+  border:           1.5px solid var(--color-border);
+  color:            var(--color-text-secondary);
+  transition:       all var(--transition-standard) var(--ease-out);
+}
+
+.stepActive {
+  background-color: var(--color-tea-green);
+  border-color:     var(--color-tea-green);
+  color:            white;
+  box-shadow:       0 0 0 4px rgba(45,80,22,0.12);
+}
+
+.stepDone {
+  background-color: var(--color-tea-green-light);
+  border-color:     var(--color-tea-green-light);
+  color:            white;
+}
+
+.stepLabel {
+  font-family: var(--font-sans);
+  font-size:   12px;
+  color:       var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.stepLabelActive {
+  color:       var(--color-tea-green);
+  font-weight: 600;
+}
+
+.stepLine {
+  flex:             1;
+  height:           1.5px;
+  background-color: var(--color-border);
+  margin:           0 4px;
+  margin-bottom:    18px; /* align with dots */
+  transition:       background-color var(--transition-standard);
+}
+
+.stepLineDone {
+  background-color: var(--color-tea-green-light);
+}
+
+/* ── Step content ────────────────────────────────────────────────────────── */
+.stepContent {
+  display:        flex;
+  flex-direction: column;
+  gap:            var(--spacing-xl);
+  animation:      fadeUp var(--transition-standard) var(--ease-out);
+}
+
+/* ── Navigation ──────────────────────────────────────────────────────────── */
+.nav {
+  display:    flex;
+  align-items: center;
+  gap:         var(--spacing-sm);
+  padding-top: var(--spacing-lg);
+  border-top:  1px solid var(--color-border);
+}
+
+.backBtn {
+  display:         inline-flex;
+  align-items:     center;
+  gap:             4px;
+  background:      none;
+  border:          1px solid var(--color-border);
+  border-radius:   var(--radius-md);
+  padding:         10px 20px;
+  font-family:     var(--font-sans);
+  font-size:       14px;
+  font-weight:     500;
+  color:           var(--color-text-secondary);
+  cursor:          pointer;
+  transition:      background-color var(--transition-fast);
+}
+
+.backBtn:hover {
+  background-color: var(--color-warm-cream);
+  color:            var(--color-text-primary);
+}
+
+.nextBtn {
+  display:          inline-flex;
+  align-items:      center;
+  gap:              4px;
+  background-color: var(--color-tea-green);
+  color:            white;
+  border:           none;
+  border-radius:    var(--radius-md);
+  padding:          12px 28px;
+  font-family:      var(--font-sans);
+  font-size:        14px;
+  font-weight:      600;
+  cursor:           pointer;
+  transition:       background-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.nextBtn:hover {
+  background-color: var(--color-tea-green-light);
+  transform:        translateY(-1px);
+}
+
+.submitBtn {
+  display:          inline-flex;
+  align-items:      center;
+  gap:              6px;
+  background-color: var(--color-sunrise-gold);
+  color:            var(--color-tea-green);
+  border:           none;
+  border-radius:    var(--radius-md);
+  padding:          14px 36px;
+  font-family:      var(--font-sans);
+  font-size:        15px;
+  font-weight:      700;
+  cursor:           pointer;
+  transition:       background-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.submitBtn:hover:not(:disabled) {
+  background-color: #c49060;
+  transform:        translateY(-1px);
+}
+
+.submitBtn:disabled {
+  opacity: 0.7;
+  cursor:  not-allowed;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 479px) {
+  .stepLabel { display: none; }
+  .nextBtn, .submitBtn { padding: 12px 20px; }
+}

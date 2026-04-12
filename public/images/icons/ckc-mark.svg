@@ -1,0 +1,17 @@
+<svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- CKC Mark - Tea Leaf Symbol -->
+  <circle cx="30" cy="30" r="28" fill="#F5F0E8" stroke="#2D5016" stroke-width="2"/>
+  
+  <!-- Central Tea Leaf -->
+  <path d="M30 15C30 15 22 18 22 28C22 38 30 43 30 43C30 43 38 38 38 28C38 18 30 15 30 15Z" fill="#2D5016"/>
+  
+  <!-- Leaf Veins -->
+  <line x1="30" y1="15" x2="30" y2="43" stroke="#4A7C2C" stroke-width="1.5"/>
+  <path d="M30 22C28 24 26 26 26 30" stroke="#4A7C2C" stroke-width="1" stroke-linecap="round"/>
+  <path d="M30 22C32 24 34 26 34 30" stroke="#4A7C2C" stroke-width="1" stroke-linecap="round"/>
+  
+  <!-- Letters CKC -->
+  <text x="30" y="53" font-family="Georgia, serif" font-size="8" font-weight="600" fill="#2D5016" text-anchor="middle">
+    CKC
+  </text>
+</svg>

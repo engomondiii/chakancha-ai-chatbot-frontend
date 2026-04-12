@@ -1,0 +1,92 @@
+/* InvitationCard.module.css */
+
+.card {
+  position:       relative;
+  background:     linear-gradient(135deg, rgba(45,80,22,0.05) 0%, rgba(212,165,116,0.08) 100%);
+  border:         1px solid rgba(45,80,22,0.15);
+  border-radius:  var(--radius-xl);
+  padding:        var(--spacing-lg);
+  display:        flex;
+  flex-direction: column;
+  gap:            var(--spacing-md);
+  animation:      fadeUp var(--transition-slow) var(--ease-out);
+  max-width:      480px;
+}
+
+.dismiss {
+  position: absolute; top: 12px; right: 12px;
+  background: none; border: none; cursor: pointer;
+  color: var(--color-text-secondary); padding: 4px;
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center;
+}
+.dismiss:hover { color: var(--color-text-primary); }
+
+.header { display: flex; align-items: center; gap: var(--spacing-sm); }
+
+.icon {
+  width: 36px; height: 36px; border-radius: '50%';
+  background-color: var(--color-tea-green);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.eyebrow {
+  font-family: var(--font-sans); font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--color-tea-green); margin: 0;
+}
+
+.title {
+  font-family: var(--font-display); font-size: 17px; font-weight: 600;
+  color: var(--color-earth-brown); margin: 2px 0 0;
+}
+
+.intro {
+  font-family: var(--font-sans); font-size: 14px;
+  color: var(--color-text-secondary); line-height: 1.6; margin: 0;
+}
+
+.expandToggle {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: none; border: none; cursor: pointer;
+  font-family: var(--font-sans); font-size: 13px; font-weight: 600;
+  color: var(--color-tea-green); padding: 0;
+  align-self: flex-start;
+}
+
+.steps {
+  display: flex; flex-direction: column; gap: var(--spacing-sm);
+  animation: fadeIn var(--transition-standard) var(--ease-out);
+}
+
+.step { display: flex; align-items: flex-start; gap: 10px; }
+
+.stepNum {
+  width: 22px; height: 22px; border-radius: 50%;
+  background-color: var(--color-tea-green); color: white;
+  font-family: var(--font-sans); font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+
+.stepTitle {
+  font-family: var(--font-sans); font-size: 13px; font-weight: 600;
+  color: var(--color-earth-brown); margin: 0 0 2px;
+}
+
+.stepDesc {
+  font-family: var(--font-sans); font-size: 12px;
+  color: var(--color-text-secondary); line-height: 1.5; margin: 0;
+}
+
+.cta {
+  display: inline-flex; align-items: center; gap: 6px;
+  background-color: var(--color-tea-green); color: white;
+  border: none; border-radius: var(--radius-md);
+  padding: 10px 20px; font-family: var(--font-sans);
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  align-self: flex-start;
+  transition: background-color var(--transition-fast);
+}
+.cta:hover { background-color: var(--color-tea-green-light); }

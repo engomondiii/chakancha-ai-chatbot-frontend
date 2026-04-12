@@ -1,0 +1,40 @@
+:root {
+  /* Primary Palette */
+  --color-tea-green: #2D5016;
+  --color-tea-green-light: #4A7C2C;
+  --color-mist-gray: #B8C5D6;
+  --color-warm-cream: #F5F0E8;
+  --color-soft-white: #FDFDFB;
+  --color-earth-brown: #6B5544;
+  
+  /* Accent Colors */
+  --color-sunrise-gold: #D4A574;
+  --color-muted-olive: #8B8C5A;
+  
+  /* Text Colors */
+  --color-text-primary: #2D3436;
+  --color-text-secondary: #636E72;
+  
+  /* UI Colors */
+  --color-border: #DFE6E9;
+  --color-divider: #E5E5E5;
+  
+  /* Semantic Colors */
+  --color-success: #4A7C2C;
+  --color-warning: #D4A574;
+  --color-error: #D63031;
+  --color-info: #B8C5D6;
+  
+  /* Opacity Variants */
+  --color-white-10: rgba(255, 255, 255, 0.1);
+  --color-white-20: rgba(255, 255, 255, 0.2);
+  --color-white-30: rgba(255, 255, 255, 0.3);
+  --color-white-40: rgba(255, 255, 255, 0.4);
+  --color-white-60: rgba(255, 255, 255, 0.6);
+  --color-white-80: rgba(255, 255, 255, 0.8);
+  
+  --color-black-10: rgba(0, 0, 0, 0.1);
+  --color-black-20: rgba(0, 0, 0, 0.2);
+  --color-black-30: rgba(0, 0, 0, 0.3);
+  --color-black-40: rgba(0, 0, 0, 0.4);
+}

@@ -1,0 +1,163 @@
+/* Button Component Styles */
+
+.button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-medium);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-standard) var(--ease-out);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--color-tea-green);
+  outline-offset: 2px;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Variants */
+
+/* Primary - Deep Tea Green */
+.primary {
+  background-color: var(--color-tea-green);
+  color: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.primary:hover:not(:disabled) {
+  background-color: var(--color-tea-green-light);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Secondary - Outline */
+.secondary {
+  background-color: transparent;
+  color: var(--color-tea-green);
+  border: 1.5px solid var(--color-tea-green);
+}
+
+.secondary:hover:not(:disabled) {
+  background-color: var(--color-tea-green);
+  color: white;
+}
+
+/* CTA - Sunrise Gold (High Value) */
+.cta {
+  background-color: var(--color-sunrise-gold);
+  color: var(--color-tea-green);
+  font-weight: var(--font-weight-semibold);
+  box-shadow: var(--shadow-md);
+}
+
+.cta:hover:not(:disabled) {
+  background-color: #C49466;
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+/* Ghost - Minimal */
+.ghost {
+  background-color: transparent;
+  color: var(--color-tea-green);
+}
+
+.ghost:hover:not(:disabled) {
+  background-color: var(--color-warm-cream);
+}
+
+/* Link Style */
+.link {
+  background-color: transparent;
+  color: var(--color-tea-green);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.link:hover:not(:disabled) {
+  color: var(--color-tea-green-light);
+}
+
+/* Sizes */
+.sm {
+  padding: 8px 16px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.md {
+  padding: 12px 24px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.lg {
+  padding: 16px 32px;
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+/* Full Width */
+.fullWidth {
+  width: 100%;
+}
+
+/* Loading State */
+.loading {
+  pointer-events: none;
+}
+
+.spinner {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.spinnerIcon {
+  animation: spin 1s linear infinite;
+  width: 16px;
+  height: 16px;
+}
+
+.loading .content {
+  visibility: hidden;
+}
+
+/* Icons */
+.iconLeft,
+.iconRight {
+  display: inline-flex;
+  align-items: center;
+}
+
+.iconLeft {
+  margin-right: -4px;
+}
+
+.iconRight {
+  margin-left: -4px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .lg {
+    padding: 14px 28px;
+    font-size: 16px;
+  }
+}

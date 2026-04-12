@@ -1,0 +1,93 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Tabs.module.css
+───────────────────────────────────────────────────────────────────────────── */
+
+.tabs {
+  display:       flex;
+  flex-direction: column;
+  gap:           var(--spacing-lg);
+}
+
+/* ── Tab list ─────────────────────────────────────────────────────────────── */
+.tabList {
+  position:         relative;
+  display:          flex;
+  gap:              0;
+  background-color: var(--color-warm-cream);
+  border:           1px solid var(--color-border);
+  border-radius:    var(--radius-md);
+  padding:          4px;
+}
+
+/* Sliding indicator */
+.indicator {
+  position:         absolute;
+  bottom:           4px;
+  height:           calc(100% - 8px);
+  background-color: white;
+  border-radius:    calc(var(--radius-md) - 2px);
+  box-shadow:       var(--shadow-sm);
+  transition:       left  var(--transition-standard) var(--ease-out),
+                    width var(--transition-standard) var(--ease-out);
+  pointer-events:   none;
+  z-index:          0;
+}
+
+/* ── Individual tab ──────────────────────────────────────────────────────── */
+.tab {
+  position:       relative;
+  z-index:        1;
+  flex:           1;
+  display:        flex;
+  align-items:    center;
+  justify-content: center;
+  padding:        8px 16px;
+  font-family:    var(--font-sans);
+  font-size:      14px;
+  font-weight:    500;
+  color:          var(--color-text-secondary);
+  background:     none;
+  border:         none;
+  border-radius:  calc(var(--radius-md) - 2px);
+  cursor:         pointer;
+  white-space:    nowrap;
+  transition:     color var(--transition-fast) var(--ease-out);
+  user-select:    none;
+}
+
+.tab:hover:not(.tabActive):not(.tabDisabled) {
+  color: var(--color-text-primary);
+}
+
+.tab:focus-visible {
+  outline:        2px solid var(--color-tea-green);
+  outline-offset: 2px;
+}
+
+.tabActive {
+  color:       var(--color-earth-brown);
+  font-weight: 600;
+}
+
+.tabDisabled {
+  opacity: 0.4;
+  cursor:  not-allowed;
+}
+
+/* ── Tab panel ────────────────────────────────────────────────────────────── */
+.tabPanel {
+  display: none;
+}
+
+.tabPanelActive {
+  display:   block;
+  animation: fadeIn var(--transition-standard) var(--ease-out);
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 479px) {
+  .tab {
+    font-size: 13px;
+    padding:   7px 10px;
+  }
+}

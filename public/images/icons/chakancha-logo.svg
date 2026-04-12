@@ -1,0 +1,18 @@
+<svg width="200" height="60" viewBox="0 0 200 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Chakancha Logo -->
+  <g id="chakancha-logo">
+    <!-- Tea Leaf Icon -->
+    <path d="M30 10C30 10 25 15 25 25C25 35 30 40 30 40C30 40 35 35 35 25C35 15 30 10 30 10Z" fill="#2D5016"/>
+    <path d="M30 10C30 10 22 12 20 22C18 32 25 38 25 38" stroke="#4A7C2C" stroke-width="1.5" stroke-linecap="round"/>
+    
+    <!-- Text: CHAKANCHA -->
+    <text x="50" y="35" font-family="Georgia, serif" font-size="24" font-weight="600" fill="#2D5016">
+      CHAKANCHA
+    </text>
+    
+    <!-- Tagline -->
+    <text x="50" y="48" font-family="Inter, sans-serif" font-size="9" fill="#6B5544" letter-spacing="1">
+      FROM NANDI HILLS
+    </text>
+  </g>
+</svg>

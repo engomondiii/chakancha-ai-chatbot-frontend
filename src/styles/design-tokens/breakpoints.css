@@ -1,0 +1,18 @@
+:root {
+  /* Breakpoint Values */
+  --breakpoint-xs: 320px;
+  --breakpoint-sm: 480px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1440px;
+  --breakpoint-2xl: 1920px;
+}
+
+/* Media Query Mixins (for reference) */
+/* Mobile First Approach */
+
+/* 
+Usage in components:
+@media (min-width: 768px) { ... }  // Tablet and up
+@media (min-width: 1024px) { ... } // Desktop and up
+*/

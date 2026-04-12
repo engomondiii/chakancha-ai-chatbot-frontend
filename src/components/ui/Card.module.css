@@ -1,0 +1,105 @@
+/* Card Component Styles */
+
+.card {
+  display: block;
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-standard) var(--ease-out);
+}
+
+/* Variants */
+
+/* Default - Warm Cream */
+.default {
+  background-color: var(--color-warm-cream);
+  border: 1px solid var(--color-border);
+}
+
+/* Glass - Glass-morphism */
+.glass {
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: var(--shadow-glass);
+}
+
+/* Subtle - Light glass */
+.subtle {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Product - Warm cream with border */
+.product {
+  background-color: var(--color-warm-cream);
+  border: 1px solid var(--color-mist-gray);
+}
+
+/* Elevated - White with shadow */
+.elevated {
+  background-color: white;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--color-border);
+}
+
+/* Padding Variants */
+.padding-none {
+  padding: 0;
+}
+
+.padding-sm {
+  padding: var(--spacing-md);
+}
+
+.padding-md {
+  padding: var(--spacing-lg);
+}
+
+.padding-lg {
+  padding: var(--spacing-xl);
+}
+
+/* Hover State */
+.hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.glass.hover:hover {
+  background: rgba(255, 255, 255, 0.5);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.product.hover:hover {
+  border-color: var(--color-tea-green);
+}
+
+/* Clickable */
+.clickable {
+  cursor: pointer;
+  border: none;
+  text-align: left;
+  width: 100%;
+}
+
+.clickable:focus-visible {
+  outline: 2px solid var(--color-tea-green);
+  outline-offset: 2px;
+}
+
+.clickable:active {
+  transform: translateY(0);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .padding-md {
+    padding: var(--spacing-md);
+  }
+  
+  .padding-lg {
+    padding: var(--spacing-lg);
+  }
+}

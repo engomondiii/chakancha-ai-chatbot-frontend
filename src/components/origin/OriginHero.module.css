@@ -1,0 +1,8 @@
+.hero { position: relative; height: 60vh; min-height: 400px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.bg { position: absolute; inset: 0; background: linear-gradient(135deg, #1a2e0a 0%, #2d5016 50%, #1a3a08 100%); }
+.overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.35); }
+.content { position: relative; z-index: 2; text-align: center; padding: var(--spacing-lg); }
+.eyebrow { font-family: var(--font-sans); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.7); }
+.title { font-family: var(--font-display); font-size: clamp(40px,6vw,72px); font-weight: 500; color: white; margin: 0 0 16px; line-height: 1.15; }
+.accent { color: var(--color-sunrise-gold); }
+.subtitle { font-family: var(--font-sans); font-size: 20px; font-weight: 300; color: rgba(255,255,255,0.8); margin: 0; }

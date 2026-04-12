@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Import design tokens */
+@import './design-tokens/colors.css';
+@import './design-tokens/typography.css';
+@import './design-tokens/spacing.css';
+@import './design-tokens/shadows.css';
+@import './design-tokens/breakpoints.css';
+@import './design-tokens/animations.css';
+
+/* CSS Reset */
+@import './reset.css';
+
+/* Global Styles */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  color: var(--color-text-primary);
+  background-color: var(--color-soft-white);
+}
+
+/* Selection */
+::selection {
+  background-color: var(--color-tea-green);
+  color: white;
+}
+
+/* Focus visible */
+:focus-visible {
+  outline: 2px solid var(--color-tea-green);
+  outline-offset: 2px;
+}
+
+/* Utility Classes */
+@layer utilities {
+  .glass-morphism {
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+  
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .container-site {
+    max-width: var(--max-width-site);
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: var(--spacing-lg);
+    padding-right: var(--spacing-lg);
+  }
+  
+  .container-content {
+    max-width: var(--max-width-content);
+    margin-left: auto;
+    margin-right: auto;
+  }
+}

@@ -1,0 +1,146 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   MessageBubble.module.css
+   Uses CSS variables from globals.css — no hardcoded values.
+───────────────────────────────────────────────────────────────────────────── */
+
+/* ── System message ──────────────────────────────────────────────────────── */
+.systemMessage {
+  display:         flex;
+  justify-content: center;
+  padding:         var(--spacing-sm) 0;
+}
+
+.systemText {
+  font-family: var(--font-sans);
+  font-size:   13px;
+  color:       var(--color-text-secondary);
+  background:  var(--color-warm-cream);
+  border:      1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  padding:     4px 14px;
+}
+
+/* ── User message row ────────────────────────────────────────────────────── */
+.userRow {
+  display:         flex;
+  justify-content: flex-end;
+  align-items:     flex-end;
+  gap:             var(--spacing-xs);
+  animation:       fadeUp var(--transition-standard) var(--ease-out);
+}
+
+.userBubble {
+  max-width:        72%;
+  background-color: var(--color-tea-green);
+  color:            #ffffff;
+  border-radius:    18px 18px 4px 18px;
+  padding:          12px 18px;
+  box-shadow:       var(--shadow-sm);
+}
+
+.userText {
+  font-family: var(--font-sans);
+  font-size:   var(--font-size-body);
+  line-height: 1.6;
+  margin:      0;
+  white-space: pre-wrap;
+  word-break:  break-word;
+}
+
+.userActions {
+  display:     flex;
+  align-items: center;
+  gap:         2px;
+  opacity:     0;
+  animation:   fadeIn var(--transition-fast) var(--ease-out) forwards;
+}
+
+.userRow:hover .userActions {
+  opacity: 1;
+}
+
+/* ── AI message row ──────────────────────────────────────────────────────── */
+.aiRow {
+  display:     flex;
+  align-items: flex-start;
+  gap:         var(--spacing-sm);
+  animation:   fadeUp var(--transition-standard) var(--ease-out);
+}
+
+.aiContent {
+  flex:      1;
+  min-width: 0; /* prevent overflow */
+}
+
+.aiText {
+  background:    white;
+  border:        1px solid var(--color-border);
+  border-radius: 4px 18px 18px 18px;
+  padding:       14px 18px;
+  box-shadow:    var(--shadow-sm);
+  font-family:   var(--font-sans);
+}
+
+/* ── Action buttons (shared) ─────────────────────────────────────────────── */
+.actionBtn {
+  display:          flex;
+  align-items:      center;
+  justify-content:  center;
+  width:            26px;
+  height:           26px;
+  background:       none;
+  border:           none;
+  cursor:           pointer;
+  border-radius:    var(--radius-sm);
+  color:            var(--color-text-secondary);
+  transition:       background-color var(--transition-fast) var(--ease-out),
+                    color            var(--transition-fast) var(--ease-out);
+}
+
+.actionBtn:hover {
+  background-color: var(--color-warm-cream);
+  color:            var(--color-tea-green);
+}
+
+/* ── AI action bar ───────────────────────────────────────────────────────── */
+.aiActions {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  padding:         4px 4px 0;
+  opacity:         0;
+  transition:      opacity var(--transition-fast) var(--ease-out);
+}
+
+.aiActionsVisible {
+  opacity: 1;
+}
+
+.aiRow:hover .aiActions {
+  opacity: 1;
+}
+
+.timestamp {
+  font-family: var(--font-sans);
+  font-size:   11px;
+  color:       var(--color-text-secondary);
+  opacity:     0.7;
+}
+
+.aiActionBtns {
+  display:     flex;
+  align-items: center;
+  gap:         2px;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .userBubble {
+    max-width: 86%;
+  }
+
+  .userBubble,
+  .aiText {
+    padding: 10px 14px;
+  }
+}

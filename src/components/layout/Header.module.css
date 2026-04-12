@@ -1,0 +1,279 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Header — Header.module.css
+   All values hardcoded — no CSS variable dependencies
+───────────────────────────────────────────────────────────────────────────── */
+
+/* ── Base header ─────────────────────────────────────────────────────────── */
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  transition: background-color 300ms ease, border-color 300ms ease, box-shadow 300ms ease;
+}
+
+/* Transparent state — floating over the hero */
+.transparent {
+  background-color: rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Scrolled state — solid white */
+.scrolled {
+  background-color: rgba(253, 253, 251, 0.97);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(184, 197, 214, 0.4);
+  box-shadow: 0 1px 20px rgba(45, 80, 22, 0.06);
+}
+
+/* ── Container ───────────────────────────────────────────────────────────── */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+/* ── Logo ────────────────────────────────────────────────────────────────── */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.logoIcon {
+  color: #ffffff;
+  transition: color 300ms ease;
+  flex-shrink: 0;
+}
+
+.scrolled .logoIcon,
+.header.scrolled .logoIcon {
+  color: #2d5016;
+}
+
+.logoText {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: 0.01em;
+  transition: color 300ms ease;
+}
+
+.scrolled .logoText,
+.header.scrolled .logoText {
+  color: #6b5544;
+}
+
+/* Override colors when scrolled — applied via parent class */
+.header.scrolled .logoIcon { color: #2d5016; }
+.header.scrolled .logoText { color: #6b5544; }
+
+/* ── Desktop Nav ─────────────────────────────────────────────────────────── */
+.desktopNav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  justify-content: center;
+}
+
+.navLink {
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  transition: background-color 150ms ease, color 150ms ease;
+  white-space: nowrap;
+}
+
+.navLink:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+/* Nav links when scrolled */
+.header.scrolled .navLink {
+  color: #6b5544;
+}
+
+.header.scrolled .navLink:hover {
+  background-color: #f5f0e8;
+  color: #2d5016;
+}
+
+/* ── Actions ─────────────────────────────────────────────────────────────── */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.iconButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background-color 150ms ease, color 150ms ease;
+  padding: 0;
+}
+
+.iconButton:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.header.scrolled .iconButton {
+  color: #6b5544;
+}
+
+.header.scrolled .iconButton:hover {
+  background-color: #f5f0e8;
+  color: #2d5016;
+}
+
+/* Mobile menu toggle — hidden on desktop */
+.menuToggle {
+  display: none;
+}
+
+/* ── Mobile Overlay ──────────────────────────────────────────────────────── */
+.mobileOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background-color: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.mobileMenu {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: min(360px, 100vw);
+  height: 100vh;
+  background-color: #fdfdfb;
+  display: flex;
+  flex-direction: column;
+  padding: 0 0 32px;
+  box-shadow: -4px 0 40px rgba(0, 0, 0, 0.15);
+}
+
+.mobileMenuHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  height: 72px;
+  border-bottom: 1px solid rgba(184, 197, 214, 0.4);
+  flex-shrink: 0;
+}
+
+/* Override logo colors inside mobile menu (always on white bg) */
+.mobileMenu .logoIcon { color: #2d5016 !important; }
+.mobileMenu .logoText { color: #6b5544 !important; }
+.mobileMenu .iconButton { color: #6b5544 !important; }
+.mobileMenu .iconButton:hover {
+  background-color: #f5f0e8 !important;
+  color: #2d5016 !important;
+}
+
+.mobileNavLinks {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 12px;
+  gap: 4px;
+  flex: 1;
+}
+
+.mobileNavLink {
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 18px;
+  font-weight: 500;
+  color: #6b5544;
+  text-decoration: none;
+  padding: 14px 16px;
+  border-radius: 10px;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.mobileNavLink:hover {
+  background-color: #f5f0e8;
+  color: #2d5016;
+}
+
+.mobileActions {
+  display: flex;
+  gap: 12px;
+  padding: 0 20px;
+  margin-top: 8px;
+}
+
+.mobileActionLink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  justify-content: center;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b5544;
+  text-decoration: none;
+  background-color: #f5f0e8;
+  border: 1px solid rgba(184, 197, 214, 0.5);
+  border-radius: 10px;
+  padding: 12px;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.mobileActionLink:hover {
+  background-color: #2d5016;
+  color: #ffffff;
+  border-color: #2d5016;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 1023px) {
+  .desktopNav {
+    display: none;
+  }
+
+  .menuToggle {
+    display: flex;
+  }
+}
+
+@media (max-width: 767px) {
+  .container {
+    padding: 0 16px;
+    height: 64px;
+  }
+
+  .logoText {
+    font-size: 18px;
+  }
+}

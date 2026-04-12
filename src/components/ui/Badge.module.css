@@ -1,0 +1,77 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Badge.module.css
+   Replaces the Phase 1 version which referenced the non-existent
+   var(--color-light-tea-green). Corrected to var(--color-tea-green-light).
+───────────────────────────────────────────────────────────────────────────── */
+
+.badge {
+  display:        inline-flex;
+  align-items:    center;
+  justify-content: center;
+  font-family:    var(--font-sans);
+  font-weight:    600;
+  border-radius:  var(--radius-pill);
+  white-space:    nowrap;
+  line-height:    1;
+  transition:     background-color var(--transition-fast) var(--ease-out),
+                  color            var(--transition-fast) var(--ease-out);
+}
+
+/* ── Sizes ───────────────────────────────────────────────────────────────── */
+.sm {
+  padding:   3px 10px;
+  font-size: 11px;
+}
+
+.md {
+  padding:   5px 12px;
+  font-size: 12px;
+}
+
+.lg {
+  padding:   7px 16px;
+  font-size: var(--font-size-body);
+}
+
+/* ── Variants ────────────────────────────────────────────────────────────── */
+.default {
+  background-color: var(--color-mist-gray);
+  color:            var(--color-text-primary);
+}
+
+/* FIX: was var(--color-light-tea-green) — corrected ✓ */
+.primary {
+  background-color: var(--color-tea-green);
+  color:            white;
+}
+
+.secondary {
+  background-color: var(--color-tea-green-light);   /* ← bug fix */
+  color:            white;
+}
+
+.success {
+  background-color: #10b981;
+  color:            white;
+}
+
+.error {
+  background-color: var(--color-error);
+  color:            white;
+}
+
+.warning {
+  background-color: var(--color-warning);
+  color:            var(--color-tea-green);
+}
+
+.info {
+  background-color: #3b82f6;
+  color:            white;
+}
+
+.outline {
+  background-color: transparent;
+  border:           1.5px solid var(--color-tea-green);
+  color:            var(--color-tea-green);
+}
