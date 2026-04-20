@@ -1,14 +1,24 @@
 /**
- * aiSlice.js
- * Zustand slice for AI conversation state.
- * Handles messages, streaming, intents, and follow-up suggestions.
+ * src/store/slices/aiSlice.js — Integration Phase 2
+ *
+ * What changed from the original:
+ *  - sendMessage() now calls chat() from claudeClient.js which hits
+ *    POST /api/v1/ai/stream/ via SSE — not the Anthropic SDK directly
+ *  - onComplete callback handles the new 'products' and 'generatedImage' fields
+ *    from the backend response
+ *  - generatedImages state added to store product images from the SSE stream
+ *  - productCards state added — populated from the 'products' SSE event
+ *  - backend message_id stored on AI messages for feedback (thumbs up/down)
+ *  - onProducts callback fires before onComplete to immediately show cards
+ *  - onImage callback stores the generated image URL inline in the message
+ *  - sendFeedback action added — calls POST /api/v1/ai/feedback/
+ *  - All other actions (clearConversation, retryLastMessage, etc.) unchanged
  */
 
-import { chat } from '@/lib/ai/claudeClient';
+import { chat, sendFeedback as apiFeedback } from '@/lib/ai/claudeClient';
 import {
   createUserMessage,
   createAIMessage,
-  createSystemMessage,
   generateConversationId,
   trimHistoryToContextWindow,
   saveConversation,
@@ -25,24 +35,22 @@ export const createAISlice = (set, get) => ({
   suggestedFollowUps:     [],
   conversationId:         null,
   error:                  null,
+  // Phase 2 additions
+  productCards:           [],   // Products from the last 'products' SSE event
+  generatedImages:        {},   // { [messageId]: imageUrl } from 'image' SSE event
 
-  // ── Actions ────────────────────────────────────────────────────────────────
-
+  // ── sendMessage ─────────────────────────────────────────────────────────────
   /**
-   * Send a user message and stream the AI response.
+   * Send a user message and stream the AI response from the Django backend.
+   * Handles all 5 SSE event types: token, products, image, metadata/done, error.
    */
   sendMessage: async (content) => {
     const state = get();
     if (state.isStreaming || !content?.trim()) return;
 
-    // Ensure we have a conversation ID
     const conversationId = state.conversationId || generateConversationId();
-
-    // Create user message
-    const userMsg = createUserMessage(content);
-
-    // Create a placeholder AI message (will be updated as tokens arrive)
-    const aiMsg = createAIMessage('', { isStreaming: true });
+    const userMsg        = createUserMessage(content);
+    const aiMsg          = createAIMessage('', { isStreaming: true });
 
     set((s) => ({
       conversationId,
@@ -50,19 +58,31 @@ export const createAISlice = (set, get) => ({
       isStreaming:            true,
       currentStreamingMessage: '',
       error:                  null,
+      productCards:           [],
     }));
 
-    // Build history (exclude the empty placeholder)
+    // Build history for the backend (exclude the empty placeholder AI message)
     const historyForAPI = trimHistoryToContextWindow(
       get().messages.filter((m) => m.id !== aiMsg.id)
     );
+
+    // Pull cart context from cartSlice if available
+    const cartContext = {
+      item_count: get().cartItemCount || 0,
+      subtotal:   get().cartSubtotal  || 0,
+      items:      (get().cartItems    || []).map((i) => ({
+        name:     i.name,
+        quantity: i.quantity,
+        price:    i.price,
+      })),
+    };
 
     try {
       await chat(
         content,
         historyForAPI,
         {
-          // Called for each streaming token
+          // ── Token arrives ────────────────────────────────────────────────
           onToken: (delta, accumulated) => {
             set((s) => ({
               currentStreamingMessage: accumulated,
@@ -72,32 +92,63 @@ export const createAISlice = (set, get) => ({
             }));
           },
 
-          // Called when streaming completes
-          onComplete: ({ content: finalContent, intent, followUps }) => {
+          // ── Product cards from backend ───────────────────────────────────
+          onProducts: (products) => {
+            set({ productCards: products });
+          },
+
+          // ── Generated image from DALL-E 3 ────────────────────────────────
+          onImage: (imageUrl) => {
+            set((s) => ({
+              generatedImages: { ...s.generatedImages, [aiMsg.id]: imageUrl },
+              messages: s.messages.map((m) =>
+                m.id === aiMsg.id ? { ...m, generatedImage: imageUrl } : m
+              ),
+            }));
+          },
+
+          // ── Stream complete ───────────────────────────────────────────────
+          onComplete: ({
+            content: finalContent,
+            intent,
+            followUps,
+            products,
+            generatedImage,
+            message_id: backendMessageId,
+          }) => {
             set((s) => ({
               isStreaming:            false,
               currentStreamingMessage: '',
               currentIntent:          intent,
               suggestedFollowUps:     followUps || [],
+              productCards:           products   || s.productCards,
               messages: s.messages.map((m) =>
                 m.id === aiMsg.id
-                  ? { ...m, content: finalContent, isStreaming: false, intent, followUps }
+                  ? {
+                      ...m,
+                      content:         finalContent,
+                      isStreaming:     false,
+                      intent,
+                      followUps:       followUps || [],
+                      generatedImage:  generatedImage || m.generatedImage || null,
+                      backendId:       backendMessageId || null,
+                    }
                   : m
               ),
             }));
 
-            // Check Chakan Tree readiness and surface in uiSlice if ready
+            // Chakan Tree readiness signal
             const finalMessages = get().messages;
             const readiness     = assessChakanTreeReadiness(finalMessages, intent);
             if (readiness.ready && readiness.layer >= 2) {
               get().setChakanTreeSignal?.(readiness);
             }
 
-            // Persist conversation
+            // Persist conversation locally
             saveConversation(conversationId, get().messages);
           },
 
-          // Called on streaming error
+          // ── Stream error ─────────────────────────────────────────────────
           onError: (err) => {
             set((s) => ({
               isStreaming:            false,
@@ -110,14 +161,18 @@ export const createAISlice = (set, get) => ({
                       isStreaming: false,
                       content:
                         m.content ||
-                        'I apologize — something went wrong. Please try again.',
+                        "I'm having trouble right now. Please try again in a moment.",
                     }
                   : m
               ),
             }));
           },
         },
-        { conversationId }
+        {
+          conversationId,
+          cartContext,
+          language: 'en',
+        }
       );
     } catch (err) {
       set({
@@ -128,9 +183,7 @@ export const createAISlice = (set, get) => ({
     }
   },
 
-  /**
-   * Clear all messages and start fresh.
-   */
+  // ── clearConversation ──────────────────────────────────────────────────────
   clearConversation: () => {
     const { conversationId } = get();
     if (conversationId) deleteConversation(conversationId);
@@ -143,12 +196,12 @@ export const createAISlice = (set, get) => ({
       suggestedFollowUps:     [],
       conversationId:         null,
       error:                  null,
+      productCards:           [],
+      generatedImages:        {},
     });
   },
 
-  /**
-   * Retry the last failed/empty AI message.
-   */
+  // ── retryLastMessage ───────────────────────────────────────────────────────
   retryLastMessage: () => {
     const { messages, isStreaming } = get();
     if (isStreaming) return;
@@ -156,71 +209,77 @@ export const createAISlice = (set, get) => ({
     const lastUserMsg = [...messages].reverse().find((m) => m.type === 'user');
     if (!lastUserMsg) return;
 
-    // Remove the failed AI response (last ai message)
-    const lastAIIndex = messages.length - 1 - [...messages].reverse().findIndex((m) => m.type === 'ai');
+    // Remove the last AI message (failed response)
+    const lastAIIndex = messages.length - 1 -
+      [...messages].reverse().findIndex((m) => m.type === 'ai');
     const trimmed = messages.filter((_, i) => i !== lastAIIndex);
 
-    set({ messages: trimmed, error: null });
+    set({ messages: trimmed, error: null, productCards: [] });
     get().sendMessage(lastUserMsg.content);
   },
 
-  /**
-   * Use a suggested follow-up question.
-   */
+  // ── selectFollowUp ────────────────────────────────────────────────────────
   selectFollowUp: (followUpText) => {
     get().sendMessage(followUpText);
   },
 
-  /**
-   * Set conversation ID (used when restoring a saved conversation).
-   */
+  // ── setConversationId ─────────────────────────────────────────────────────
   setConversationId: (id) => set({ conversationId: id }),
 
-  /**
-   * Delete a specific message by ID.
-   */
+  // ── deleteMessage ─────────────────────────────────────────────────────────
   deleteMessage: (messageId) => {
     set((s) => ({
       messages: s.messages.filter((m) => m.id !== messageId),
     }));
   },
 
-  /**
-   * Edit a user message content (clears subsequent messages).
-   */
+  // ── editMessage ────────────────────────────────────────────────────────────
   editMessage: (messageId, newContent) => {
     const { messages } = get();
     const index = messages.findIndex((m) => m.id === messageId);
     if (index === -1) return;
-
-    // Keep messages up to and including the edited one, then resend
     const trimmed = messages.slice(0, index);
-    set({ messages: trimmed, error: null });
+    set({ messages: trimmed, error: null, productCards: [] });
     get().sendMessage(newContent);
   },
 
-  /**
-   * Get structured context from current conversation (used by prompts.js).
-   */
+  // ── getConversationContext ─────────────────────────────────────────────────
   getConversationContext: () => {
     const { messages, currentIntent, conversationId } = get();
     return {
       messages,
       currentIntent,
       conversationId,
-      messageCount:    messages.length,
+      messageCount:     messages.length,
       userMessageCount: messages.filter((m) => m.type === 'user').length,
     };
   },
 
-  /**
-   * Pre-populate a message from the ?q= query param (used by chat/page.jsx).
-   */
+  // ── initFromQuery ──────────────────────────────────────────────────────────
   initFromQuery: (queryText) => {
     if (!queryText?.trim()) return;
     const { messages } = get();
-    if (messages.length > 0) return; // Don't override existing conversation
+    if (messages.length > 0) return;
     get().sendMessage(queryText.trim());
+  },
+
+  // ── sendFeedback (Phase 2 addition) ───────────────────────────────────────
+  /**
+   * Send thumbs up/down to POST /api/v1/ai/feedback/
+   * @param {string} messageId - Internal Zustand message id
+   * @param {number} rating    - +1 or -1
+   * @param {string} [comment]
+   */
+  sendFeedback: async (messageId, rating, comment = '') => {
+    const msg = get().messages.find((m) => m.id === messageId);
+    if (!msg?.backendId) return { success: false, error: 'No backend message ID' };
+
+    try {
+      await apiFeedback(msg.backendId, rating, comment);
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
   },
 });
 

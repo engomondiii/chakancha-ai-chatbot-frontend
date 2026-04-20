@@ -1,145 +1,143 @@
 /**
- * chakanTreeSlice.js
- * Zustand slice for Chakan Tree participation state.
- * Tracks membership, referrals, rewards, and impact metrics.
+ * src/store/slices/chakanTreeSlice.js — Integration Phase 4
+ *
+ * What changed from the original:
+ *  - All raw fetch() calls replaced with functions from chakanTree.js API layer
+ *    which use the shared Axios client (auth headers, error handling, etc.)
+ *  - fetchMembership() uses getChakanTreeInfo() which includes membership if authenticated
+ *  - joinChakanTree() uses joinChakanTree() from API layer
+ *  - fetchDashboard() uses getDashboard() + getImpact() from API layer
+ *  - All responses normalized via normalizeMembership() in chakanTree.js
+ *  - showNotification → uses uiSlice showSuccess/showError via get()
+ *  - getReferralLink() uses NEXT_PUBLIC_SITE_URL env var
+ *  - shareReferralCode() unchanged in UI logic
  */
 
-import { API_ENDPOINTS } from '@/lib/constants/apiEndpoints';
-
-async function apiFetch(url, options = {}, token = null) {
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...options.headers,
-  };
-
-  const res = await fetch(url, { ...options, headers });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ message: res.statusText }));
-    throw new Error(err.message || `Request failed (${res.status})`);
-  }
-  return res.json();
-}
+import {
+  getChakanTreeInfo,
+  joinChakanTree as apiJoinChakanTree,
+  getDashboard   as apiGetDashboard,
+  getImpact      as apiGetImpact,
+  normalizeMembership,
+} from '@/lib/api/chakanTree';
 
 export const createChakanTreeSlice = (set, get) => ({
   // ── State ──────────────────────────────────────────────────────────────────
-  membership:   null,   // null | { referralCode, joinedAt, tier, isActive }
-  referrals:    [],     // Array of referral records
-  rewards:      null,   // { totalEarned, pendingPayout, paidOut }
-  impact:       null,   // { teaPickersSupported, communityFunds, totalValue }
-  isLoading:    false,
-  error:        null,
+  membership: null,   // null | normalized membership object
+  referrals:  [],
+  rewards:    null,
+  impact:     null,
+  isLoading:  false,
+  error:      null,
 
   // ── Computed ───────────────────────────────────────────────────────────────
-
-  isJoined: () => !!get().membership?.isActive,
+  isJoined:     () => !!get().membership?.isActive,
   referralCode: () => get().membership?.referralCode || null,
 
-  // ── Actions ────────────────────────────────────────────────────────────────
-
+  // ── fetchMembership ────────────────────────────────────────────────────────
   /**
-   * Fetch current Chakan Tree membership status.
+   * Fetch Chakan Tree membership for the currently authenticated user.
    * Called on account page mount and after login.
+   * Uses getChakanTreeInfo() which returns { membership } when authenticated.
    */
   fetchMembership: async () => {
     const { accessToken } = get();
     if (!accessToken) return;
 
     set({ isLoading: true, error: null });
-
     try {
-      const data = await apiFetch(
-        API_ENDPOINTS.CHAKAN_TREE.INFO,
-        { method: 'GET' },
-        accessToken
-      );
-      set({ membership: data.membership || null, isLoading: false });
-    } catch (err) {
-      set({ error: err.message, isLoading: false });
-    }
-  },
-
-  /**
-   * Join the Chakan Tree program.
-   *
-   * @param {object} options - { referredBy: string|null }
-   */
-  joinChakanTree: async (options = {}) => {
-    const { accessToken } = get();
-    set({ isLoading: true, error: null });
-
-    try {
-      const data = await apiFetch(
-        API_ENDPOINTS.CHAKAN_TREE.JOIN,
-        { method: 'POST', body: JSON.stringify(options) },
-        accessToken
-      );
-
+      const info = await getChakanTreeInfo();
       set({
-        membership: data.membership,
+        membership: info.membership || null,
         isLoading:  false,
       });
-
-      // Show success notification
-      get().showNotification?.(
-        'Welcome to Chakan Tree! Your referral code is ready.',
-        'success',
-        6000
-      );
-
-      return { success: true, membership: data.membership };
     } catch (err) {
       set({ error: err.message, isLoading: false });
-      return { success: false, error: err.message };
     }
   },
 
+  // ── joinChakanTree ─────────────────────────────────────────────────────────
   /**
-   * Fetch dashboard data: referrals, rewards, impact.
+   * Join the Chakan Tree program.
+   * POST /api/v1/chakan-tree/join/
+   *
+   * @param {object} options - { referredBy: string | undefined }
+   */
+  joinChakanTree: async (options = {}) => {
+    set({ isLoading: true, error: null });
+    try {
+      const result = await apiJoinChakanTree(options);
+
+      if (result.success && result.membership) {
+        set({ membership: result.membership, isLoading: false });
+
+        get().showSuccess?.(
+          result.message || `Welcome to Chakan Tree! Your code: ${result.membership.referralCode}`,
+          6000
+        );
+        return { success: true, membership: result.membership };
+      }
+
+      set({ isLoading: false });
+      return { success: false, error: 'Join failed — please try again.' };
+
+    } catch (err) {
+      const msg = err.message || 'Could not join Chakan Tree. Please try again.';
+      set({ error: msg, isLoading: false });
+      get().showError?.(msg);
+      return { success: false, error: msg };
+    }
+  },
+
+  // ── fetchDashboard ─────────────────────────────────────────────────────────
+  /**
+   * Fetch dashboard data: referrals, rewards, and impact.
+   * GET /api/v1/chakan-tree/dashboard/ + GET /api/v1/chakan-tree/impact/
    */
   fetchDashboard: async () => {
     const { accessToken } = get();
     if (!accessToken) return;
 
     set({ isLoading: true, error: null });
-
     try {
       const [dashData, impactData] = await Promise.all([
-        apiFetch(API_ENDPOINTS.CHAKAN_TREE.DASHBOARD, { method: 'GET' }, accessToken),
-        apiFetch(API_ENDPOINTS.CHAKAN_TREE.IMPACT,    { method: 'GET' }, accessToken),
+        apiGetDashboard(),
+        apiGetImpact(),
       ]);
 
       set({
         referrals: dashData.referrals || [],
         rewards:   dashData.rewards   || null,
-        impact:    impactData.impact  || null,
+        impact:    impactData         || null,
         isLoading: false,
       });
+
+      // Also refresh membership from dashboard if available
+      if (dashData.membership) {
+        set({ membership: dashData.membership });
+      }
+
     } catch (err) {
       set({ error: err.message, isLoading: false });
     }
   },
 
-  /**
-   * Get referral link for sharing.
-   */
+  // ── getReferralLink ────────────────────────────────────────────────────────
   getReferralLink: () => {
     const code = get().membership?.referralCode;
     if (!code) return null;
-
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://chakancha.com';
     return `${baseUrl}?ref=${code}`;
   },
 
+  // ── shareReferralCode ─────────────────────────────────────────────────────
   /**
-   * Share referral code via Web Share API or copy to clipboard.
-   *
+   * Share via Web Share API or copy to clipboard.
    * @returns {Promise<'shared'|'copied'|'error'>}
    */
   shareReferralCode: async () => {
     const link = get().getReferralLink?.() || get().getReferralLink();
     const code = get().membership?.referralCode;
-
     if (!link || !code) return 'error';
 
     try {
@@ -151,14 +149,8 @@ export const createChakanTreeSlice = (set, get) => ({
         });
         return 'shared';
       }
-
-      // Fallback: copy to clipboard
       await navigator.clipboard.writeText(link);
-      get().showNotification?.(
-        'Referral link copied to clipboard!',
-        'success',
-        3000
-      );
+      get().showSuccess?.('Referral link copied to clipboard!', 3000);
       return 'copied';
     } catch {
       return 'error';

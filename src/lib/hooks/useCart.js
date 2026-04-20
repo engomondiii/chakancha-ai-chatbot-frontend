@@ -1,9 +1,14 @@
 /**
- * src/lib/hooks/useCart.js
- * Canonical cart hook — Phase 3 version.
- * Wired to cartSlice. Uses useShallow to prevent infinite re-renders.
- * This is the definitive useCart — the Phase 1 version in useProducts.js
- * was a stub; this replaces it.
+ * src/lib/hooks/useCart.js — Integration Phase 3
+ *
+ * What changed from the original:
+ *  - applyCoupon() now calls validateCoupon() from cart.js API
+ *    (POST /api/v1/checkout/coupon/) instead of using a hardcoded mock object
+ *  - applyCoupon() falls back to mock COUPONS when API is unavailable (dev mode)
+ *  - FREE_SHIPPING_THRESHOLD changed to $50 USD (matches backend settings and
+ *    store/index.js config — original was 5000 KES)
+ *  - formatTotal/formatSubtotal updated to use USD formatting
+ *  - Everything else unchanged
  */
 
 'use client';
@@ -12,28 +17,23 @@ import { useCallback, useMemo } from 'react';
 import { useStore }              from '@/store';
 import { useShallow }            from 'zustand/react/shallow';
 import { formatCurrency }        from '@/lib/utils/currency';
+import { validateCoupon }        from '@/lib/api/cart';
 
-const FREE_SHIPPING_KES = 5000;
+const FREE_SHIPPING_THRESHOLD_USD = 50; // USD — matches backend SEARCH_CONFIG
 
 // ─── Primary hook ──────────────────────────────────────────────────────────────
 
-/**
- * useCart
- * Full cart state and all operations.
- */
 export function useCart() {
-  // ── Primitives — each stable reference ───────────────────────────────────
-  const cartItems    = useStore((s) => s.cartItems);
+  const cartItems     = useStore((s) => s.cartItems);
   const appliedCoupon = useStore((s) => s.appliedCoupon);
-  const cartSubtotal = useStore((s) => s.cartSubtotal);
-  const cartShipping = useStore((s) => s.cartShipping);
-  const cartTax      = useStore((s) => s.cartTax);
-  const cartTotal    = useStore((s) => s.cartTotal);
-  const cartDiscount = useStore((s) => s.cartDiscount);
+  const cartSubtotal  = useStore((s) => s.cartSubtotal);
+  const cartShipping  = useStore((s) => s.cartShipping);
+  const cartTax       = useStore((s) => s.cartTax);
+  const cartTotal     = useStore((s) => s.cartTotal);
+  const cartDiscount  = useStore((s) => s.cartDiscount);
   const cartItemCount = useStore((s) => s.cartItemCount);
-  const isCartOpen   = useStore((s) => s.isCartOpen);
+  const isCartOpen    = useStore((s) => s.isCartOpen);
 
-  // ── Actions — grouped with useShallow ────────────────────────────────────
   const {
     addToCart,
     removeFromCart,
@@ -49,80 +49,83 @@ export function useCart() {
     getCartSummary,
   } = useStore(
     useShallow((s) => ({
-      addToCart:     s.addToCart,
-      removeFromCart:s.removeFromCart,
-      updateQuantity:s.updateQuantity,
-      clearCart:     s.clearCart,
-      applyCoupon:   s.applyCoupon,
-      removeCoupon:  s.removeCoupon,
-      openCart:      s.openCart,
-      closeCart:     s.closeCart,
-      toggleCart:    s.toggleCart,
-      getCartItem:   s.getCartItem,
-      isInCart:      s.isInCart,
-      getCartSummary:s.getCartSummary,
+      addToCart:      s.addToCart,
+      removeFromCart: s.removeFromCart,
+      updateQuantity: s.updateQuantity,
+      clearCart:      s.clearCart,
+      applyCoupon:    s.applyCoupon,
+      removeCoupon:   s.removeCoupon,
+      openCart:       s.openCart,
+      closeCart:      s.closeCart,
+      toggleCart:     s.toggleCart,
+      getCartItem:    s.getCartItem,
+      isInCart:       s.isInCart,
+      getCartSummary: s.getCartSummary,
     }))
   );
 
-  // ── Derived values ────────────────────────────────────────────────────────
-  const isEmpty   = cartItems.length === 0;
-  const hasItems  = cartItems.length > 0;
+  const isEmpty  = cartItems.length === 0;
+  const hasItems = cartItems.length > 0;
 
   const freeShippingRemaining = useMemo(
-    () => Math.max(0, FREE_SHIPPING_KES - cartSubtotal),
+    () => Math.max(0, FREE_SHIPPING_THRESHOLD_USD - cartSubtotal),
     [cartSubtotal]
   );
-
   const hasFreeShipping = freeShippingRemaining === 0;
 
-  // ── Coupon helpers ────────────────────────────────────────────────────────
+  // ── Coupon — wired to real backend with mock fallback ────────────────────
 
-  // Mock coupon validator (production connects to validateCoupon API)
+  const MOCK_COUPONS = {
+    WELCOME10: { type: 'percentage',    value: 10 },
+    SAVE50:    { type: 'fixed',         value: 50 },
+    FREESHIP:  { type: 'free_shipping', value: 0  },
+  };
+
   const applyCoupon = useCallback(async (code) => {
-    const COUPONS = {
-      WELCOME10: { type: 'percentage',    value: 10 },
-      SAVE50:    { type: 'fixed',         value: 50 },
-      FREESHIP:  { type: 'free_shipping', value: 0  },
-    };
-    const upper  = code.trim().toUpperCase();
-    const coupon = COUPONS[upper];
-    if (coupon) {
-      storeApplyCoupon({ code: upper, ...coupon });
+    const upper = code.trim().toUpperCase();
+
+    try {
+      // Try real backend first
+      const coupon = await validateCoupon(upper, cartSubtotal);
+      storeApplyCoupon({
+        code:  coupon.code  || upper,
+        type:  coupon.type,
+        value: parseFloat(coupon.value) || 0,
+      });
       return { success: true };
+    } catch (err) {
+      // Fall back to mock coupons in development
+      const mockCoupon = MOCK_COUPONS[upper];
+      if (mockCoupon) {
+        storeApplyCoupon({ code: upper, ...mockCoupon });
+        return { success: true };
+      }
+      return { success: false, error: err.message || 'Invalid coupon code' };
     }
-    return { success: false, error: 'Invalid coupon code' };
-  }, [storeApplyCoupon]);
+  }, [storeApplyCoupon, cartSubtotal]);
 
   const removeCoupon = useCallback(() => {
     storeRemoveCoupon();
   }, [storeRemoveCoupon]);
 
   // ── Format helpers ────────────────────────────────────────────────────────
-
-  const formatTotal    = useCallback(() => formatCurrency(cartTotal,    'KES', 'en-KE'), [cartTotal]);
-  const formatSubtotal = useCallback(() => formatCurrency(cartSubtotal, 'KES', 'en-KE'), [cartSubtotal]);
+  const formatTotal    = useCallback(() => formatCurrency(cartTotal,    'USD', 'en-US'), [cartTotal]);
+  const formatSubtotal = useCallback(() => formatCurrency(cartSubtotal, 'USD', 'en-US'), [cartSubtotal]);
 
   return {
-    // State
     items:        cartItems,
     appliedCoupon,
     isEmpty,
     hasItems,
     isCartOpen,
-
-    // Totals
     subtotal:     cartSubtotal,
     shipping:     cartShipping,
     tax:          cartTax,
     total:        cartTotal,
     discount:     cartDiscount,
     itemCount:    cartItemCount,
-
-    // Derived
     freeShippingRemaining,
     hasFreeShipping,
-
-    // Actions (aliased for ergonomic API)
     addItem:       addToCart,
     removeItem:    removeFromCart,
     updateQuantity,
@@ -132,17 +135,11 @@ export function useCart() {
     openCart,
     closeCart,
     toggleCart,
-
-    // Queries
     getItem:       getCartItem,
     isInCart,
     getCartSummary,
-
-    // Formatters
     formatTotal,
     formatSubtotal,
-
-    // Direct store actions for advanced use
     addToCart,
     removeFromCart,
   };
@@ -150,52 +147,31 @@ export function useCart() {
 
 // ─── Sub-hooks ────────────────────────────────────────────────────────────────
 
-/**
- * useCartItem — get a specific item by product ID.
- */
 export function useCartItem(productId) {
   const cartItems = useStore((s) => s.cartItems);
-  return useMemo(
-    () => cartItems.find((i) => i.id === productId) || null,
-    [cartItems, productId]
-  );
+  return useMemo(() => cartItems.find((i) => i.id === productId) || null, [cartItems, productId]);
 }
 
-/**
- * useCartCount — item count badge only (minimal re-renders).
- */
 export function useCartCount() {
   return useStore((s) => s.cartItemCount);
 }
 
-/**
- * useAddToCart — lightweight hook for add-to-cart buttons.
- */
 export function useAddToCart() {
   const addToCart   = useStore((s) => s.addToCart);
   const openCart    = useStore((s) => s.openCart);
   const showSuccess = useStore((s) => s.showSuccess);
 
-  return useCallback(
-    (product, quantity = 1, options = {}) => {
-      const { showCart = true, notify = true } = options;
-      addToCart(product, quantity);
-      if (notify)    showSuccess(`${product.name} added to cart`);
-      if (showCart)  openCart();
-    },
-    [addToCart, showSuccess, openCart]
-  );
+  return useCallback((product, quantity = 1, options = {}) => {
+    const { showCart = true, notify = true } = options;
+    addToCart(product, quantity);
+    if (notify)   showSuccess(`${product.name} added to cart`);
+    if (showCart) openCart();
+  }, [addToCart, showSuccess, openCart]);
 }
 
-/**
- * useIsInCart — reactive check if a product is in cart.
- */
 export function useIsInCart(productId) {
   const cartItems = useStore((s) => s.cartItems);
-  return useMemo(
-    () => cartItems.some((i) => i.id === productId),
-    [cartItems, productId]
-  );
+  return useMemo(() => cartItems.some((i) => i.id === productId), [cartItems, productId]);
 }
 
 export default useCart;

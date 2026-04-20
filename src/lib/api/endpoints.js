@@ -1,113 +1,157 @@
 /**
  * src/lib/api/endpoints.js
- * API endpoint definitions for the Phase 2 API layer.
- * Mirrors apiEndpoints.js constants but exports path-only strings
- * so they work with the Axios client (which already knows the base URL).
+ * Integration Phase 1 — all backend URLs mapped to constants.
+ *
+ * What changed from the original:
+ *  - Trailing slashes added to every URL to match Django's APPEND_SLASH
+ *  - ORDERS.CREATE corrected to '/orders/create/' (was '/orders')
+ *  - USER.UPDATE_PROFILE corrected to '/user/profile/' (same endpoint, PUT method)
+ *  - USER.CHANGE_PASSWORD corrected to '/user/password/change/'
+ *  - CART endpoints corrected to match cart/urls.py path names
+ *  - AI endpoints added (chat, stream, generate-image, conversations, feedback)
+ *  - SEARCH endpoint added (Phase 9)
+ *  - CONTACT endpoint corrected
+ *  - All helper functions (slug, id) kept and verified against backend urls.py
  */
 
 export const ENDPOINTS = {
-  // ── Products ──────────────────────────────────────────────────────────────
-  PRODUCTS: {
-    LIST:            '/products',
-    DETAIL:          (slug)  => `/products/${slug}`,
-    CATEGORIES:      '/products/categories',
-    SEARCH:          '/products/search',
-    FEATURED:        '/products/featured',
-    RECOMMENDATIONS: '/products/recommendations',
-  },
 
-  // ── Cart ──────────────────────────────────────────────────────────────────
-  CART: {
-    GET:    '/cart',
-    ADD:    '/cart/add',
-    UPDATE: '/cart/update',
-    REMOVE: '/cart/remove',
-    CLEAR:  '/cart/clear',
-  },
-
-  // ── Orders ────────────────────────────────────────────────────────────────
-  ORDERS: {
-    CREATE: '/orders',
-    LIST:   '/orders',
-    DETAIL: (id) => `/orders/${id}`,
-    CANCEL: (id) => `/orders/${id}/cancel`,
-    TRACK:  (id) => `/orders/${id}/track`,
-  },
-
-  // ── Checkout ──────────────────────────────────────────────────────────────
-  CHECKOUT: {
-    INITIALIZE:        '/checkout/initialize',
-    CALCULATE_SHIPPING:'/checkout/shipping',
-    APPLY_COUPON:      '/checkout/coupon',
-    PROCESS_PAYMENT:   '/checkout/payment',
-  },
-
-  // ── Auth ──────────────────────────────────────────────────────────────────
+  // ── Auth (/api/v1/auth/) ──────────────────────────────────────────────────
+  // Matches accounts/urls.py exactly
   AUTH: {
-    LOGIN:           '/auth/login',
-    SIGNUP:          '/auth/signup',
-    LOGOUT:          '/auth/logout',
-    REFRESH:         '/auth/refresh',
-    FORGOT_PASSWORD: '/auth/forgot-password',
-    RESET_PASSWORD:  '/auth/reset-password',
-    VERIFY_EMAIL:    '/auth/verify-email',
+    LOGIN:           '/auth/login/',
+    SIGNUP:          '/auth/signup/',
+    LOGOUT:          '/auth/logout/',
+    REFRESH:         '/auth/refresh/',
+    FORGOT_PASSWORD: '/auth/forgot-password/',
+    RESET_PASSWORD:  '/auth/reset-password/',
+    VERIFY_EMAIL:    '/auth/verify-email/',
   },
 
-  // ── User ──────────────────────────────────────────────────────────────────
+  // ── User (/api/v1/user/) ──────────────────────────────────────────────────
+  // Matches accounts/user_urls.py exactly
   USER: {
-    PROFILE:         '/user/profile',
-    UPDATE_PROFILE:  '/user/profile/update',
-    CHANGE_PASSWORD: '/user/password/change',
-    PREFERENCES:     '/user/preferences',
+    PROFILE:         '/user/profile/',
+    UPDATE_PROFILE:  '/user/profile/',          // PUT to same endpoint
+    CHANGE_PASSWORD: '/user/password/change/',
+    PREFERENCES:     '/user/preferences/',
   },
 
-  // ── Chakan Tree ───────────────────────────────────────────────────────────
-  CHAKAN_TREE: {
-    INFO:      '/chakan-tree',
-    JOIN:      '/chakan-tree/join',
-    DASHBOARD: '/chakan-tree/dashboard',
-    REFERRALS: '/chakan-tree/referrals',
-    REWARDS:   '/chakan-tree/rewards',
-    IMPACT:    '/chakan-tree/impact',
+  // ── Products (/api/v1/products/) ──────────────────────────────────────────
+  // Matches products/urls.py
+  PRODUCTS: {
+    LIST:            '/products/',
+    DETAIL:          (slug)  => `/products/${slug}/`,
+    CATEGORIES:      '/products/categories/',
+    SEARCH:          '/products/search/',
+    FEATURED:        '/products/featured/',
+    RECOMMENDATIONS: '/products/recommendations/',
   },
 
-  // ── Subscriptions ─────────────────────────────────────────────────────────
+  // ── Cart (/api/v1/cart/) ──────────────────────────────────────────────────
+  // Matches cart/urls.py
+  CART: {
+    GET:      '/cart/',
+    ADD:      '/cart/add/',
+    UPDATE:   '/cart/update/',
+    REMOVE:   '/cart/remove/',
+    CLEAR:    '/cart/clear/',
+    VALIDATE: '/cart/validate/',
+  },
+
+  // ── Checkout (/api/v1/checkout/) ─────────────────────────────────────────
+  // Matches orders/checkout_urls.py
+  CHECKOUT: {
+    INITIALIZE:         '/checkout/initialize/',
+    CALCULATE_SHIPPING: '/checkout/shipping/',
+    APPLY_COUPON:       '/checkout/coupon/',
+    PROCESS_PAYMENT:    '/checkout/payment/',
+  },
+
+  // ── Orders (/api/v1/orders/) ──────────────────────────────────────────────
+  // Matches orders/urls.py
+  ORDERS: {
+    CREATE: '/orders/create/',
+    LIST:   '/orders/',
+    DETAIL: (id) => `/orders/${id}/`,
+    CANCEL: (id) => `/orders/${id}/cancel/`,
+    TRACK:  (id) => `/orders/${id}/track/`,
+  },
+
+  // ── Subscriptions (/api/v1/subscriptions/) ────────────────────────────────
+  // Matches subscriptions/urls.py
   SUBSCRIPTIONS: {
-    LIST:   '/subscriptions',
-    CREATE: '/subscriptions/create',
-    DETAIL: (id) => `/subscriptions/${id}`,
-    UPDATE: (id) => `/subscriptions/${id}/update`,
-    CANCEL: (id) => `/subscriptions/${id}/cancel`,
-    PAUSE:  (id) => `/subscriptions/${id}/pause`,
-    RESUME: (id) => `/subscriptions/${id}/resume`,
+    LIST:   '/subscriptions/',
+    CREATE: '/subscriptions/create/',
+    DETAIL: (id) => `/subscriptions/${id}/`,
+    UPDATE: (id) => `/subscriptions/${id}/update/`,
+    CANCEL: (id) => `/subscriptions/${id}/cancel/`,
+    PAUSE:  (id) => `/subscriptions/${id}/pause/`,
+    RESUME: (id) => `/subscriptions/${id}/resume/`,
   },
 
-  // ── Content ───────────────────────────────────────────────────────────────
+  // ── Reviews (/api/v1/reviews/) ────────────────────────────────────────────
+  // Matches reviews/urls.py
+  REVIEWS: {
+    LIST:   (slug) => `/reviews/product/${slug}/`,
+    CREATE: '/reviews/create/',
+    UPDATE: (id)   => `/reviews/${id}/update/`,
+    DELETE: (id)   => `/reviews/${id}/delete/`,
+  },
+
+  // ── Content (/api/v1/content/) ────────────────────────────────────────────
+  // Matches content/urls.py
   CONTENT: {
-    ORIGIN_STORY:   '/content/origin',
-    TEA_PICKERS:    '/content/tea-pickers',
-    IMPACT_METRICS: '/content/impact',
-    BREWING_GUIDES: '/content/brewing-guides',
+    ORIGIN_STORY:   '/content/origin/',
+    TEA_PICKERS:    '/content/tea-pickers/',
+    IMPACT_METRICS: '/content/impact/',
+    BREWING_GUIDES: '/content/brewing-guides/',
   },
 
-  // ── Newsletter ────────────────────────────────────────────────────────────
+  // ── Chakan Tree (/api/v1/chakan-tree/) ────────────────────────────────────
+  // Matches chakan_tree/urls.py
+  CHAKAN_TREE: {
+    INFO:      '/chakan-tree/',
+    JOIN:      '/chakan-tree/join/',
+    DASHBOARD: '/chakan-tree/dashboard/',
+    REFERRALS: '/chakan-tree/referrals/',
+    REWARDS:   '/chakan-tree/rewards/',
+    IMPACT:    '/chakan-tree/impact/',
+  },
+
+  // ── Newsletter (/api/v1/newsletter/) ─────────────────────────────────────
+  // Matches newsletter/urls.py
   NEWSLETTER: {
-    SUBSCRIBE:   '/newsletter/subscribe',
-    UNSUBSCRIBE: '/newsletter/unsubscribe',
+    SUBSCRIBE:   '/newsletter/subscribe/',
+    UNSUBSCRIBE: '/newsletter/unsubscribe/',
+  },
+
+  // ── AI / Chat (/api/v1/ai/) ───────────────────────────────────────────────
+  // Matches chatbot/urls.py
+  AI: {
+    CHAT:              '/ai/chat/',
+    STREAM:            '/ai/stream/',
+    GENERATE_IMAGE:    '/ai/generate-image/',
+    CONVERSATIONS:     '/ai/conversations/',
+    CONVERSATION:      (sessionId) => `/ai/conversations/${sessionId}/`,
+    DELETE_CONVERSATION: (sessionId) => `/ai/conversations/${sessionId}/delete/`,
+    FEEDBACK:          '/ai/feedback/',
+    HEALTH:            '/ai/health/',
+  },
+
+  // ── Search (/api/v1/search/) ──────────────────────────────────────────────
+  // Phase 9 — matches search/urls.py
+  SEARCH: {
+    QUERY: '/search/',
   },
 
   // ── Contact ───────────────────────────────────────────────────────────────
   CONTACT: {
-    SUBMIT: '/contact/submit',
+    SUBMIT: '/contact/submit/',
   },
 
-  // ── Reviews ───────────────────────────────────────────────────────────────
-  REVIEWS: {
-    LIST:   (slug)     => `/reviews/product/${slug}`,
-    CREATE: '/reviews/create',
-    UPDATE: (id)       => `/reviews/${id}/update`,
-    DELETE: (id)       => `/reviews/${id}/delete`,
-  },
+  // ── Health ────────────────────────────────────────────────────────────────
+  HEALTH: '/health/',
 };
 
 export default ENDPOINTS;

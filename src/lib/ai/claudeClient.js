@@ -1,51 +1,27 @@
 /**
- * claudeClient.js
- * Anthropic Claude API client for Chakancha Global
- * Handles all AI communication — streaming, single-shot, and conversation-aware requests
+ * src/lib/ai/claudeClient.js — Integration Phase 2
+ *
+ * What changed from the original:
+ *  - The Anthropic SDK is REMOVED entirely. The frontend never calls Anthropic directly.
+ *    All AI calls go through the Django backend (POST /api/v1/ai/stream/).
+ *  - streamMessage() now calls the backend SSE endpoint via createSSEStream()
+ *    from client.js, yielding the exact event types the backend emits:
+ *      token | products | image | done | error | metadata
+ *  - sendMessage() calls POST /api/v1/ai/chat/ (non-streaming fallback)
+ *  - chat() is the high-level wrapper used by aiSlice.js — unchanged API surface
+ *  - checkHealth() calls GET /api/v1/ai/health/ instead of pinging Anthropic
+ *  - ClaudeError kept for backward compatibility with error handling in aiSlice.js
+ *  - generateFollowUpSuggestions() kept — used as fallback when backend follow_ups is empty
+ *  - The session_id is automatically injected by createSSEStream() from client.js
+ *    (via X-Session-Id header and in the POST body)
  */
 
-import Anthropic from '@anthropic-ai/sdk';
-import { SYSTEM_PROMPTS, buildContextualSystemPrompt } from './prompts';
+import { api, createSSEStream, getSessionId, ApiError } from '@/lib/api/client';
+import { ENDPOINTS } from '@/lib/api/endpoints';
 import { detectIntent } from './intentDetection';
 import { buildConversationContext } from './conversationManager';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-export const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
-
-const MAX_TOKENS     = 1024;
-const TEMPERATURE    = 0.7;
-const MAX_RETRIES    = 2;
-const RETRY_DELAY_MS = 1000;
-
-// ─── Client singleton ─────────────────────────────────────────────────────────
-
-let _client = null;
-
-function getClient() {
-  if (_client) return _client;
-
-  const apiKey =
-    process.env.NEXT_PUBLIC_CLAUDE_API_KEY ||
-    process.env.ANTHROPIC_API_KEY;
-
-  if (!apiKey) {
-    throw new ClaudeError(
-      'MISSING_API_KEY',
-      'Anthropic API key is not configured. Please set ANTHROPIC_API_KEY in your environment.'
-    );
-  }
-
-  _client = new Anthropic({
-    apiKey,
-    // Required for browser-side streaming with Next.js
-    dangerouslyAllowBrowser: true,
-  });
-
-  return _client;
-}
-
-// ─── Error class ──────────────────────────────────────────────────────────────
+// ─── Error class (kept for backward compat) ───────────────────────────────────
 
 export class ClaudeError extends Error {
   constructor(code, message, details = null) {
@@ -56,232 +32,269 @@ export class ClaudeError extends Error {
   }
 }
 
-// ─── Retry helper ─────────────────────────────────────────────────────────────
+// ─── Message format converter ─────────────────────────────────────────────────
+// Internal format: { id, type: 'user'|'ai'|'system', content, ... }
+// Backend format:  { role: 'user'|'assistant', content }
 
-async function withRetry(fn, retries = MAX_RETRIES) {
-  let lastError;
-
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      return await fn();
-    } catch (err) {
-      lastError = err;
-
-      // Don't retry on client errors (4xx), only server errors (5xx) or network
-      if (err?.status && err.status >= 400 && err.status < 500) break;
-
-      if (attempt < retries) {
-        await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * (attempt + 1)));
-      }
-    }
-  }
-
-  throw lastError;
-}
-
-// ─── Message helpers ──────────────────────────────────────────────────────────
-
-/**
- * Convert internal message format → Anthropic API format
- * Internal: { id, type: 'user'|'ai'|'system', content, timestamp }
- * Anthropic: { role: 'user'|'assistant', content: string }
- */
-function toAnthropicMessages(messages) {
+function toBackendHistory(messages) {
   return messages
     .filter((m) => m.type === 'user' || m.type === 'ai')
     .map((m) => ({
       role:    m.type === 'user' ? 'user' : 'assistant',
-      content: m.content,
+      content: m.content || '',
     }));
 }
 
-// ─── Core: send a single message (non-streaming) ──────────────────────────────
+// ─── sendMessage — non-streaming (POST /api/v1/ai/chat/) ─────────────────────
 
 /**
- * Send a message and get a complete response.
- * Useful for intent detection and short non-streamed calls.
+ * Send a message and get a complete (non-streaming) response.
+ * Used as a fallback and for intent detection in tests.
  *
- * @param {string}   userMessage - The user's message
- * @param {Array}    history     - Previous messages in internal format
- * @param {object}   options     - { systemPrompt, maxTokens, temperature }
- * @returns {Promise<{content: string, intent: string|null, usage: object}>}
+ * @param {string} userMessage
+ * @param {Array}  history      - Internal message format
+ * @param {object} options      - { language, cartContext }
+ * @returns {Promise<{content, intent, followUps, usage}>}
  */
 export async function sendMessage(userMessage, history = [], options = {}) {
-  const client = getClient();
-
   const {
-    systemPrompt = SYSTEM_PROMPTS.base,
-    maxTokens    = MAX_TOKENS,
-    temperature  = TEMPERATURE,
+    language    = 'en',
+    cartContext  = {},
   } = options;
 
-  const messages = [
-    ...toAnthropicMessages(history),
-    { role: 'user', content: userMessage },
-  ];
+  try {
+    const data = await api.post(ENDPOINTS.AI.CHAT, {
+      message:              userMessage,
+      session_id:           getSessionId(),
+      language,
+      cart_context:         cartContext,
+      conversation_history: toBackendHistory(history),
+    });
 
-  const response = await withRetry(() =>
-    client.messages.create({
-      model:      CLAUDE_MODEL,
-      max_tokens: maxTokens,
-      system:     systemPrompt,
-      messages,
-      temperature,
-    })
-  );
-
-  const content = response.content?.[0]?.text ?? '';
-  const intent  = await detectIntent(userMessage, content);
-
-  return {
-    content,
-    intent,
-    usage: response.usage,
-    stopReason: response.stop_reason,
-  };
+    // Backend response: { response, intent, follow_ups, tokens, latency_ms, session_id }
+    return {
+      content:    data.response   || '',
+      intent:     data.intent     || 'general',
+      followUps:  data.follow_ups || [],
+      usage:      { total_tokens: data.tokens || 0 },
+      latency_ms: data.latency_ms || 0,
+    };
+  } catch (err) {
+    throw normalizeError(err);
+  }
 }
 
-// ─── Core: streaming message ──────────────────────────────────────────────────
+// ─── streamMessage — SSE streaming (POST /api/v1/ai/stream/) ─────────────────
 
 /**
- * Send a message and stream the response token-by-token.
+ * Send a message and stream the response token-by-token via SSE.
+ * This is the primary function used by aiSlice.js → chat().
  *
- * @param {string}   userMessage  - The user's message
- * @param {Array}    history      - Previous messages in internal format
- * @param {object}   callbacks    - { onToken, onComplete, onError }
- * @param {object}   options      - { systemPrompt, maxTokens, temperature, conversationContext }
+ * The backend emits these SSE event types:
+ *   {"type": "token",    "content": "Hello"}           → text delta
+ *   {"type": "products", "products": [...]}             → product cards
+ *   {"type": "image",    "url": "https://..."}          → generated image
+ *   {"type": "metadata", "intent": "...", ...}          → post-stream metadata
+ *   {"type": "done",     "session_id": "...", ...}      → stream complete
+ *   {"type": "error",    "message": "..."}              → stream error
+ *
+ * @param {string}   userMessage
+ * @param {Array}    history      - Internal message format
+ * @param {object}   callbacks    - { onToken, onProducts, onImage, onComplete, onError }
+ * @param {object}   options      - { language, cartContext, conversationContext }
  */
 export async function streamMessage(userMessage, history = [], callbacks = {}, options = {}) {
   const {
     onToken    = () => {},
+    onProducts = () => {},
+    onImage    = () => {},
     onComplete = () => {},
     onError    = () => {},
   } = callbacks;
 
   const {
-    maxTokens           = MAX_TOKENS,
-    temperature         = TEMPERATURE,
+    language           = 'en',
+    cartContext         = {},
     conversationContext = null,
   } = options;
 
-  const client = getClient();
+  const payload = {
+    message:              userMessage,
+    session_id:           getSessionId(),
+    language,
+    cart_context:         cartContext,
+    conversation_history: toBackendHistory(history),
+  };
 
-  // Build a contextual system prompt based on conversation history + current intent
-  const systemPrompt = buildContextualSystemPrompt(
-    history,
-    conversationContext
-  );
-
-  const messages = [
-    ...toAnthropicMessages(history),
-    { role: 'user', content: userMessage },
-  ];
+  let fullContent  = '';
+  let intent       = 'general';
+  let followUps    = [];
+  let totalTokens  = 0;
+  let generatedImage = null;
+  let products     = [];
 
   try {
-    let fullContent = '';
+    for await (const event of createSSEStream(payload)) {
+      switch (event.type) {
 
-    const stream = client.messages.stream({
-      model:      CLAUDE_MODEL,
-      max_tokens: maxTokens,
-      system:     systemPrompt,
-      messages,
-      temperature,
-    });
+        case 'token':
+          fullContent += event.content || '';
+          onToken(event.content || '', fullContent);
+          break;
 
-    // Stream tokens as they arrive
-    stream.on('text', (delta) => {
-      fullContent += delta;
-      onToken(delta, fullContent);
-    });
+        case 'products':
+          products = event.products || [];
+          onProducts(products);
+          break;
 
-    // Wait for stream to complete
-    const finalMessage = await stream.finalMessage();
+        case 'image':
+          generatedImage = event.url;
+          onImage(event.url);
+          break;
 
-    const intent    = await detectIntent(userMessage, fullContent);
-    const followUps = generateFollowUpSuggestions(intent, fullContent);
+        case 'metadata':
+          intent      = event.intent      || intent;
+          followUps   = event.follow_ups  || [];
+          totalTokens = event.tokens_used || 0;
+          break;
 
+        case 'done':
+          // done carries the final metadata too
+          intent    = event.intent      || intent;
+          followUps = event.follow_ups  || followUps;
+          onComplete({
+            content:        fullContent,
+            intent,
+            followUps,
+            products,
+            generatedImage,
+            usage:          { total_tokens: event.tokens || totalTokens },
+            latency_ms:     event.latency_ms || 0,
+            session_id:     event.session_id,
+            message_id:     event.message_id,
+          });
+          return { content: fullContent, intent, followUps, products, generatedImage };
+
+        case 'error':
+          const streamErr = new ClaudeError('STREAM_ERROR', event.message || 'Stream error');
+          onError(streamErr);
+          throw streamErr;
+
+        default:
+          break;
+      }
+    }
+
+    // Stream ended without 'done' event — treat as complete
     onComplete({
-      content:     fullContent,
+      content:        fullContent,
       intent,
-      followUps,
-      usage:       finalMessage.usage,
-      stopReason:  finalMessage.stop_reason,
+      followUps:      followUps.length ? followUps : generateFollowUpSuggestions(intent),
+      products,
+      generatedImage,
+      usage:          { total_tokens: totalTokens },
     });
 
-    return { content: fullContent, intent, followUps };
+    return { content: fullContent, intent, followUps, products, generatedImage };
 
   } catch (err) {
-    const claudeError = normalizeError(err);
-    onError(claudeError);
-    throw claudeError;
+    if (err instanceof ClaudeError) {
+      onError(err);
+      throw err;
+    }
+    const normalized = normalizeError(err);
+    onError(normalized);
+    throw normalized;
   }
 }
 
-// ─── Conversational wrapper ───────────────────────────────────────────────────
+// ─── chat — high-level wrapper used by aiSlice.js ────────────────────────────
 
 /**
- * High-level function used by the AI store.
- * Builds full context, streams, handles Chakan Tree signals.
+ * High-level conversational function.
+ * Builds context and delegates to streamMessage.
+ * API surface identical to the original — aiSlice.js calls this unchanged.
  *
  * @param {string} userMessage
- * @param {Array}  history
- * @param {object} callbacks   - { onToken, onComplete, onError }
- * @param {object} metadata    - { conversationId, userId }
+ * @param {Array}  history        - Internal message format
+ * @param {object} callbacks      - { onToken, onProducts, onImage, onComplete, onError }
+ * @param {object} metadata       - { conversationId, userId, cartContext, language }
  */
 export async function chat(userMessage, history = [], callbacks = {}, metadata = {}) {
   const conversationContext = buildConversationContext(history);
 
   return streamMessage(userMessage, history, callbacks, {
     conversationContext,
-    ...metadata,
+    language:    metadata.language    || 'en',
+    cartContext: metadata.cartContext || {},
   });
 }
 
-// ─── Follow-up suggestions ────────────────────────────────────────────────────
+// ─── checkHealth ─────────────────────────────────────────────────────────────
 
 /**
- * Generate contextual follow-up questions based on detected intent.
+ * Verify the backend AI endpoint is reachable.
+ * Calls GET /api/v1/ai/health/ — much cheaper than a real message.
  */
-function generateFollowUpSuggestions(intent, _responseContent) {
-  const suggestions = {
-    discovery: [
-      'Tell me more about the tasting notes',
-      'How do I brew this tea perfectly?',
-      'What makes Nandi Hills special for growing tea?',
-    ],
-    origin: [
-      'How is the tea harvested?',
-      'What elevation are the tea gardens at?',
-      'Can I trace my specific batch?',
-    ],
-    impact: [
-      'How does Chakan Tree work?',
-      'What percentage goes to tea pickers?',
-      'How can I support the community?',
-    ],
-    brewing: [
-      'What water temperature works best?',
-      'Can I reuse the tea leaves?',
-      'What food pairs well with this tea?',
-    ],
-    products: [
-      'What are your shipping options?',
-      'Do you offer subscriptions?',
-      'Tell me about the black tea',
-    ],
-    chakanTree: [
-      'How do I join Chakan Tree?',
-      'What rewards do participants get?',
-      'How does the referral system work?',
-    ],
-    general: [
-      'Tell me about your teas',
-      'Where does Chakancha tea come from?',
-      'How does Chakancha support tea pickers?',
-    ],
-  };
+export async function checkHealth() {
+  try {
+    await api.get(ENDPOINTS.AI.HEALTH);
+    return { healthy: true };
+  } catch (err) {
+    return { healthy: false, error: normalizeError(err) };
+  }
+}
 
-  return (suggestions[intent] || suggestions.general).slice(0, 3);
+// ─── generateImage ───────────────────────────────────────────────────────────
+
+/**
+ * Request a DALL-E 3 image from the backend.
+ * POST /api/v1/ai/generate-image/
+ *
+ * @param {string} prompt        - Product name or mood description
+ * @param {string} [style]       - 'product_photography' | 'lifestyle'
+ * @param {string} [productSlug] - Used for backend Redis caching
+ * @returns {Promise<{image_url, prompt_used, cached, model}>}
+ */
+export async function generateImage(prompt, style = 'product_photography', productSlug = null) {
+  return api.post(ENDPOINTS.AI.GENERATE_IMAGE, {
+    prompt,
+    style,
+    ...(productSlug && { product_slug: productSlug }),
+  });
+}
+
+// ─── sendFeedback ─────────────────────────────────────────────────────────────
+
+/**
+ * Send thumbs up/down feedback on a message.
+ * POST /api/v1/ai/feedback/
+ *
+ * @param {number} messageId - Backend message DB id
+ * @param {number} rating    - +1 or -1
+ * @param {string} [comment]
+ */
+export async function sendFeedback(messageId, rating, comment = '') {
+  return api.post(ENDPOINTS.AI.FEEDBACK, {
+    message: messageId,
+    rating,
+    comment,
+  });
+}
+
+// ─── Follow-up suggestions (client-side fallback) ────────────────────────────
+
+function generateFollowUpSuggestions(intent) {
+  const map = {
+    discovery:   ['Tell me more about the tasting notes', 'How do I brew this?', 'What makes Nandi Hills special?'],
+    origin:      ['How is the tea harvested?', 'What elevation are the gardens?', 'Who picks the tea?'],
+    impact:      ['How does Chakan Tree work?', 'What percentage goes to pickers?', 'How can I support the community?'],
+    brewing:     ['What water temperature?', 'Can I reuse the leaves?', 'What food pairs well?'],
+    products:    ['What are the shipping options?', 'Do you offer subscriptions?', 'Tell me about the black tea'],
+    chakanTree:  ['How do I join Chakan Tree?', 'What rewards do participants get?', 'How does referral work?'],
+    general:     ['Tell me about your teas', 'Where does Chakancha come from?', 'How does Chakancha support pickers?'],
+  };
+  return (map[intent] || map.general).slice(0, 3);
 }
 
 // ─── Error normalizer ─────────────────────────────────────────────────────────
@@ -289,47 +302,23 @@ function generateFollowUpSuggestions(intent, _responseContent) {
 function normalizeError(err) {
   if (err instanceof ClaudeError) return err;
 
-  // Anthropic SDK errors
-  if (err?.status) {
-    const map = {
-      400: ['INVALID_REQUEST',   'Invalid request sent to Claude API.'],
-      401: ['AUTH_ERROR',        'Claude API authentication failed. Check your API key.'],
-      403: ['PERMISSION_DENIED', 'Permission denied by Claude API.'],
-      429: ['RATE_LIMIT',        'Claude API rate limit exceeded. Please try again shortly.'],
-      500: ['SERVER_ERROR',      'Claude API server error. Please try again.'],
-      529: ['OVERLOADED',        'Claude API is temporarily overloaded. Please try again.'],
+  if (err instanceof ApiError) {
+    const codeMap = {
+      401: 'AUTH_ERROR',
+      403: 'PERMISSION_DENIED',
+      429: 'RATE_LIMIT',
+      500: 'SERVER_ERROR',
+      503: 'OVERLOADED',
     };
-
-    const [code, message] = map[err.status] || ['API_ERROR', err.message];
-    return new ClaudeError(code, message, { status: err.status });
+    const code = codeMap[err.status] || 'API_ERROR';
+    return new ClaudeError(code, err.message, { status: err.status });
   }
 
-  // Network errors
-  if (err?.code === 'ECONNREFUSED' || err?.message?.includes('fetch')) {
+  if (!err?.status && err?.message?.toLowerCase().includes('fetch')) {
     return new ClaudeError('NETWORK_ERROR', 'Network error — please check your connection.');
   }
 
   return new ClaudeError('UNKNOWN_ERROR', err?.message || 'An unexpected error occurred.');
 }
 
-// ─── Health check ─────────────────────────────────────────────────────────────
-
-/**
- * Quick sanity check — send a 1-token ping to verify the API key works.
- * Used by the ConversationView on mount in development.
- */
-export async function checkHealth() {
-  try {
-    const client = getClient();
-    await client.messages.create({
-      model:      CLAUDE_MODEL,
-      max_tokens: 1,
-      messages:   [{ role: 'user', content: 'hi' }],
-    });
-    return { healthy: true };
-  } catch (err) {
-    return { healthy: false, error: normalizeError(err) };
-  }
-}
-
-export default { sendMessage, streamMessage, chat, checkHealth, ClaudeError };
+export default { sendMessage, streamMessage, chat, checkHealth, generateImage, sendFeedback, ClaudeError };

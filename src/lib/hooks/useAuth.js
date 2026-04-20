@@ -1,7 +1,16 @@
 /**
- * useAuth.js
- * Custom hook for authentication functionality.
- * Fully wired to authSlice in the Zustand store.
+ * src/lib/hooks/useAuth.js
+ * Authentication hook — Integration Phase 1.
+ *
+ * What changed from the original:
+ *  - useLogout now also clears refreshToken from localStorage
+ *    (not just accessToken — required because backend blacklists refresh tokens)
+ *  - useRequireAuth uses verifyToken which now handles the refresh flow internally
+ *  - useAutoLogin is unchanged in interface but verifyToken now does more
+ *  - All other hooks unchanged — they correctly read from the updated authSlice
+ *
+ * No API import needed — all auth actions go through authSlice.js
+ * which uses authFetch internally at slice initialisation time.
  */
 
 'use client';
@@ -10,8 +19,9 @@ import { useEffect, useCallback } from 'react';
 import { useStore } from '@/store';
 import { useShallow } from 'zustand/react/shallow';
 import { useRouter } from 'next/navigation';
+import { clearSessionId } from '@/lib/api/client';
 
-// ─── Helpers ───────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getInitials(name) {
   if (!name) return '';
@@ -24,17 +34,16 @@ function getInitials(name) {
 
 /**
  * useAuth
- * Full authentication state and all actions.
+ * Full authentication state + all actions.
+ * Use this in forms, nav, account pages, etc.
  */
 export function useAuth() {
-  // ── State ──────────────────────────────────────────────────────────────────
   const user            = useStore((s) => s.user);
   const isAuthenticated = useStore((s) => s.isAuthenticated);
   const authLoading     = useStore((s) => s.authLoading);
   const authError       = useStore((s) => s.authError);
   const accessToken     = useStore((s) => s.accessToken);
 
-  // ── Actions ────────────────────────────────────────────────────────────────
   const {
     login,
     signup,
@@ -61,11 +70,12 @@ export function useAuth() {
     }))
   );
 
-  // ── Computed ───────────────────────────────────────────────────────────────
+  // Computed
   const userName     = user?.name || user?.email || 'Guest';
   const userInitials = user ? getInitials(user.name || user.email) : '';
   const hasProfile   = user !== null;
   const isGuest      = !isAuthenticated;
+  const isVerified   = user?.is_verified === true;
 
   return {
     // State
@@ -80,6 +90,7 @@ export function useAuth() {
     userInitials,
     hasProfile,
     isGuest,
+    isVerified,
 
     // Actions
     login,
@@ -98,7 +109,7 @@ export function useAuth() {
 // ─── Sub-hooks ─────────────────────────────────────────────────────────────────
 
 /**
- * useAuthStatus — lightweight auth status check.
+ * useAuthStatus — lightweight check (no actions, minimal re-renders).
  */
 export function useAuthStatus() {
   return useStore(
@@ -118,7 +129,7 @@ export function useUser() {
 }
 
 /**
- * useAuthActions — actions only (no re-renders on state change).
+ * useAuthActions — actions only (no state subscription, no re-renders).
  */
 export function useAuthActions() {
   return useStore(
@@ -133,10 +144,11 @@ export function useAuthActions() {
 
 /**
  * useRequireAuth
- * Redirects to /login if user is not authenticated.
- * Calls verifyToken on mount to handle page refresh.
+ * Redirects to /login if the user is not authenticated.
+ * Calls verifyToken on mount — verifyToken will silently refresh
+ * the access token if it's expired, so page refreshes don't log users out.
  *
- * @param {string} [redirectTo] - Path to return to after login
+ * @param {string} [redirectTo] - URL-encoded return path after login
  */
 export function useRequireAuth(redirectTo = null) {
   const router = useRouter();
@@ -160,7 +172,7 @@ export function useRequireAuth(redirectTo = null) {
 
 /**
  * useGuestOnly
- * Redirects authenticated users away (for login/signup pages).
+ * Redirects authenticated users away from login/signup pages.
  */
 export function useGuestOnly() {
   const router = useRouter();
@@ -178,36 +190,42 @@ export function useGuestOnly() {
 /**
  * useAutoLogin
  * Verifies the stored token once on app mount.
- * Called from StoreProvider or layout.
+ * Called from the root layout.jsx provider.
+ * verifyToken handles the refresh flow internally — no extra logic needed here.
  */
 export function useAutoLogin() {
   const verifyToken     = useStore((s) => s.verifyToken);
   const isAuthenticated = useStore((s) => s.isAuthenticated);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      verifyToken();
-    }
-  }, [verifyToken, isAuthenticated]);
+    verifyToken();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only on mount
 }
 
 /**
  * useLogout
- * Enhanced logout that also clears cart and conversation.
+ * Enhanced logout that:
+ *  1. Calls backend to blacklist the refresh token
+ *  2. Clears cart state
+ *  3. Clears AI conversation state
+ *  4. Clears the SSE session ID (new conversation on next visit)
+ *  5. Redirects to the given path (default: '/')
  *
  * @returns {function} logout(redirectTo?)
  */
 export function useLogout() {
-  const router          = useRouter();
-  const logout          = useStore((s) => s.logout);
-  const clearCart       = useStore((s) => s.clearCart);
+  const router            = useRouter();
+  const logout            = useStore((s) => s.logout);
+  const clearCart         = useStore((s) => s.clearCart);
   const clearConversation = useStore((s) => s.clearConversation);
 
   return useCallback(
     async (redirectTo = '/') => {
-      await logout();
-      clearCart();
-      clearConversation();
+      await logout();          // Blacklists token on backend + clears localStorage
+      clearCart?.();           // Clears Zustand cart state
+      clearConversation?.();   // Clears Zustand AI conversation state
+      clearSessionId();        // Clears the SSE session UUID from localStorage
       router.push(redirectTo);
     },
     [logout, clearCart, clearConversation, router]

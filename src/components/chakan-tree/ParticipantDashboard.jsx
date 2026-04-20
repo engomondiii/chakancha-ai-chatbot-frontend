@@ -1,6 +1,15 @@
 /**
- * ParticipantDashboard.jsx
- * Full Chakan Tree participant dashboard — referrals list, rewards, impact.
+ * src/components/chakan-tree/ParticipantDashboard.jsx — Integration Phase 4
+ *
+ * What changed from the original:
+ *  - getDashboard() and getImpact() now come from the updated chakanTree.js
+ *    which hits real backend endpoints (GET /api/v1/chakan-tree/dashboard/ and
+ *    GET /api/v1/chakan-tree/impact/)
+ *  - Dashboard response shape updated: dashboard.rewards (not dashboard.reward)
+ *    since normalised by chakanTree.js
+ *  - referrals list uses normalized field names: r.name, r.purchases, r.valueGenerated
+ *  - referralLink built from membership.referralCode (camelCase, from normalizeM embership())
+ *  - Everything else unchanged
  */
 
 'use client';
@@ -22,12 +31,17 @@ export function ParticipantDashboard() {
 
   useEffect(() => {
     Promise.all([getDashboard(), getImpact()])
-      .then(([d, i]) => { setDashboard(d); setImpact(i); })
+      .then(([d, i]) => {
+        setDashboard(d);
+        setImpact(i);
+      })
       .finally(() => setLoading(false));
   }, []);
 
-  const referralLink = membership?.referralCode
-    ? `${process.env.NEXT_PUBLIC_SITE_URL || 'https://chakancha.com'}?ref=${membership.referralCode}`
+  // referralCode comes from normalized membership (camelCase)
+  const referralCode = membership?.referralCode || null;
+  const referralLink = referralCode
+    ? `${process.env.NEXT_PUBLIC_SITE_URL || 'https://chakancha.com'}?ref=${referralCode}`
     : null;
 
   if (loading) return (
@@ -37,19 +51,24 @@ export function ParticipantDashboard() {
     </div>
   );
 
+  // dashboard.referrals from getDashboard() are already normalized
+  const referrals = dashboard?.referrals || [];
+  // dashboard.rewards from getDashboard() are already normalized
+  const rewards   = dashboard?.rewards   || null;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-2xl)' }}>
 
       {/* Referral code */}
-      {membership?.referralCode && (
-        <ReferralCode code={membership.referralCode} referralLink={referralLink} />
+      {referralCode && (
+        <ReferralCode code={referralCode} referralLink={referralLink} />
       )}
 
       {/* Rewards */}
-      {dashboard?.rewards && (
+      {rewards && (
         <section>
           <h3 style={sectionTitle}><TrendingUp size={16} color="var(--color-tea-green)" /> Your Rewards</h3>
-          <RewardsSummary rewards={dashboard.rewards} />
+          <RewardsSummary rewards={rewards} />
         </section>
       )}
 
@@ -62,23 +81,47 @@ export function ParticipantDashboard() {
       )}
 
       {/* Referrals list */}
-      {dashboard?.referrals?.length > 0 && (
+      {referrals.length > 0 && (
         <section>
-          <h3 style={sectionTitle}><Users size={16} color="var(--color-tea-green)" /> People You've Invited ({dashboard.referrals.length})</h3>
+          <h3 style={sectionTitle}>
+            <Users size={16} color="var(--color-tea-green)" />
+            People You've Invited ({referrals.length})
+          </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)' }}>
-            {dashboard.referrals.map((r) => (
-              <div key={r.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px var(--spacing-md)', backgroundColor: 'white', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}>
+            {referrals.map((r) => (
+              <div key={r.id} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '12px var(--spacing-md)', backgroundColor: 'white',
+                border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)',
+              }}>
                 <div>
-                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, color: 'var(--color-earth-brown)', margin: 0 }}>{r.name}</p>
-                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--color-text-secondary)', margin: 0 }}>{r.purchases} purchase{r.purchases !== 1 ? 's' : ''}</p>
+                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, color: 'var(--color-earth-brown)', margin: 0 }}>
+                    {r.name}
+                  </p>
+                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--color-text-secondary)', margin: 0 }}>
+                    {r.purchases} purchase{r.purchases !== 1 ? 's' : ''}
+                  </p>
                 </div>
                 <span style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 700, color: 'var(--color-tea-green)' }}>
-                  +${r.valueGenerated?.toFixed(2)}
+                  +${(r.valueGenerated || 0).toFixed(2)}
                 </span>
               </div>
             ))}
           </div>
         </section>
+      )}
+
+      {/* Empty state when no referrals yet */}
+      {referrals.length === 0 && !loading && (
+        <div style={{
+          textAlign: 'center', padding: 'var(--spacing-2xl)',
+          backgroundColor: 'var(--color-warm-cream)',
+          border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)',
+        }}>
+          <p style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: 'var(--color-text-secondary)', margin: 0 }}>
+            No referrals yet. Share your code to start building your impact.
+          </p>
+        </div>
       )}
     </div>
   );

@@ -1,7 +1,12 @@
 /**
- * ConversationView.jsx
- * The complete AI conversation interface for /chat page.
- * Reads ?q= query param, manages message list, input, and suggestion rendering.
+ * src/components/ai/ConversationView.jsx — Integration Phase 2
+ *
+ * What changed from the original:
+ *  - Uses productCards from aiSlice (backend SSE 'products' event)
+ *    instead of useFeaturedProducts() hook for suggestion cards
+ *  - SuggestionCards receives both backend productCards and followUps
+ *  - Error display improved to show ClaudeError codes from backend
+ *  - Everything else (scroll, clear, empty state) unchanged
  */
 
 'use client';
@@ -10,7 +15,6 @@ import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Leaf, RotateCcw, Trash2, ChevronDown } from 'lucide-react';
 import { useAI } from '@/lib/hooks/useAI';
-import { useFeaturedProducts } from '@/lib/hooks/useProducts';
 import { MessageBubble }   from './MessageBubble';
 import { TypingIndicator } from './TypingIndicator';
 import { SuggestionCards } from './SuggestionCards';
@@ -22,34 +26,26 @@ import styles from './ConversationView.module.css';
 
 function EmptyState({ onChipClick }) {
   const chips = [
-    { text: 'Find my tea',     prompt: 'Help me find the perfect tea for my taste preferences' },
-    { text: 'Origin story',    prompt: 'Tell me about Nandi Hills and where Chakancha tea comes from' },
-    { text: 'Living wage',     prompt: 'How does Chakancha ensure living wages for tea pickers?' },
-    { text: 'Brewing tips',    prompt: 'What are the best practices for brewing premium tea?' },
-    { text: 'What teas?',      prompt: 'What teas do you currently have available?' },
-    { text: 'Chakan Tree',     prompt: 'What is the Chakan Tree and how does it work?' },
+    { text: 'Find my tea',    prompt: 'Help me find the perfect tea for my taste preferences' },
+    { text: 'Origin story',   prompt: 'Tell me about Nandi Hills and where Chakancha tea comes from' },
+    { text: 'Living wage',    prompt: 'How does Chakancha ensure living wages for tea pickers?' },
+    { text: 'Brewing tips',   prompt: 'What are the best practices for brewing premium tea?' },
+    { text: 'What teas?',     prompt: 'What teas do you currently have available?' },
+    { text: 'Chakan Tree',    prompt: 'What is the Chakan Tree and how does it work?' },
   ];
 
   return (
     <div className={styles.emptyState}>
-      {/* Logo mark */}
       <div className={styles.emptyMark}>
         <Leaf size={28} color="var(--color-tea-green)" />
       </div>
-
       <h2 className={styles.emptyTitle}>Ask anything about Chakancha</h2>
       <p className={styles.emptySubtitle}>
         Tea discovery · Origin · Impact · Brewing · Orders
       </p>
-
       <div className={styles.emptyChips}>
         {chips.map((c) => (
-          <button
-            key={c.text}
-            className={styles.emptyChip}
-            onClick={() => onChipClick(c.prompt)}
-            type="button"
-          >
+          <button key={c.text} className={styles.emptyChip} onClick={() => onChipClick(c.prompt)} type="button">
             {c.text}
           </button>
         ))}
@@ -58,7 +54,7 @@ function EmptyState({ onChipClick }) {
   );
 }
 
-// ─── Scroll-to-bottom button ──────────────────────────────────────────────────
+// ─── Scroll button ────────────────────────────────────────────────────────────
 
 function ScrollToBottomBtn({ onClick, visible }) {
   return (
@@ -85,6 +81,7 @@ export function ConversationView() {
     suggestedFollowUps,
     error,
     hasMessages,
+    productCards,       // Phase 2: from SSE 'products' event
     sendMessage,
     clearConversation,
     retryLastMessage,
@@ -94,54 +91,41 @@ export function ConversationView() {
     showProductSuggestions,
   } = useAI();
 
-  const { products: featuredProducts } = useFeaturedProducts(3);
-
-  // ── Refs ────────────────────────────────────────────────────────────────────
-  const messagesEndRef    = useRef(null);
-  const messagesAreaRef   = useRef(null);
-  const hasInitialised    = useRef(false);
+  const messagesEndRef  = useRef(null);
+  const messagesAreaRef = useRef(null);
+  const hasInitialised  = useRef(false);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [confirmClear,  setConfirmClear]  = useState(false);
 
-  // ── Initialise from ?q= query param ────────────────────────────────────────
+  // ── Init from ?q= ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (hasInitialised.current) return;
     hasInitialised.current = true;
-
     const query = searchParams?.get('q');
-    if (query) {
-      initFromQuery(decodeURIComponent(query));
-    }
+    if (query) initFromQuery(decodeURIComponent(query));
   }, [searchParams, initFromQuery]);
 
-  // ── Auto-scroll to bottom ───────────────────────────────────────────────────
+  // ── Auto-scroll ────────────────────────────────────────────────────────────
   const scrollToBottom = useCallback((smooth = true) => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: smooth ? 'smooth' : 'instant',
-    });
+    messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'instant' });
   }, []);
 
   useEffect(() => {
-    if (isStreaming || messages.length > 0) {
-      scrollToBottom();
-    }
+    if (isStreaming || messages.length > 0) scrollToBottom();
   }, [messages.length, isStreaming, scrollToBottom]);
 
   // ── Scroll button visibility ────────────────────────────────────────────────
   useEffect(() => {
     const el = messagesAreaRef.current;
     if (!el) return;
-
     const onScroll = () => {
-      const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-      setShowScrollBtn(distFromBottom > 200);
+      setShowScrollBtn(el.scrollHeight - el.scrollTop - el.clientHeight > 200);
     };
-
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
   }, []);
 
-  // ── Clear conversation with confirm ────────────────────────────────────────
+  // ── Clear with confirm ─────────────────────────────────────────────────────
   const handleClear = () => {
     if (confirmClear) {
       clearConversation();
@@ -152,18 +136,16 @@ export function ConversationView() {
     }
   };
 
-  // ── Determine if we should show product suggestions ────────────────────────
+  // ── Show suggestion cards ─────────────────────────────────────────────────
   const lastAIMessage = [...messages].reverse().find((m) => m.type === 'ai' && !m.isStreaming);
+  // Phase 2: show if backend sent product cards OR intent warrants it
   const showSuggestions =
-    lastAIMessage &&
-    shouldShowProductSuggestions(currentIntent, messages) &&
-    featuredProducts.length > 0;
+    lastAIMessage && (productCards.length > 0 || showProductSuggestions);
 
-  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className={styles.container}>
 
-      {/* ── Top bar ──────────────────────────────────────────────────────── */}
+      {/* Top bar */}
       <div className={styles.topBar}>
         <div className={styles.topBarLeft}>
           <Leaf size={16} color="var(--color-tea-green)" />
@@ -172,7 +154,6 @@ export function ConversationView() {
             <span className={styles.intentBadge}>{currentIntent}</span>
           )}
         </div>
-
         {hasMessages && (
           <div className={styles.topBarActions}>
             <button
@@ -188,7 +169,7 @@ export function ConversationView() {
         )}
       </div>
 
-      {/* ── Messages area ────────────────────────────────────────────────── */}
+      {/* Messages area */}
       <div className={styles.messagesArea} ref={messagesAreaRef}>
         {!hasMessages ? (
           <EmptyState onChipClick={sendMessage} />
@@ -207,7 +188,7 @@ export function ConversationView() {
               );
             })}
 
-            {/* Typing indicator — shown when waiting for first token */}
+            {/* Typing indicator — only when waiting for first token */}
             {isStreaming && messages[messages.length - 1]?.content === '' && (
               <TypingIndicator />
             )}
@@ -215,48 +196,39 @@ export function ConversationView() {
             {/* Product + follow-up suggestions */}
             {showSuggestions && (
               <SuggestionCards
-                products={featuredProducts.slice(0, 2)}
+                products={productCards}
                 followUps={suggestedFollowUps}
                 onFollowUp={selectFollowUp}
               />
             )}
 
-            {/* Error message */}
+            {/* Error bar */}
             {error && !isStreaming && (
               <div className={styles.errorBar}>
                 <span className={styles.errorText}>{error}</span>
-                <button
-                  className={styles.retryBtn}
-                  onClick={retryLastMessage}
-                  type="button"
-                >
+                <button className={styles.retryBtn} onClick={retryLastMessage} type="button">
                   <RotateCcw size={13} /> Retry
                 </button>
               </div>
             )}
 
-            {/* Scroll anchor */}
             <div ref={messagesEndRef} style={{ height: 1 }} />
           </div>
         )}
       </div>
 
-      {/* Scroll-to-bottom FAB */}
-      <ScrollToBottomBtn
-        visible={showScrollBtn}
-        onClick={() => scrollToBottom()}
-      />
+      <ScrollToBottomBtn visible={showScrollBtn} onClick={() => scrollToBottom()} />
 
-      {/* ── Input bar ────────────────────────────────────────────────────── */}
+      {/* Input bar */}
       <div className={styles.inputBar}>
         <div className={styles.inputWrap}>
           <PromptInput
             onSubmit={sendMessage}
             placeholder="Ask about our teas, origin, impact…"
+            isLoading={isStreaming}
           />
         </div>
       </div>
-
     </div>
   );
 }

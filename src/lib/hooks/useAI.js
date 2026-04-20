@@ -1,8 +1,12 @@
 /**
- * useAI.js
- * Custom hook for AI conversation functionality.
- * Fully wired to the Zustand store created in Phase 2.
- * Replaces the Phase 1 stub that referenced @/store before it existed.
+ * src/lib/hooks/useAI.js — Integration Phase 2
+ *
+ * What changed from the original:
+ *  - productCards and generatedImages added to state reads (from aiSlice)
+ *  - sendFeedback added to actions
+ *  - showProductSuggestions now also checks productCards from the backend
+ *    (not just intent-based detection)
+ *  - Everything else unchanged
  */
 
 'use client';
@@ -14,22 +18,18 @@ import { assessChakanTreeReadiness, shouldShowProductSuggestions } from '@/lib/a
 
 // ─── Primary hook ──────────────────────────────────────────────────────────────
 
-/**
- * useAI
- * Full-featured hook for the AI conversation.
- * Provides state, actions, computed values, and UI helpers.
- */
 export function useAI() {
-  // ── State (individual selectors — always stable references) ──────────────
-  const messages               = useStore((s) => s.messages);
-  const isStreaming            = useStore((s) => s.isStreaming);
-  const currentStreamingMessage = useStore((s) => s.currentStreamingMessage);
-  const currentIntent          = useStore((s) => s.currentIntent);
-  const suggestedFollowUps     = useStore((s) => s.suggestedFollowUps);
-  const conversationId         = useStore((s) => s.conversationId);
-  const error                  = useStore((s) => s.error);
+  const messages                = useStore((s) => s.messages);
+  const isStreaming             = useStore((s) => s.isStreaming);
+  const currentStreamingMessage  = useStore((s) => s.currentStreamingMessage);
+  const currentIntent           = useStore((s) => s.currentIntent);
+  const suggestedFollowUps      = useStore((s) => s.suggestedFollowUps);
+  const conversationId          = useStore((s) => s.conversationId);
+  const error                   = useStore((s) => s.error);
+  // Phase 2 additions
+  const productCards            = useStore((s) => s.productCards    || []);
+  const generatedImages         = useStore((s) => s.generatedImages || {});
 
-  // ── Actions (grouped with useShallow — prevents new object each render) ──
   const {
     sendMessage,
     clearConversation,
@@ -40,6 +40,7 @@ export function useAI() {
     editMessage,
     getConversationContext,
     initFromQuery,
+    sendFeedback,
   } = useStore(
     useShallow((s) => ({
       sendMessage:            s.sendMessage,
@@ -51,17 +52,15 @@ export function useAI() {
       editMessage:            s.editMessage,
       getConversationContext: s.getConversationContext,
       initFromQuery:          s.initFromQuery,
+      sendFeedback:           s.sendFeedback,
     }))
   );
 
-  // ── Computed values ────────────────────────────────────────────────────────
   const hasMessages      = messages.length > 0;
   const lastMessage      = messages[messages.length - 1] ?? null;
   const lastUserMessage  = [...messages].reverse().find((m) => m.type === 'user') ?? null;
   const lastAIMessage    = [...messages].reverse().find((m) => m.type === 'ai') ?? null;
   const userMessageCount = messages.filter((m) => m.type === 'user').length;
-
-  // ── Helper callbacks ───────────────────────────────────────────────────────
 
   const canRetry = useCallback(
     () => !isStreaming && error !== null,
@@ -91,17 +90,15 @@ export function useAI() {
     [messages, error, isStreaming, conversationId]
   );
 
-  // ── Chakan Tree readiness (computed from intent history) ──────────────────
   const chakanTreeReadiness = useCallback(
     () => assessChakanTreeReadiness(messages, currentIntent),
     [messages, currentIntent]
   );
 
-  // ── Product suggestion visibility ─────────────────────────────────────────
-  const showProductSuggestions = shouldShowProductSuggestions(
-    currentIntent,
-    messages
-  );
+  // Phase 2: show product suggestions if backend sent product cards OR intent signals it
+  const showProductSuggestions =
+    productCards.length > 0 ||
+    shouldShowProductSuggestions(currentIntent, messages);
 
   return {
     // State
@@ -112,6 +109,8 @@ export function useAI() {
     suggestedFollowUps,
     conversationId,
     error,
+    productCards,
+    generatedImages,
 
     // Computed
     hasMessages,
@@ -130,6 +129,7 @@ export function useAI() {
     deleteMessage,
     editMessage,
     initFromQuery,
+    sendFeedback,
 
     // Helpers
     canRetry,
@@ -141,12 +141,8 @@ export function useAI() {
   };
 }
 
-// ─── Focused sub-hooks ─────────────────────────────────────────────────────────
+// ─── Sub-hooks ─────────────────────────────────────────────────────────────────
 
-/**
- * useAIStreaming — streaming state only.
- * Use in StreamingText and TypingIndicator to minimise re-renders.
- */
 export function useAIStreaming() {
   return useStore(
     useShallow((s) => ({
@@ -156,16 +152,10 @@ export function useAIStreaming() {
   );
 }
 
-/**
- * useAIMessages — message array only.
- */
 export function useAIMessages() {
   return useStore((s) => s.messages);
 }
 
-/**
- * useAIActions — actions only (zero re-renders from state changes).
- */
 export function useAIActions() {
   return useStore(
     useShallow((s) => ({
@@ -174,29 +164,26 @@ export function useAIActions() {
       retryLastMessage:  s.retryLastMessage,
       selectFollowUp:    s.selectFollowUp,
       initFromQuery:     s.initFromQuery,
+      sendFeedback:      s.sendFeedback,
     }))
   );
 }
 
-/**
- * useCurrentIntent — current detected intent only.
- */
 export function useCurrentIntent() {
   return useStore((s) => s.currentIntent);
 }
 
-/**
- * useSuggestedFollowUps — follow-up questions only.
- */
 export function useSuggestedFollowUps() {
   return useStore((s) => s.suggestedFollowUps);
 }
 
-/**
- * useConversationError — error state only.
- */
 export function useConversationError() {
   return useStore((s) => s.error);
+}
+
+// Phase 2: hook for product cards from backend
+export function useProductCards() {
+  return useStore((s) => s.productCards || []);
 }
 
 export default useAI;

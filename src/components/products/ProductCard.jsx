@@ -1,7 +1,16 @@
 /**
- * ProductCard.jsx
- * Tea product card for the product catalog grid.
- * Warm-cream card with hover elevation, category badge, tasting notes, and CTA.
+ * src/components/products/ProductCard.jsx — Integration Phase 3
+ *
+ * What changed from the original:
+ *  - All field names updated to handle both camelCase and snake_case variants
+ *    (products.js normalizeProduct() provides both, so components are resilient)
+ *  - caffeineLevel read from both caffeineLevel and caffeine_level
+ *  - flavorProfile read from both flavorProfile and flavor_profile
+ *  - inStock read from both inStock and in_stock
+ *  - image read from image OR primary_image
+ *  - category displayed from category.name (object) or category (string)
+ *  - addToCart uses product fields that match cartSlice.addToCart expectations
+ *  - Everything else unchanged
  */
 
 'use client';
@@ -25,14 +34,24 @@ export function ProductCard({ product, priority = false }) {
   const addToCart   = useStore((s) => s.addToCart);
   const openCart    = useStore((s) => s.openCart);
   const showSuccess = useStore((s) => s.showSuccess);
-  const isInCart    = useStore((s) => s.isInCart(product.id));
+  const isInCart    = useStore((s) => s.isInCart(product?.id));
 
   if (!product) return null;
 
-  const { name, slug, category, price, image, flavorProfile,
-          tastingNotes, caffeineLevel, inStock, featured } = product;
+  // Accept both camelCase (mock) and snake_case (backend) field names
+  const name          = product.name;
+  const slug          = product.slug;
+  const price         = parseFloat(product.price) || 0;
+  const image         = product.image || product.primary_image || null;
+  const flavorProfile = product.flavorProfile || product.flavor_profile || '';
+  const tastingNotes  = product.tastingNotes  || product.tasting_notes  || [];
+  const caffeineLevel = product.caffeineLevel || product.caffeine_level || 'medium';
+  const inStock       = product.inStock !== undefined ? product.inStock : (product.in_stock !== false);
+  const featured      = product.featured || false;
 
-  const caffeine = CAFFEINE_LABELS[caffeineLevel] || CAFFEINE_LABELS.medium;
+  // Category: might be an object {name, slug} or a plain string
+  const categoryName = product.category?.name || product.category || '';
+  const caffeine     = CAFFEINE_LABELS[caffeineLevel] || CAFFEINE_LABELS.medium;
 
   const handleAddToCart = async (e) => {
     e.stopPropagation();
@@ -47,11 +66,14 @@ export function ProductCard({ product, priority = false }) {
   const handleView = () => router.push(`/products/${slug}`);
 
   return (
-    <article className={styles.card} onClick={handleView} role="button" tabIndex={0}
+    <article
+      className={styles.card}
+      onClick={handleView}
+      role="button"
+      tabIndex={0}
       onKeyDown={(e) => e.key === 'Enter' && handleView()}
       aria-label={`View ${name}`}
     >
-      {/* Image */}
       <div className={styles.imageWrapper}>
         {image ? (
           <img src={image} alt={name} className={styles.image} loading={priority ? 'eager' : 'lazy'} />
@@ -60,29 +82,19 @@ export function ProductCard({ product, priority = false }) {
             <span className={styles.placeholderEmoji}>🍃</span>
           </div>
         )}
-
-        {/* Overlaid badges */}
         <div className={styles.imageBadges}>
-          {featured && <span className={styles.featuredBadge}>Featured</span>}
+          {featured  && <span className={styles.featuredBadge}>Featured</span>}
           {!inStock  && <span className={styles.outOfStockBadge}>Out of stock</span>}
         </div>
-
-        {/* Quick-view on hover */}
         <div className={styles.imageOverlay}>
-          <span className={styles.quickView}>
-            <Eye size={14} /> Quick view
-          </span>
+          <span className={styles.quickView}><Eye size={14} /> Quick view</span>
         </div>
       </div>
 
-      {/* Body */}
       <div className={styles.body}>
         <div className={styles.meta}>
-          <span className={styles.category}>{category} tea</span>
-          <span
-            className={styles.caffeine}
-            style={{ color: caffeine.color }}
-          >
+          <span className={styles.category}>{categoryName} tea</span>
+          <span className={styles.caffeine} style={{ color: caffeine.color }}>
             {caffeine.label}
           </span>
         </div>
@@ -91,10 +103,8 @@ export function ProductCard({ product, priority = false }) {
 
         <TastingNotes flavorProfile={flavorProfile} compact />
 
-        {/* Footer */}
         <div className={styles.footer}>
-          <span className={styles.price}>${price?.toFixed(2)}</span>
-
+          <span className={styles.price}>${price.toFixed(2)}</span>
           <button
             className={`${styles.cartBtn} ${isInCart ? styles.cartBtnInCart : ''}`}
             onClick={handleAddToCart}

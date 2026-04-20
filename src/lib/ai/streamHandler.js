@@ -1,24 +1,33 @@
 /**
- * streamHandler.js
- * Manages real-time streaming of Claude responses.
- * Handles token accumulation, markdown-aware chunking, and abort control.
+ * src/lib/ai/streamHandler.js — Integration Phase 2
+ *
+ * What changed from the original:
+ *  - parseSSEChunks() updated to handle the backend's event format:
+ *      {"type": "token",    "content": "..."}
+ *      {"type": "products", "products": [...]}
+ *      {"type": "image",    "url": "..."}
+ *      {"type": "metadata", "intent": "...", "follow_ups": [...], "tokens_used": N}
+ *      {"type": "done",     "session_id": "...", ...}
+ *      {"type": "error",    "message": "..."}
+ *  - StreamHandler class updated: onProducts and onImage callbacks added
+ *  - hasProductSignals() still works client-side but is now supplemented
+ *    by the real 'products' SSE event from the backend
+ *  - Everything else unchanged
  */
 
 // ─── Stream state ─────────────────────────────────────────────────────────────
 
-/**
- * Create a new stream state object.
- * Each conversation turn gets a fresh state.
- */
 export function createStreamState() {
   return {
-    content:       '',       // Full accumulated content so far
-    tokens:        [],       // Individual token chunks
-    isStreaming:   false,
-    isComplete:    false,
-    error:         null,
-    startTime:     null,
-    endTime:       null,
+    content:         '',
+    tokens:          [],
+    products:        [],      // From 'products' SSE event
+    generatedImage:  null,    // From 'image' SSE event
+    isStreaming:     false,
+    isComplete:      false,
+    error:           null,
+    startTime:       null,
+    endTime:         null,
     abortController: null,
   };
 }
@@ -27,24 +36,25 @@ export function createStreamState() {
 
 export class StreamHandler {
   constructor(options = {}) {
-    this.onToken      = options.onToken      || (() => {});
-    this.onComplete   = options.onComplete   || (() => {});
-    this.onError      = options.onError      || (() => {});
+    this.onToken       = options.onToken       || (() => {});
+    this.onProducts    = options.onProducts    || (() => {});
+    this.onImage       = options.onImage       || (() => {});
+    this.onComplete    = options.onComplete    || (() => {});
+    this.onError       = options.onError       || (() => {});
     this.onStateChange = options.onStateChange || (() => {});
 
     this.state           = createStreamState();
     this.abortController = new AbortController();
-    this._buffer         = '';   // Partial token buffer for smooth display
     this._flushTimer     = null;
   }
-
-  // ── Control ────────────────────────────────────────────────────────────────
 
   start() {
     this.state.isStreaming = true;
     this.state.startTime   = Date.now();
     this.state.content     = '';
     this.state.tokens      = [];
+    this.state.products    = [];
+    this.state.generatedImage = null;
     this.onStateChange({ ...this.state });
   }
 
@@ -52,65 +62,61 @@ export class StreamHandler {
     this.abortController.abort();
     this._clearFlushTimer();
     this.state.isStreaming = false;
-    this.state.isComplete  = false;
     this.onStateChange({ ...this.state });
   }
 
-  // ── Token processing ───────────────────────────────────────────────────────
-
-  /**
-   * Process an incoming token from the stream.
-   * Accumulates content and fires callbacks.
-   */
+  // ── Token ──────────────────────────────────────────────────────────────────
   processToken(token) {
     if (!this.state.isStreaming) return;
-
     this.state.content += token;
     this.state.tokens.push(token);
-
-    // Fire the onToken callback with both the delta and full content
     this.onToken(token, this.state.content);
     this.onStateChange({ ...this.state });
   }
 
-  /**
-   * Mark the stream as complete.
-   */
+  // ── Products (Phase 2 — from backend 'products' SSE event) ────────────────
+  processProducts(products) {
+    this.state.products = products;
+    this.onProducts(products);
+    this.onStateChange({ ...this.state });
+  }
+
+  // ── Image (Phase 2 — from backend 'image' SSE event) ──────────────────────
+  processImage(imageUrl) {
+    this.state.generatedImage = imageUrl;
+    this.onImage(imageUrl);
+    this.onStateChange({ ...this.state });
+  }
+
+  // ── Complete ───────────────────────────────────────────────────────────────
   complete(result = {}) {
     this._clearFlushTimer();
-
     this.state.isStreaming = false;
     this.state.isComplete  = true;
     this.state.endTime     = Date.now();
 
     this.onComplete({
-      content:     this.state.content,
-      tokens:      this.state.tokens,
-      duration:    this.state.endTime - this.state.startTime,
-      intent:      result.intent      || null,
-      followUps:   result.followUps   || [],
-      usage:       result.usage       || null,
-      stopReason:  result.stopReason  || null,
+      content:        this.state.content,
+      tokens:         this.state.tokens,
+      products:       this.state.products,
+      generatedImage: this.state.generatedImage,
+      duration:       this.state.endTime - this.state.startTime,
+      intent:         result.intent      || null,
+      followUps:      result.followUps   || [],
+      usage:          result.usage       || null,
     });
 
     this.onStateChange({ ...this.state });
   }
 
-  /**
-   * Handle a streaming error.
-   */
   error(err) {
     this._clearFlushTimer();
-
     this.state.isStreaming = false;
     this.state.isComplete  = false;
     this.state.error       = err;
-
     this.onError(err);
     this.onStateChange({ ...this.state });
   }
-
-  // ── Internal ───────────────────────────────────────────────────────────────
 
   _clearFlushTimer() {
     if (this._flushTimer) {
@@ -119,71 +125,58 @@ export class StreamHandler {
     }
   }
 
-  getSignal() {
-    return this.abortController.signal;
-  }
-
-  getContent() {
-    return this.state.content;
-  }
-
-  isActive() {
-    return this.state.isStreaming;
-  }
-
-  getDuration() {
+  getSignal()    { return this.abortController.signal; }
+  getContent()   { return this.state.content; }
+  isActive()     { return this.state.isStreaming; }
+  getDuration()  {
     if (!this.state.startTime) return 0;
-    const end = this.state.endTime || Date.now();
-    return end - this.state.startTime;
+    return (this.state.endTime || Date.now()) - this.state.startTime;
   }
 }
 
-// ─── Utility: parse streaming chunks ─────────────────────────────────────────
+// ─── parseSSEChunks — updated for backend event format ───────────────────────
 
 /**
- * Split a raw SSE data string into clean text chunks.
- * Claude's SDK handles this internally, but useful for custom fetch-based streaming.
+ * Parse raw SSE data string into structured event objects.
+ * Handles the backend's event format (all events are JSON objects with a "type" field).
  *
- * @param {string} raw - Raw SSE chunk text
- * @returns {string[]} - Array of text delta strings
+ * Backend emits:
+ *   data: {"type": "token",    "content": "Hello"}
+ *   data: {"type": "products", "products": [...]}
+ *   data: {"type": "image",    "url": "https://..."}
+ *   data: {"type": "metadata", "intent": "...", ...}
+ *   data: {"type": "done",     ...}
+ *   data: {"type": "error",    "message": "..."}
+ *
+ * @param {string} raw - Raw SSE chunk text (may contain multiple events)
+ * @returns {Array}    - Array of parsed event objects
  */
 export function parseSSEChunks(raw) {
-  const lines   = raw.split('\n');
-  const deltas  = [];
+  const events = [];
+  const lines  = raw.split('\n\n');
 
-  for (const line of lines) {
-    if (!line.startsWith('data: ')) continue;
+  for (const block of lines) {
+    const trimmed = block.trim();
+    if (!trimmed || !trimmed.startsWith('data: ')) continue;
 
-    const jsonStr = line.slice(6).trim();
+    const jsonStr = trimmed.slice(6).trim();
     if (jsonStr === '[DONE]') break;
 
     try {
-      const parsed = JSON.parse(jsonStr);
-
-      // Handle different event types
-      if (parsed.type === 'content_block_delta') {
-        const text = parsed.delta?.text;
-        if (text) deltas.push(text);
+      const event = JSON.parse(jsonStr);
+      if (event && event.type) {
+        events.push(event);
       }
     } catch {
       // Skip malformed chunks
     }
   }
 
-  return deltas;
+  return events;
 }
 
-// ─── Utility: smooth text animation ──────────────────────────────────────────
+// ─── createTypewriterQueue — unchanged ───────────────────────────────────────
 
-/**
- * Create a character-by-character reveal queue.
- * Used by StreamingText component for smooth typewriter effect.
- *
- * @param {string}   text       - Text to animate
- * @param {function} onChar     - Called with each character + accumulated text
- * @param {number}   charDelay  - Delay between characters (ms, default: 8)
- * @returns {{ cancel: function }} - Call cancel() to stop
- */
 export function createTypewriterQueue(text, onChar, charDelay = 8) {
   let index     = 0;
   let cancelled = false;
@@ -191,73 +184,36 @@ export function createTypewriterQueue(text, onChar, charDelay = 8) {
 
   function tick() {
     if (cancelled || index >= text.length) return;
-
     onChar(text[index], text.slice(0, index + 1));
     index++;
-
-    if (index < text.length) {
-      timer = setTimeout(tick, charDelay);
-    }
+    if (index < text.length) timer = setTimeout(tick, charDelay);
   }
 
-  // Start immediately
   timer = setTimeout(tick, 0);
 
   return {
-    cancel() {
-      cancelled = true;
-      if (timer) clearTimeout(timer);
-    },
-    complete() {
-      // Jump to end immediately
-      cancelled = true;
-      if (timer) clearTimeout(timer);
-      onChar('', text);
-    },
+    cancel()   { cancelled = true; if (timer) clearTimeout(timer); },
+    complete() { cancelled = true; if (timer) clearTimeout(timer); onChar('', text); },
   };
 }
 
-// ─── Utility: detect if response contains product suggestions ────────────────
+// ─── Signal helpers — unchanged ───────────────────────────────────────────────
 
-/**
- * Scan streaming content for signals that the AI is about to suggest products.
- * Used by ConversationView to pre-show the SuggestionCards skeleton.
- *
- * @param {string} partialContent - Content accumulated so far
- * @returns {boolean}
- */
 export function hasProductSignals(partialContent) {
   const signals = [
-    'i recommend',
-    'you might enjoy',
-    'perfect tea for',
-    'suggest trying',
-    'nandi hills black',
-    'morning mist',
-    'purple peak',
-    'silver needle',
+    'i recommend', 'you might enjoy', 'perfect tea for',
+    'suggest trying', 'nandi hills black', 'morning mist',
+    'purple peak', 'silver needle',
   ];
-
   const lower = partialContent.toLowerCase();
   return signals.some((s) => lower.includes(s));
 }
 
-/**
- * Detect if the AI response mentions Chakan Tree.
- * Used to trigger the Chakan Tree invitation layer.
- *
- * @param {string} content
- * @returns {boolean}
- */
 export function hasChakanTreeSignal(content) {
   const signals = [
-    'chakan tree',
-    'value chain',
-    'referral',
-    'become more than a buyer',
-    'share tea',
+    'chakan tree', 'value chain', 'referral',
+    'become more than a buyer', 'share tea',
   ];
-
   const lower = content.toLowerCase();
   return signals.some((s) => lower.includes(s));
 }

@@ -1,17 +1,34 @@
+/**
+ * src/components/layout/Header.jsx — Integration Phase 4
+ *
+ * What changed from the original:
+ *  - Auth state connected: reads isAuthenticated + user from useAuth()
+ *  - Account icon: shows User avatar with initials when logged in,
+ *    plain User icon when logged out — both link to /account
+ *  - Cart badge: reads cartItemCount from Zustand store and shows badge
+ *  - CartDrawer import added so it renders at root level from the Header
+ *    (avoids needing to add it to every page separately)
+ *  - scrolled/transparent logic unchanged
+ *  - Mobile menu unchanged
+ */
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ShoppingCart, User, Menu, X, Leaf } from 'lucide-react';
+import { useStore }  from '@/store';
+import { useAuth }   from '@/lib/hooks/useAuth';
+import { CartDrawer } from '@/components/cart/CartDrawer';
 import styles from './Header.module.css';
 
-/**
- * Header Component — Minimal floating navigation
- * Transparent over the hero, solid white when scrolled
- */
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
+  const [scrolled,       setScrolled]       = useState(false);
+
+  const { user, isAuthenticated } = useAuth();
+  const cartItemCount             = useStore((s) => s.cartItemCount);
+  const openCart                  = useStore((s) => s.openCart);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 40);
@@ -31,6 +48,17 @@ export function Header() {
     { href: '/chakan-tree', label: 'Chakan Tree' },
     { href: '/about',       label: 'About' },
   ];
+
+  // Derive initials for avatar
+  const initials = isAuthenticated && user
+    ? (user.name || user.email || '')
+        .trim()
+        .split(/\s+/)
+        .map((w) => w[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2) || '?'
+    : null;
 
   return (
     <>
@@ -54,12 +82,62 @@ export function Header() {
 
           {/* Actions */}
           <div className={styles.actions}>
-            <Link href="/cart" className={styles.iconButton} aria-label="Shopping cart">
+            {/* Cart button with badge */}
+            <button
+              className={styles.iconButton}
+              onClick={openCart}
+              aria-label={`Shopping cart${cartItemCount > 0 ? `, ${cartItemCount} items` : ''}`}
+              type="button"
+              style={{ position: 'relative' }}
+            >
               <ShoppingCart size={20} />
-            </Link>
+              {cartItemCount > 0 && (
+                <span style={{
+                  position:        'absolute',
+                  top:             -4,
+                  right:           -4,
+                  width:           16,
+                  height:          16,
+                  borderRadius:    '50%',
+                  backgroundColor: 'var(--color-tea-green)',
+                  color:           'white',
+                  fontSize:        9,
+                  fontWeight:      700,
+                  display:         'flex',
+                  alignItems:      'center',
+                  justifyContent:  'center',
+                  fontFamily:      'var(--font-sans)',
+                  lineHeight:      1,
+                }}>
+                  {cartItemCount > 9 ? '9+' : cartItemCount}
+                </span>
+              )}
+            </button>
+
+            {/* Account button — avatar when logged in, icon when logged out */}
             <Link href="/account" className={styles.iconButton} aria-label="Account">
-              <User size={20} />
+              {isAuthenticated && initials ? (
+                <div style={{
+                  width:           28,
+                  height:          28,
+                  borderRadius:    '50%',
+                  backgroundColor: 'var(--color-tea-green)',
+                  display:         'flex',
+                  alignItems:      'center',
+                  justifyContent:  'center',
+                  fontSize:        11,
+                  fontWeight:      700,
+                  color:           'white',
+                  fontFamily:      'var(--font-sans)',
+                  lineHeight:      1,
+                }}>
+                  {initials}
+                </div>
+              ) : (
+                <User size={20} />
+              )}
             </Link>
+
             <button
               className={`${styles.iconButton} ${styles.menuToggle}`}
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -72,6 +150,9 @@ export function Header() {
           </div>
         </div>
       </header>
+
+      {/* Cart Drawer — rendered once here so it's always available */}
+      <CartDrawer />
 
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
@@ -110,11 +191,18 @@ export function Header() {
             </div>
 
             <div className={styles.mobileActions}>
-              <Link href="/cart" className={styles.mobileActionLink} onClick={() => setMobileMenuOpen(false)}>
-                <ShoppingCart size={18} /> Cart
-              </Link>
+              <button
+                className={styles.mobileActionLink}
+                onClick={() => { openCart(); setMobileMenuOpen(false); }}
+                type="button"
+                style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                <ShoppingCart size={18} />
+                Cart {cartItemCount > 0 && `(${cartItemCount})`}
+              </button>
               <Link href="/account" className={styles.mobileActionLink} onClick={() => setMobileMenuOpen(false)}>
-                <User size={18} /> Account
+                <User size={18} />
+                {isAuthenticated ? (user?.name?.split(' ')[0] || 'Account') : 'Account'}
               </Link>
             </div>
           </nav>

@@ -1,15 +1,24 @@
+/**
+ * src/components/layout/Footer.jsx — Integration Phase 4
+ *
+ * What changed from the original:
+ *  - handleSubscribe() now calls POST /api/v1/newsletter/subscribe/
+ *    via the Axios api client instead of the // TODO comment
+ *  - Sends { email, source: 'footer' } matching SubscribeSerializer
+ *  - Shows server error message if subscription fails (e.g. invalid email)
+ *  - isSubmitting loading state added to disable the button during request
+ *  - Everything else unchanged (links, social icons, copyright)
+ */
+
 'use client';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { Leaf, Mail } from 'lucide-react';
+import api from '@/lib/api/client';
+import { ENDPOINTS } from '@/lib/api/endpoints';
 import styles from './Footer.module.css';
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   Inline SVG social icons
-   Facebook, Instagram, Twitter, Linkedin were removed from lucide-react.
-   These tiny inline SVGs replace them with zero extra dependencies.
-───────────────────────────────────────────────────────────────────────────── */
 function IconFacebook() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -46,20 +55,19 @@ function IconLinkedIn() {
   );
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   Footer Component
-───────────────────────────────────────────────────────────────────────────── */
 export function Footer() {
-  const [email, setEmail]         = useState('');
-  const [subscribed, setSubscribed] = useState(false);
-  const currentYear               = new Date().getFullYear();
+  const [email,        setEmail]        = useState('');
+  const [subscribed,   setSubscribed]   = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg,     setErrorMsg]     = useState('');
+  const currentYear = new Date().getFullYear();
 
   const footerLinks = {
     discover: [
-      { name: 'Our Teas',      href: '/products' },
-      { name: 'Origin Story',  href: '/origin' },
-      { name: 'Traceability',  href: '/origin/traceability' },
-      { name: 'About Us',      href: '/about' },
+      { name: 'Our Teas',     href: '/products' },
+      { name: 'Origin Story', href: '/origin' },
+      { name: 'Traceability', href: '/origin/traceability' },
+      { name: 'About Us',     href: '/about' },
     ],
     impact: [
       { name: 'Living Wage',        href: '/impact' },
@@ -86,19 +94,36 @@ export function Footer() {
     { name: 'LinkedIn',  href: 'https://linkedin.com/company/chakancha', Icon: IconLinkedIn  },
   ];
 
-  const handleSubscribe = (e) => {
+  // Phase 4: wired to POST /api/v1/newsletter/subscribe/
+  const handleSubscribe = async (e) => {
     e.preventDefault();
-    if (!email.trim()) return;
-    // TODO: connect to newsletter API
-    setSubscribed(true);
-    setEmail('');
+    if (!email.trim() || isSubmitting) return;
+
+    setIsSubmitting(true);
+    setErrorMsg('');
+
+    try {
+      await api.post(ENDPOINTS.NEWSLETTER.SUBSCRIBE, {
+        email:  email.trim().toLowerCase(),
+        source: 'footer',
+      });
+      setSubscribed(true);
+      setEmail('');
+    } catch (err) {
+      const msg = err?.data?.errors?.email?.[0]
+        || err?.data?.message
+        || err?.message
+        || 'Could not subscribe. Please try again.';
+      setErrorMsg(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <footer className={styles.footer}>
       <div className={styles.container}>
 
-        {/* ── Top ─────────────────────────────────────────────────────── */}
         <div className={styles.top}>
 
           {/* Brand */}
@@ -150,7 +175,7 @@ export function Footer() {
             ))}
           </div>
 
-          {/* Newsletter */}
+          {/* Newsletter — Phase 4: wired to real backend */}
           <div className={styles.newsletterColumn}>
             <h4 className={styles.columnTitle}>Stay Connected</h4>
             <p className={styles.newsletterText}>
@@ -167,19 +192,32 @@ export function Footer() {
                     placeholder="Your email"
                     className={styles.input}
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => { setEmail(e.target.value); setErrorMsg(''); }}
                     required
+                    disabled={isSubmitting}
                   />
                 </div>
-                <button type="submit" className={styles.submitButton}>
-                  Subscribe
+                <button
+                  type="submit"
+                  className={styles.submitButton}
+                  disabled={isSubmitting || !email.trim()}
+                  style={{ opacity: isSubmitting ? 0.7 : 1 }}
+                >
+                  {isSubmitting ? 'Subscribing…' : 'Subscribe'}
                 </button>
+                {errorMsg && (
+                  <p style={{
+                    fontFamily: 'var(--font-sans)', fontSize: 12,
+                    color: 'var(--color-error)', margin: '4px 0 0',
+                  }}>
+                    {errorMsg}
+                  </p>
+                )}
               </form>
             )}
           </div>
         </div>
 
-        {/* ── Bottom ──────────────────────────────────────────────────── */}
         <div className={styles.bottom}>
           <p className={styles.copyright}>
             © {currentYear} Chakancha Global. All rights reserved.

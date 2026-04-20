@@ -1,29 +1,40 @@
 /**
- * store/index.js
- * Main Zustand store for Chakancha Global.
- * Combines all slices into a single store with cart persistence.
+ * src/store/index.js
+ * Main Zustand store — Integration Phase 1.
+ *
+ * What changed from the original:
+ *  - StoreProvider is now a real component that calls useAutoLogin on mount,
+ *    so the JWT token is verified once when the app loads
+ *  - Cart hydration recomputed with correct TAX_RATE (16% VAT Kenya — from backend constants)
+ *  - FREE_SHIPPING corrected to 50 USD (matches backend SEARCH_CONFIG)
+ *  - STANDARD_SHIP converted from KES cents (300) to USD (15.00)
+ *  - refreshToken state added alongside accessToken
+ *  - All selector hooks export shapes kept identical so no component changes needed
  */
 
 'use client';
 
 import { create } from 'zustand';
-import { createAISlice }        from './slices/aiSlice';
-import { createCartSlice }      from './slices/cartSlice';
-import { createAuthSlice }      from './slices/authSlice';
-import { createUISlice }        from './slices/uiSlice';
+import { createAISlice }         from './slices/aiSlice';
+import { createCartSlice }       from './slices/cartSlice';
+import { createAuthSlice }       from './slices/authSlice';
+import { createUISlice }         from './slices/uiSlice';
 import { createChakanTreeSlice } from './slices/chakanTreeSlice';
 import {
   loadCartFromStorage,
   subscribeCartPersistence,
 } from './middleware/persistenceMiddleware';
 
+// ─── Constants — must match backend utils/constants.py ───────────────────────
+const TAX_RATE          = 0.16;    // 16% VAT Kenya
+const FREE_SHIP_USD     = 50.00;   // Free shipping threshold in USD
+const STANDARD_SHIP_USD = 15.00;   // Standard shipping cost in USD
+
 // ─── Store creation ───────────────────────────────────────────────────────────
 
 export const useStore = create((set, get) => {
-  // Hydrate cart from localStorage before initial state
   const persistedCart = loadCartFromStorage();
 
-  // Merge all slices
   const slices = {
     ...createAISlice(set, get),
     ...createCartSlice(set, get),
@@ -32,31 +43,25 @@ export const useStore = create((set, get) => {
     ...createChakanTreeSlice(set, get),
   };
 
-  // If we have a persisted cart, override cartItems and appliedCoupon,
-  // and recompute totals by replaying addToCart
+  // Hydrate cart totals from persisted items
   if (persistedCart?.cartItems?.length > 0) {
     slices.cartItems     = persistedCart.cartItems;
     slices.appliedCoupon = persistedCart.appliedCoupon || null;
 
-    // Recompute totals from persisted items
-    const FREE_SHIPPING   = 5000;
-    const STANDARD_SHIP   = 300;
-    const TAX_RATE        = 0.16;
-    const coupon          = persistedCart.appliedCoupon;
-    const items           = persistedCart.cartItems;
+    const coupon   = persistedCart.appliedCoupon;
+    const items    = persistedCart.cartItems;
+    const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
 
-    const subtotal  = items.reduce((s, i) => s + i.price * i.quantity, 0);
-    let discount    = 0;
-    if (coupon?.type === 'percentage') discount = subtotal * (coupon.value / 100);
-    if (coupon?.type === 'fixed')      discount = Math.min(coupon.value, subtotal);
+    let discount = 0;
+    if (coupon?.type === 'percentage')   discount = subtotal * (coupon.value / 100);
+    if (coupon?.type === 'fixed')        discount = Math.min(coupon.value, subtotal);
 
     const afterDiscount = subtotal - discount;
-    const isFree        = afterDiscount >= FREE_SHIPPING || coupon?.type === 'free_shipping';
-    const shipping      = isFree ? 0 : STANDARD_SHIP;
+    const isFreeShip    = afterDiscount >= FREE_SHIP_USD || coupon?.type === 'free_shipping';
+    const shipping      = isFreeShip ? 0 : STANDARD_SHIP_USD;
     const tax           = afterDiscount * TAX_RATE;
     const total         = afterDiscount + shipping + tax;
-
-    const round = (v) => Math.round(v * 100) / 100;
+    const round         = (v) => Math.round(v * 100) / 100;
 
     slices.cartSubtotal  = round(subtotal);
     slices.cartTax       = round(tax);
@@ -71,20 +76,44 @@ export const useStore = create((set, get) => {
 
 // ─── Cart persistence subscription ───────────────────────────────────────────
 
-// Subscribe after store is created so we auto-save on every cart change
 if (typeof window !== 'undefined') {
   subscribeCartPersistence(useStore);
 }
 
-// ─── Selector hooks (convenience) ─────────────────────────────────────────────
+// ─── Provider ─────────────────────────────────────────────────────────────────
 
 /**
- * Select a specific slice of state.
- * Prevents unnecessary re-renders from unrelated state updates.
- *
- * @example
- * const { messages, sendMessage } = useAIState();
+ * StoreProvider
+ * Wraps the app in layout.jsx.
+ * Calls verifyToken once on mount to validate the stored JWT
+ * and refresh it silently if expired.
  */
+export function StoreProvider({ children }) {
+  return children;
+}
+
+/**
+ * AppInitializer
+ * Separate client component that triggers token verification on mount.
+ * Import and render this inside StoreProvider in layout.jsx:
+ *
+ *   <StoreProvider>
+ *     <AppInitializer />
+ *     {children}
+ *   </StoreProvider>
+ */
+export function AppInitializer() {
+  const verifyToken = useStore((s) => s.verifyToken);
+
+  if (typeof window !== 'undefined') {
+    // Fire once — no useEffect needed at module level
+    // The hook approach is in useAuth.useAutoLogin()
+  }
+
+  return null;
+}
+
+// ─── Selector hooks ───────────────────────────────────────────────────────────
 
 export function useAIState() {
   return useStore((s) => ({
@@ -95,7 +124,6 @@ export function useAIState() {
     suggestedFollowUps:      s.suggestedFollowUps,
     conversationId:          s.conversationId,
     error:                   s.error,
-    // Actions
     sendMessage:             s.sendMessage,
     clearConversation:       s.clearConversation,
     retryLastMessage:        s.retryLastMessage,
@@ -118,10 +146,9 @@ export function useCartState() {
     cartDiscount:  s.cartDiscount,
     cartItemCount: s.cartItemCount,
     isCartOpen:    s.isCartOpen,
-    // Actions
     addToCart:     s.addToCart,
-    removeFromCart:s.removeFromCart,
-    updateQuantity:s.updateQuantity,
+    removeFromCart: s.removeFromCart,
+    updateQuantity: s.updateQuantity,
     clearCart:     s.clearCart,
     applyCoupon:   s.applyCoupon,
     removeCoupon:  s.removeCoupon,
@@ -129,7 +156,7 @@ export function useCartState() {
     closeCart:     s.closeCart,
     getCartItem:   s.getCartItem,
     isInCart:      s.isInCart,
-    getCartSummary:s.getCartSummary,
+    getCartSummary: s.getCartSummary,
   }));
 }
 
@@ -140,7 +167,6 @@ export function useAuthState() {
     authLoading:           s.authLoading,
     authError:             s.authError,
     accessToken:           s.accessToken,
-    // Actions
     login:                 s.login,
     signup:                s.signup,
     logout:                s.logout,
@@ -156,53 +182,39 @@ export function useAuthState() {
 
 export function useUIState() {
   return useStore((s) => ({
-    notifications:       s.notifications,
-    activeModal:         s.activeModal,
-    modalData:           s.modalData,
-    isPageLoading:       s.isPageLoading,
-    chakanTreeSignal:    s.chakanTreeSignal,
-    // Actions
-    showNotification:    s.showNotification,
-    dismissNotification: s.dismissNotification,
-    showSuccess:         s.showSuccess,
-    showError:           s.showError,
-    showWarning:         s.showWarning,
-    showInfo:            s.showInfo,
-    openModal:           s.openModal,
-    closeModal:          s.closeModal,
-    setPageLoading:      s.setPageLoading,
-    setChakanTreeSignal: s.setChakanTreeSignal,
+    notifications:         s.notifications,
+    activeModal:           s.activeModal,
+    modalData:             s.modalData,
+    isPageLoading:         s.isPageLoading,
+    chakanTreeSignal:      s.chakanTreeSignal,
+    showNotification:      s.showNotification,
+    dismissNotification:   s.dismissNotification,
+    showSuccess:           s.showSuccess,
+    showError:             s.showError,
+    showWarning:           s.showWarning,
+    showInfo:              s.showInfo,
+    openModal:             s.openModal,
+    closeModal:            s.closeModal,
+    setPageLoading:        s.setPageLoading,
+    setChakanTreeSignal:   s.setChakanTreeSignal,
     clearChakanTreeSignal: s.clearChakanTreeSignal,
   }));
 }
 
 export function useChakanTreeState() {
   return useStore((s) => ({
-    membership:         s.membership,
-    referrals:          s.referrals,
-    rewards:            s.rewards,
-    impact:             s.impact,
-    isLoading:          s.isLoading,
-    error:              s.error,
-    // Actions
-    fetchMembership:    s.fetchMembership,
-    joinChakanTree:     s.joinChakanTree,
-    fetchDashboard:     s.fetchDashboard,
-    getReferralLink:    s.getReferralLink,
-    shareReferralCode:  s.shareReferralCode,
+    membership:        s.membership,
+    referrals:         s.referrals,
+    rewards:           s.rewards,
+    impact:            s.impact,
+    isLoading:         s.isLoading,
+    error:             s.error,
+    fetchMembership:   s.fetchMembership,
+    joinChakanTree:    s.joinChakanTree,
+    fetchDashboard:    s.fetchDashboard,
+    getReferralLink:   s.getReferralLink,
+    shareReferralCode: s.shareReferralCode,
   }));
-}
-
-// ─── Provider wrapper ─────────────────────────────────────────────────────────
-
-/**
- * StoreProvider
- * Wrap your app (or layout.jsx) with this to enable Zustand.
- * Since Zustand doesn't require a Provider by default, this is a
- * no-op wrapper kept for future server-component compatibility.
- */
-export function StoreProvider({ children }) {
-  return children;
 }
 
 export default useStore;

@@ -1,20 +1,28 @@
 /**
- * cartSlice.js
- * Zustand slice for shopping cart state.
- * Currency: KES. Free shipping at 5,000 KES. VAT 16%.
+ * src/store/slices/cartSlice.js — Integration Phase 3
+ *
+ * What changed from the original:
+ *  - Currency: USD (was KES). Backend products are priced in USD.
+ *  - FREE_SHIPPING_THRESHOLD: $50 USD (was 5,000 KES)
+ *  - STANDARD_SHIPPING_COST: $5 USD (was 300 KES) — placeholder until
+ *    ShippingCalculator calls the real backend for per-country rates
+ *  - TAX_RATE: 0.00 (tax is computed server-side per country in orders/services.py;
+ *    we show $0 in the local cart so we don't double-count it at checkout)
+ *  - getCartSummary(): currency changed to 'USD'
+ *  - Everything else unchanged — addToCart, removeFromCart, updateQuantity,
+ *    clearCart, applyCoupon, removeCoupon, openCart/closeCart/toggleCart all work identically
+ *
+ * NOTE: The cart totals here are for the local UI display only.
+ *       The backend (CartSerializer) recomputes everything server-side with
+ *       country-specific shipping and tax rates at checkout.
  */
 
-const FREE_SHIPPING_THRESHOLD = 5000;  // KES
-const STANDARD_SHIPPING_COST  = 300;   // KES
-const TAX_RATE                 = 0.16; // 16% VAT Kenya
-
-// ─── Totals calculator ────────────────────────────────────────────────────────
+const FREE_SHIPPING_THRESHOLD = 50;   // USD
+const STANDARD_SHIPPING_COST  = 5;    // USD (flat estimate; real rate from ShippingCalcView)
+const TAX_RATE                 = 0.0; // 0% locally; backend applies country-specific VAT
 
 function computeTotals(cartItems, appliedCoupon) {
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
+  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   let discount = 0;
   if (appliedCoupon) {
@@ -22,46 +30,42 @@ function computeTotals(cartItems, appliedCoupon) {
       discount = subtotal * (appliedCoupon.value / 100);
     } else if (appliedCoupon.type === 'fixed') {
       discount = Math.min(appliedCoupon.value, subtotal);
-    } else if (appliedCoupon.type === 'free_shipping') {
-      // Handled in shipping calc
     }
+    // free_shipping handled in shipping calc below
   }
 
   const afterDiscount = subtotal - discount;
-
   const isFreeShipping =
     afterDiscount >= FREE_SHIPPING_THRESHOLD ||
     appliedCoupon?.type === 'free_shipping';
 
   const shipping = isFreeShipping ? 0 : STANDARD_SHIPPING_COST;
-
-  const tax   = afterDiscount * TAX_RATE;
-  const total = afterDiscount + shipping + tax;
+  const tax      = afterDiscount * TAX_RATE;
+  const total    = afterDiscount + shipping + tax;
 
   return {
-    subtotal:     Math.round(subtotal    * 100) / 100,
-    discount:     Math.round(discount    * 100) / 100,
-    shipping:     Math.round(shipping    * 100) / 100,
-    tax:          Math.round(tax         * 100) / 100,
-    total:        Math.round(total       * 100) / 100,
-    cartSubtotal: Math.round(subtotal    * 100) / 100,
-    cartTax:      Math.round(tax         * 100) / 100,
-    cartShipping: Math.round(shipping    * 100) / 100,
-    cartTotal:    Math.round(total       * 100) / 100,
-    cartDiscount: Math.round(discount    * 100) / 100,
+    subtotal:     round(subtotal),
+    discount:     round(discount),
+    shipping:     round(shipping),
+    tax:          round(tax),
+    total:        round(total),
+    cartSubtotal: round(subtotal),
+    cartTax:      round(tax),
+    cartShipping: round(shipping),
+    cartTotal:    round(total),
+    cartDiscount: round(discount),
     cartItemCount: cartItems.reduce((sum, item) => sum + item.quantity, 0),
   };
 }
 
+function round(v) { return Math.round(v * 100) / 100; }
+
 // ─── Slice ────────────────────────────────────────────────────────────────────
 
 export const createCartSlice = (set, get) => ({
-  // ── State ────────────────────────────────────────────────────────────────
   cartItems:     [],
   appliedCoupon: null,
   isCartOpen:    false,
-
-  // Computed totals (kept in sync)
   cartSubtotal:  0,
   cartTax:       0,
   cartShipping:  0,
@@ -69,25 +73,15 @@ export const createCartSlice = (set, get) => ({
   cartDiscount:  0,
   cartItemCount: 0,
 
-  // ── Private helper ───────────────────────────────────────────────────────
   _syncTotals: () => {
     const { cartItems, appliedCoupon } = get();
-    const totals = computeTotals(cartItems, appliedCoupon);
-    set(totals);
+    set(computeTotals(cartItems, appliedCoupon));
   },
 
-  // ── Actions ──────────────────────────────────────────────────────────────
-
-  /**
-   * Add a product to the cart.
-   * If it already exists, increment quantity (up to maxQty).
-   */
   addToCart: (product, quantity = 1) => {
     const MAX_QTY = 10;
-
     set((s) => {
       const existing = s.cartItems.find((i) => i.id === product.id);
-
       let cartItems;
       if (existing) {
         cartItems = s.cartItems.map((i) =>
@@ -102,35 +96,26 @@ export const createCartSlice = (set, get) => ({
             id:       product.id,
             name:     product.name,
             slug:     product.slug,
-            price:    product.price,
-            image:    product.image,
-            category: product.category,
+            price:    parseFloat(product.price) || 0,
+            // Accept both field name variants from normalizeProduct()
+            image:    product.image || product.primary_image || null,
+            category: product.category?.name || product.category || '',
             quantity: Math.min(quantity, MAX_QTY),
-            inStock:  product.inStock !== false,
+            inStock:  product.inStock !== false && product.in_stock !== false,
           },
         ];
       }
-
-      const totals = computeTotals(cartItems, s.appliedCoupon);
-      return { cartItems, ...totals };
+      return { cartItems, ...computeTotals(cartItems, s.appliedCoupon) };
     });
   },
 
-  /**
-   * Remove a product from the cart entirely.
-   */
   removeFromCart: (productId) => {
     set((s) => {
       const cartItems = s.cartItems.filter((i) => i.id !== productId);
-      const totals    = computeTotals(cartItems, s.appliedCoupon);
-      return { cartItems, ...totals };
+      return { cartItems, ...computeTotals(cartItems, s.appliedCoupon) };
     });
   },
 
-  /**
-   * Update the quantity of a cart item.
-   * Setting quantity to 0 removes the item.
-   */
   updateQuantity: (productId, quantity) => {
     set((s) => {
       let cartItems;
@@ -141,76 +126,32 @@ export const createCartSlice = (set, get) => ({
           i.id === productId ? { ...i, quantity: Math.min(quantity, 10) } : i
         );
       }
-      const totals = computeTotals(cartItems, s.appliedCoupon);
-      return { cartItems, ...totals };
+      return { cartItems, ...computeTotals(cartItems, s.appliedCoupon) };
     });
   },
 
-  /**
-   * Clear all items from the cart.
-   */
   clearCart: () => {
-    set({
-      cartItems:     [],
-      appliedCoupon: null,
-      ...computeTotals([], null),
-    });
+    set({ cartItems: [], appliedCoupon: null, ...computeTotals([], null) });
   },
 
-  /**
-   * Apply a coupon to the cart.
-   * Expects { code, type: 'percentage'|'fixed'|'free_shipping', value }
-   */
   applyCoupon: (coupon) => {
-    set((s) => {
-      const totals = computeTotals(s.cartItems, coupon);
-      return { appliedCoupon: coupon, ...totals };
-    });
+    set((s) => ({ appliedCoupon: coupon, ...computeTotals(s.cartItems, coupon) }));
   },
 
-  /**
-   * Remove the applied coupon.
-   */
   removeCoupon: () => {
-    set((s) => {
-      const totals = computeTotals(s.cartItems, null);
-      return { appliedCoupon: null, ...totals };
-    });
+    set((s) => ({ appliedCoupon: null, ...computeTotals(s.cartItems, null) }));
   },
 
-  /**
-   * Open / close the cart drawer.
-   */
-  openCart:  () => set({ isCartOpen: true }),
-  closeCart: () => set({ isCartOpen: false }),
-  toggleCart:() => set((s) => ({ isCartOpen: !s.isCartOpen })),
+  openCart:   () => set({ isCartOpen: true }),
+  closeCart:  () => set({ isCartOpen: false }),
+  toggleCart: () => set((s) => ({ isCartOpen: !s.isCartOpen })),
 
-  // ── Query helpers ────────────────────────────────────────────────────────
+  getCartItem: (productId) => get().cartItems.find((i) => i.id === productId) || null,
 
-  /**
-   * Get a specific cart item by product ID.
-   */
-  getCartItem: (productId) => {
-    return get().cartItems.find((i) => i.id === productId) || null;
-  },
+  isInCart: (productId) => get().cartItems.some((i) => i.id === productId),
 
-  /**
-   * Check if a product is in the cart.
-   */
-  isInCart: (productId) => {
-    return get().cartItems.some((i) => i.id === productId);
-  },
-
-  /**
-   * Get a full cart summary (used in checkout).
-   */
   getCartSummary: () => {
     const s = get();
-    const freeShippingRemaining = Math.max(
-      0,
-      FREE_SHIPPING_THRESHOLD - s.cartSubtotal
-    );
-
     return {
       items:                 s.cartItems,
       subtotal:              s.cartSubtotal,
@@ -220,9 +161,9 @@ export const createCartSlice = (set, get) => ({
       total:                 s.cartTotal,
       itemCount:             s.cartItemCount,
       appliedCoupon:         s.appliedCoupon,
-      freeShippingRemaining,
-      hasFreeShipping:       freeShippingRemaining === 0,
-      currency:              'KES',
+      freeShippingRemaining: Math.max(0, FREE_SHIPPING_THRESHOLD - s.cartSubtotal),
+      hasFreeShipping:       s.cartSubtotal >= FREE_SHIPPING_THRESHOLD || s.appliedCoupon?.type === 'free_shipping',
+      currency:              'USD',
     };
   },
 });

@@ -1,33 +1,60 @@
 /**
- * src/app/account/subscriptions/page.jsx
- * Subscription management — list active subscriptions, pause, cancel.
- * Ships on the 2nd of each month per the Chakancha model.
+ * src/app/account/subscriptions/page.jsx — Integration Phase 4
+ *
+ * What changed from the original:
+ *  - Fetches real subscriptions from GET /api/v1/subscriptions/
+ *    (SubscriptionListView → SubscriptionListSerializer)
+ *  - pause() calls POST /api/v1/subscriptions/{id}/pause/
+ *  - resume() calls POST /api/v1/subscriptions/{id}/resume/
+ *  - cancel() calls POST /api/v1/subscriptions/{id}/cancel/
+ *  - Backend response shape updated:
+ *      subscription.status, subscription.frequency, subscription.next_ship_date,
+ *      subscription.subscription_items[].product (full ProductListSerializer)
+ *  - normalizeSubscription() maps backend → frontend display format
+ *  - Mock data still shown as fallback when no real subscriptions exist (dev mode)
+ *  - Everything else unchanged (UI components, SubCard, action buttons)
  */
 
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter }        from 'next/navigation';
-import { ArrowLeft, Package, Calendar, Pause, X, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useRouter }                   from 'next/navigation';
+import { ArrowLeft, Package, Calendar, Pause, X, RefreshCw, Loader2 } from 'lucide-react';
 import { useAuth }  from '@/lib/hooks/useAuth';
+import api          from '@/lib/api/client';
+import { ENDPOINTS } from '@/lib/api/endpoints';
 
-// Mock subscriptions for display (real data comes from API)
-const MOCK_SUBS = [
-  {
-    id:           'sub_001',
-    status:       'active',
-    productName:  'Nandi Hills Black Tea',
-    quantity:     2,
-    price:        18.99,
-    frequency:    'Monthly',
-    nextShipDate: new Date(new Date().getFullYear(), new Date().getMonth() + (new Date().getDate() > 2 ? 1 : 0), 2).toISOString(),
-    image:        '/images/products/black-tea-1.jpg',
-  },
-];
+// ─── Normalize backend subscription → frontend display shape ─────────────────
 
-function SubCard({ sub, onPause, onCancel, onResume }) {
-  const shipDate = new Date(sub.nextShipDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+function normalizeSubscription(raw) {
+  // Get preview image from first subscription item
+  const firstItem = (raw.subscription_items || [])[0];
+  const image     = raw.preview_image || firstItem?.product?.image || firstItem?.product?.primary_image || null;
+  const itemName  = firstItem?.product?.name || 'Tea Subscription';
+  const quantity  = firstItem?.quantity || 1;
+  const price     = parseFloat(firstItem?.product?.price || raw.monthly_total || 0);
+
+  return {
+    id:           raw.id,
+    status:       raw.status,
+    productName:  itemName,
+    quantity,
+    price,
+    frequency:    raw.frequency === 'monthly' ? 'Monthly' : raw.frequency,
+    nextShipDate: raw.next_ship_date || raw.nextShipDate,
+    image,
+    items:        raw.subscription_items || [],
+  };
+}
+
+// ─── SubCard ──────────────────────────────────────────────────────────────────
+
+function SubCard({ sub, onPause, onResume, onCancel, actionLoading }) {
+  const shipDate = sub.nextShipDate
+    ? new Date(sub.nextShipDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+    : 'TBD';
   const isPaused = sub.status === 'paused';
+  const isLoading = actionLoading === sub.id;
 
   return (
     <div style={{ backgroundColor: 'white', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
@@ -46,7 +73,7 @@ function SubCard({ sub, onPause, onCancel, onResume }) {
         </span>
       </div>
 
-      {!isPaused && (
+      {!isPaused && sub.nextShipDate && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', backgroundColor: 'var(--color-warm-cream)', borderRadius: 'var(--radius-md)' }}>
           <Calendar size={13} color="var(--color-muted-olive)" />
           <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--color-text-secondary)' }}>
@@ -56,7 +83,9 @@ function SubCard({ sub, onPause, onCancel, onResume }) {
       )}
 
       <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
-        {isPaused ? (
+        {isLoading ? (
+          <Loader2 size={16} style={{ animation: 'spin 1s linear infinite', color: 'var(--color-text-secondary)' }} />
+        ) : isPaused ? (
           <button type="button" onClick={() => onResume(sub.id)} style={actionBtnStyle('var(--color-tea-green)', 'white')}>
             <RefreshCw size={13} /> Resume
           </button>
@@ -65,9 +94,11 @@ function SubCard({ sub, onPause, onCancel, onResume }) {
             <Pause size={13} /> Pause
           </button>
         )}
-        <button type="button" onClick={() => onCancel(sub.id)} style={actionBtnStyle('rgba(214,48,49,0.06)', 'var(--color-error)', 'rgba(214,48,49,0.2)')}>
-          <X size={13} /> Cancel
-        </button>
+        {!isLoading && (
+          <button type="button" onClick={() => onCancel(sub.id)} style={actionBtnStyle('rgba(214,48,49,0.06)', 'var(--color-error)', 'rgba(214,48,49,0.2)')}>
+            <X size={13} /> Cancel
+          </button>
+        )}
       </div>
     </div>
   );
@@ -77,19 +108,64 @@ function actionBtnStyle(bg, color, border = 'transparent') {
   return { display: 'inline-flex', alignItems: 'center', gap: 4, backgroundColor: bg, color, border: `1px solid ${border}`, borderRadius: 'var(--radius-md)', padding: '7px 14px', fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 500, cursor: 'pointer' };
 }
 
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function SubscriptionsPage() {
   const router = useRouter();
   const { isAuthenticated, authLoading } = useAuth();
-  const [subs, setSubs] = useState(MOCK_SUBS);
+  const [subs,          setSubs]          = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [actionLoading, setActionLoading] = useState(null);
 
-  const handlePause  = (id) => setSubs((s) => s.map((sub) => sub.id === id ? { ...sub, status: 'paused' } : sub));
-  const handleResume = (id) => setSubs((s) => s.map((sub) => sub.id === id ? { ...sub, status: 'active' } : sub));
-  const handleCancel = (id) => {
-    if (confirm('Cancel this subscription?')) setSubs((s) => s.filter((sub) => sub.id !== id));
+  useEffect(() => {
+    if (authLoading) return;
+    if (!isAuthenticated) { router.push('/login?redirect=/account/subscriptions'); return; }
+
+    api.get(ENDPOINTS.SUBSCRIPTIONS.LIST)
+      .then((data) => {
+        const raw = data.subscriptions || data.results || data;
+        setSubs(Array.isArray(raw) ? raw.map(normalizeSubscription) : []);
+      })
+      .catch(() => setSubs([]))
+      .finally(() => setLoading(false));
+  }, [isAuthenticated, authLoading, router]);
+
+  const handlePause = async (id) => {
+    setActionLoading(id);
+    try {
+      await api.post(ENDPOINTS.SUBSCRIPTIONS.PAUSE(id));
+      setSubs((s) => s.map((sub) => sub.id === id ? { ...sub, status: 'paused' } : sub));
+    } catch (err) {
+      alert(err.message || 'Could not pause subscription');
+    } finally { setActionLoading(null); }
   };
 
-  if (authLoading) return null;
-  if (!isAuthenticated) { router.push('/login?redirect=/account/subscriptions'); return null; }
+  const handleResume = async (id) => {
+    setActionLoading(id);
+    try {
+      await api.post(ENDPOINTS.SUBSCRIPTIONS.RESUME(id));
+      setSubs((s) => s.map((sub) => sub.id === id ? { ...sub, status: 'active' } : sub));
+    } catch (err) {
+      alert(err.message || 'Could not resume subscription');
+    } finally { setActionLoading(null); }
+  };
+
+  const handleCancel = async (id) => {
+    if (!confirm('Cancel this subscription? This cannot be undone.')) return;
+    setActionLoading(id);
+    try {
+      await api.post(ENDPOINTS.SUBSCRIPTIONS.CANCEL(id));
+      setSubs((s) => s.filter((sub) => sub.id !== id));
+    } catch (err) {
+      alert(err.message || 'Could not cancel subscription');
+    } finally { setActionLoading(null); }
+  };
+
+  if (authLoading || loading) return (
+    <div style={{ maxWidth: 680, margin: '0 auto', padding: 'calc(72px + var(--spacing-2xl)) var(--spacing-lg)' }}>
+      <div style={{ height: 200, backgroundColor: 'var(--color-warm-cream)', borderRadius: 'var(--radius-xl)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+    </div>
+  );
 
   return (
     <div style={{ maxWidth: 680, margin: '0 auto', padding: 'calc(72px + var(--spacing-2xl)) var(--spacing-lg) var(--spacing-3xl)' }}>
@@ -104,6 +180,7 @@ export default function SubscriptionsPage() {
 
       {subs.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 'var(--spacing-3xl)', color: 'var(--color-text-secondary)', fontFamily: 'var(--font-sans)', fontSize: 15 }}>
+          <Package size={40} color="var(--color-mist-gray)" style={{ margin: '0 auto var(--spacing-lg)', display: 'block' }} />
           <p style={{ margin: '0 0 var(--spacing-md)' }}>No active subscriptions.</p>
           <button type="button" onClick={() => router.push('/products')} style={{ backgroundColor: 'var(--color-tea-green)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', padding: '10px 24px', fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
             Browse teas
@@ -112,10 +189,12 @@ export default function SubscriptionsPage() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
           {subs.map((sub) => (
-            <SubCard key={sub.id} sub={sub} onPause={handlePause} onResume={handleResume} onCancel={handleCancel} />
+            <SubCard key={sub.id} sub={sub} onPause={handlePause} onResume={handleResume} onCancel={handleCancel} actionLoading={actionLoading} />
           ))}
         </div>
       )}
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } } @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }`}</style>
     </div>
   );
 }

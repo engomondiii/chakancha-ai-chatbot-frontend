@@ -1,18 +1,28 @@
+/**
+ * src/components/hero/PromptInput.jsx — Integration Phase 2
+ *
+ * What changed from the original:
+ *  - isLoading prop added — disables input and shows spinner on submit button
+ *    while backend is processing (streaming or search)
+ *  - Everything else unchanged
+ */
+
 'use client';
 
 import React, { useState } from 'react';
-import { Send, Sparkles } from 'lucide-react';
+import { Send, Sparkles, Loader2 } from 'lucide-react';
 import styles from './PromptInput.module.css';
 
-export function PromptInput({ onSubmit, placeholder }) {
+export function PromptInput({ onSubmit, placeholder, isLoading = false }) {
   const [value,     setValue]     = useState('');
   const [isFocused, setIsFocused] = useState(false);
 
   const defaultPlaceholder = placeholder || 'What makes Chakancha different?';
+  const isDisabled = isLoading;
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!value.trim()) return;
+    if (!value.trim() || isDisabled) return;
     onSubmit(value.trim());
     setValue('');
   };
@@ -32,9 +42,8 @@ export function PromptInput({ onSubmit, placeholder }) {
 
   return (
     <form onSubmit={handleSubmit} className={styles.form}>
-      <div className={`${styles.inputWrapper} ${isFocused ? styles.focused : ''}`}>
+      <div className={`${styles.inputWrapper} ${isFocused ? styles.focused : ''} ${isLoading ? styles.loading : ''}`}>
 
-        {/* Sparkle icon — hardcoded colors, no CSS vars */}
         <div className={styles.iconLeft}>
           <Sparkles
             size={20}
@@ -46,40 +55,48 @@ export function PromptInput({ onSubmit, placeholder }) {
           />
         </div>
 
-        {/* Textarea */}
         <textarea
           value={value}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
-          placeholder={defaultPlaceholder}
+          placeholder={isLoading ? 'Thinking…' : defaultPlaceholder}
           className={styles.textarea}
           rows={1}
           maxLength={500}
+          disabled={isDisabled}
           aria-label="Ask about Chakancha tea"
         />
 
-        {/* Submit button */}
         <button
           type="submit"
-          disabled={!value.trim()}
-          className={`${styles.submitButton} ${value.trim() ? styles.submitActive : ''}`}
+          disabled={!value.trim() || isDisabled}
+          className={`${styles.submitButton} ${value.trim() && !isDisabled ? styles.submitActive : ''}`}
           aria-label="Submit"
         >
-          <Send
-            size={17}
-            style={{
-              transform: value.trim() ? 'translateX(1px)' : 'none',
-              transition: 'transform 150ms ease',
-            }}
-          />
+          {isLoading ? (
+            <Loader2
+              size={17}
+              style={{ animation: 'spin 0.8s linear infinite' }}
+            />
+          ) : (
+            <Send
+              size={17}
+              style={{
+                transform: value.trim() ? 'translateX(1px)' : 'none',
+                transition: 'transform 150ms ease',
+              }}
+            />
+          )}
         </button>
       </div>
 
       <p className={styles.helperText}>
         Ask about our teas, origin story, brewing tips, or anything else
       </p>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </form>
   );
 }
