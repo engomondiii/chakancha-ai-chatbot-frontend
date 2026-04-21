@@ -14,27 +14,20 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background-color: #0d1f06; /* very dark green fallback while images load */
+  background-color: #0d1f06;
 }
 
 /* ── Overlay ─────────────────────────────────────────────────────────────── */
-/*
-  Dark gradient overlay — gives white text sharp contrast over the image
-  WITHOUT washing the image out with white/cream.
-
-  Key rule: the bottom of the overlay fades to TRANSPARENT, not white.
-  The page background handles the white transition below the fold.
-*/
 .overlay {
   position: absolute;
   inset: 0;
   z-index: 1;
   background: linear-gradient(
     180deg,
-    rgba(0, 0, 0, 0.40) 0%,    /* under the header */
-    rgba(0, 0, 0, 0.30) 30%,   /* upper third */
-    rgba(0, 0, 0, 0.20) 55%,   /* middle — where prompt sits */
-    rgba(0, 0, 0, 0.35) 100%   /* bottom — subtle dark vignette */
+    rgba(0, 0, 0, 0.40) 0%,
+    rgba(0, 0, 0, 0.30) 30%,
+    rgba(0, 0, 0, 0.20) 55%,
+    rgba(0, 0, 0, 0.35) 100%
   );
   pointer-events: none;
 }
@@ -45,7 +38,7 @@
   z-index: 2;
   width: 100%;
   max-width: 1200px;
-  padding: 80px 24px 0; /* 80px clears the 72px fixed header */
+  padding: 80px 24px 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -81,7 +74,6 @@
   font-weight: 500;
   line-height: 1.15;
   color: #ffffff;
-  /* Strong but clean text shadow — improves readability without softening */
   text-shadow:
     0 1px 0  rgba(0, 0, 0, 0.4),
     0 2px 12px rgba(0, 0, 0, 0.3);
@@ -89,7 +81,7 @@
 }
 
 .headlineAccent {
-  color: #d4a574; /* sunrise-gold */
+  color: #d4a574;
   text-shadow:
     0 1px 0  rgba(0, 0, 0, 0.3),
     0 2px 12px rgba(0, 0, 0, 0.25);
@@ -103,6 +95,48 @@
   color: rgba(255, 255, 255, 0.80);
   letter-spacing: 0.04em;
   animation: fadeUp 0.7s ease-out 0.3s both;
+}
+
+/* ── Mode toggle ─────────────────────────────────────────────────────────── */
+.modeToggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  padding: 4px;
+  animation: fadeUp 0.7s ease-out 0.38s both;
+}
+
+.modeBtn {
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.55);
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  padding: 8px 22px;
+  cursor: pointer;
+  transition: background 200ms ease, color 200ms ease;
+  min-height: 36px;
+}
+
+.modeBtn:hover:not(.modeBtnActive) {
+  background: rgba(255, 255, 255, 0.10);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.modeBtnActive {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.30);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 /* ── Prompt wrapper ──────────────────────────────────────────────────────── */
@@ -147,7 +181,6 @@
   to   { opacity: 1; transform: translateY(0);    }
 }
 
-/* Used by BackgroundAnimation */
 @keyframes subtleZoom {
   0%   { transform: scale(1);    }
   100% { transform: scale(1.07); }
