@@ -226,6 +226,7 @@ export function ConversationView() {
             onSubmit={sendMessage}
             placeholder="Ask about our teas, origin, impact…"
             isLoading={isStreaming}
+            chat
           />
         </div>
       </div>

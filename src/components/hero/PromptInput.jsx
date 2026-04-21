@@ -4,6 +4,9 @@
  * What changed from the original:
  *  - isLoading prop added — disables input and shows spinner on submit button
  *    while backend is processing (streaming or search)
+ *  - chat prop added — when true, switches from glass-morphism (white text on
+ *    dark hero background) to solid white card (dark text on white chat background)
+ *    so typed text is visible in the ConversationView input bar
  *  - Everything else unchanged
  */
 
@@ -13,7 +16,7 @@ import React, { useState } from 'react';
 import { Send, Sparkles, Loader2 } from 'lucide-react';
 import styles from './PromptInput.module.css';
 
-export function PromptInput({ onSubmit, placeholder, isLoading = false }) {
+export function PromptInput({ onSubmit, placeholder, isLoading = false, chat = false }) {
   const [value,     setValue]     = useState('');
   const [isFocused, setIsFocused] = useState(false);
 
@@ -42,13 +45,22 @@ export function PromptInput({ onSubmit, placeholder, isLoading = false }) {
 
   return (
     <form onSubmit={handleSubmit} className={styles.form}>
-      <div className={`${styles.inputWrapper} ${isFocused ? styles.focused : ''} ${isLoading ? styles.loading : ''}`}>
+      <div
+        className={[
+          styles.inputWrapper,
+          isFocused  ? styles.focused  : '',
+          isLoading  ? styles.loading  : '',
+          chat       ? styles.chatMode : '',
+        ].filter(Boolean).join(' ')}
+      >
 
         <div className={styles.iconLeft}>
           <Sparkles
             size={20}
             style={{
-              color: value.trim() ? '#2D5016' : '#B8C5D6',
+              color:      chat
+                ? (value.trim() ? '#2D5016' : '#B8C5D6')
+                : (value.trim() ? '#2D5016' : 'rgba(255,255,255,0.6)'),
               transition: 'color 150ms ease',
               flexShrink: 0,
             }}
@@ -62,7 +74,7 @@ export function PromptInput({ onSubmit, placeholder, isLoading = false }) {
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           placeholder={isLoading ? 'Thinking…' : defaultPlaceholder}
-          className={styles.textarea}
+          className={`${styles.textarea} ${chat ? styles.textareaChat : ''}`}
           rows={1}
           maxLength={500}
           disabled={isDisabled}
@@ -72,7 +84,11 @@ export function PromptInput({ onSubmit, placeholder, isLoading = false }) {
         <button
           type="submit"
           disabled={!value.trim() || isDisabled}
-          className={`${styles.submitButton} ${value.trim() && !isDisabled ? styles.submitActive : ''}`}
+          className={[
+            styles.submitButton,
+            value.trim() && !isDisabled ? styles.submitActive : '',
+            chat ? styles.submitChat : '',
+          ].filter(Boolean).join(' ')}
           aria-label="Submit"
         >
           {isLoading ? (
@@ -84,7 +100,7 @@ export function PromptInput({ onSubmit, placeholder, isLoading = false }) {
             <Send
               size={17}
               style={{
-                transform: value.trim() ? 'translateX(1px)' : 'none',
+                transform:  value.trim() ? 'translateX(1px)' : 'none',
                 transition: 'transform 150ms ease',
               }}
             />
@@ -92,9 +108,12 @@ export function PromptInput({ onSubmit, placeholder, isLoading = false }) {
         </button>
       </div>
 
-      <p className={styles.helperText}>
-        Ask about our teas, origin story, brewing tips, or anything else
-      </p>
+      {/* Helper text only shown in hero mode, not in chat */}
+      {!chat && (
+        <p className={styles.helperText}>
+          Ask about our teas, origin story, brewing tips, or anything else
+        </p>
+      )}
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </form>
