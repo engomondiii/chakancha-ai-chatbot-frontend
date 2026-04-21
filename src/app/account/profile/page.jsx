@@ -1,19 +1,14 @@
-/**
- * src/app/account/profile/page.jsx
- * Profile settings — update name, email, and password.
- */
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter }                   from 'next/navigation';
-import { ArrowLeft, Save, Loader2 }    from 'lucide-react';
+import { ArrowLeft, Save, Loader2, LogOut } from 'lucide-react';
 import { useAuth }  from '@/lib/hooks/useAuth';
 import { Input }    from '@/components/ui/Input';
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, isAuthenticated, authLoading, updateProfile, changePassword, authError, clearAuthError, verifyToken } = useAuth();
+  const { user, isAuthenticated, authLoading, updateProfile, changePassword, verifyToken, logout } = useAuth();
 
   const [profile,  setProfile]  = useState({ name: '', email: '' });
   const [password, setPassword] = useState({ current: '', newPass: '', confirm: '' });
@@ -46,10 +41,17 @@ export default function ProfilePage() {
     setPwSaving(false);
   };
 
+  const handleLogout = async () => {
+    await logout();
+    router.push('/');
+  };
+
   if (authLoading || !user) return null;
 
   return (
     <div style={{ maxWidth: 560, margin: '0 auto', padding: 'calc(72px + var(--spacing-2xl)) var(--spacing-lg) var(--spacing-3xl)' }}>
+
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-2xl)' }}>
         <button type="button" onClick={() => router.back()} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', fontFamily: 'var(--font-sans)', fontSize: 13, padding: 0 }}>
           <ArrowLeft size={15} /> Back
@@ -57,22 +59,66 @@ export default function ProfilePage() {
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--font-size-h2)', fontWeight: 600, color: 'var(--color-earth-brown)', margin: 0 }}>Profile</h1>
       </div>
 
-      {/* Profile section */}
+      {/* Personal Information */}
       <FormSection title="Personal Information">
-        <Input label="Full name"      id="name"  value={profile.name}  onChange={(e) => setProfile(p => ({ ...p, name: e.target.value }))}  fullWidth />
-        <Input label="Email address"  id="email" type="email" value={profile.email} onChange={(e) => setProfile(p => ({ ...p, email: e.target.value }))} fullWidth />
+        <Input label="Full name"     id="name"  value={profile.name}  onChange={(e) => setProfile(p => ({ ...p, name: e.target.value }))}  fullWidth />
+        <Input label="Email address" id="email" type="email" value={profile.email} onChange={(e) => setProfile(p => ({ ...p, email: e.target.value }))} fullWidth />
         {msg && <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: msg.startsWith('✓') ? 'var(--color-success)' : 'var(--color-error)', margin: 0 }}>{msg}</p>}
         <SaveButton onClick={handleSaveProfile} loading={saving} />
       </FormSection>
 
-      {/* Password section */}
+      {/* Change Password */}
       <FormSection title="Change Password">
-        <Input label="Current password" id="current" type="password" value={password.current}  onChange={(e) => setPassword(p => ({ ...p, current: e.target.value }))}  fullWidth />
-        <Input label="New password"      id="newpass" type="password" value={password.newPass}  onChange={(e) => setPassword(p => ({ ...p, newPass: e.target.value }))}  fullWidth helperText="Minimum 8 characters" />
+        <Input label="Current password"    id="current" type="password" value={password.current}  onChange={(e) => setPassword(p => ({ ...p, current: e.target.value }))}  fullWidth />
+        <Input label="New password"        id="newpass" type="password" value={password.newPass}  onChange={(e) => setPassword(p => ({ ...p, newPass: e.target.value }))}  fullWidth helperText="Minimum 8 characters" />
         <Input label="Confirm new password" id="confirm" type="password" value={password.confirm} onChange={(e) => setPassword(p => ({ ...p, confirm: e.target.value }))} fullWidth />
         {pwMsg && <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: pwMsg.startsWith('✓') ? 'var(--color-success)' : 'var(--color-error)', margin: 0 }}>{pwMsg}</p>}
         <SaveButton onClick={handleChangePassword} loading={pwSaving} label="Update password" />
       </FormSection>
+
+      {/* Sign out */}
+      <div style={{
+        backgroundColor: 'white',
+        border:          '1px solid var(--color-border)',
+        borderRadius:    'var(--radius-xl)',
+        padding:         'var(--spacing-xl)',
+        display:         'flex',
+        flexDirection:   'column',
+        gap:             'var(--spacing-sm)',
+      }}>
+        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 600, color: 'var(--color-earth-brown)', margin: 0 }}>
+          Sign Out
+        </h2>
+        <p style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: 'var(--color-text-secondary)', margin: 0, lineHeight: 1.5 }}>
+          You will be signed out of your account on this device.
+        </p>
+        <button
+          type="button"
+          onClick={handleLogout}
+          style={{
+            display:         'inline-flex',
+            alignItems:      'center',
+            gap:             8,
+            alignSelf:       'flex-start',
+            backgroundColor: 'rgba(214,48,49,0.06)',
+            color:           'var(--color-error)',
+            border:          '1px solid rgba(214,48,49,0.2)',
+            borderRadius:    'var(--radius-md)',
+            padding:         '10px 20px',
+            fontFamily:      'var(--font-sans)',
+            fontSize:        14,
+            fontWeight:      600,
+            cursor:          'pointer',
+            marginTop:       4,
+            transition:      'background-color var(--transition-fast)',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(214,48,49,0.12)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(214,48,49,0.06)'}
+        >
+          <LogOut size={15} /> Sign out
+        </button>
+      </div>
+
     </div>
   );
 }

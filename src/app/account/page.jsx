@@ -1,14 +1,8 @@
-/**
- * src/app/account/page.jsx
- * Account overview — shows user profile summary, recent orders,
- * and Chakan Tree membership status.
- */
-
 'use client';
 
 import React, { useEffect } from 'react';
 import { useRouter }         from 'next/navigation';
-import { User, ShoppingBag, TreePine, Settings, ChevronRight } from 'lucide-react';
+import { User, ShoppingBag, TreePine, Settings, ChevronRight, LogOut } from 'lucide-react';
 import { useAuth }     from '@/lib/hooks/useAuth';
 import { useStore }    from '@/store';
 import { Skeleton }    from '@/components/ui/Skeleton';
@@ -53,17 +47,21 @@ function NavCard({ icon: Icon, title, subtitle, href, color = 'var(--color-tea-g
 
 export default function AccountPage() {
   const router     = useRouter();
-  const { user, isAuthenticated, authLoading, verifyToken } = useAuth();
+  const { user, isAuthenticated, authLoading, verifyToken, logout } = useAuth();
   const membership = useStore((s) => s.membership);
 
   useEffect(() => { verifyToken(); }, [verifyToken]);
 
-  // Redirect to login if not authenticated after loading
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       router.push('/login?redirect=/account');
     }
   }, [authLoading, isAuthenticated, router]);
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/');
+  };
 
   if (authLoading) {
     return (
@@ -106,10 +104,40 @@ export default function AccountPage() {
 
       {/* Nav links */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)' }}>
-        <NavCard icon={ShoppingBag} title="My Orders"       subtitle="View order history and tracking" href="/account/orders" />
-        <NavCard icon={User}        title="Profile"         subtitle="Update your name, email, and password" href="/account/profile" />
-        <NavCard icon={TreePine}    title="Chakan Tree"     subtitle={membership?.isActive ? `Code: ${membership.referralCode}` : 'Join the value-sharing program'} href={membership?.isActive ? '/chakan-tree/dashboard' : '/chakan-tree'} color="var(--color-tea-green)" />
-        <NavCard icon={Settings}    title="Subscriptions"   subtitle="Manage your tea subscriptions" href="/account/subscriptions" color="var(--color-sunrise-gold)" />
+        <NavCard icon={ShoppingBag} title="My Orders"     subtitle="View order history and tracking"        href="/account/orders" />
+        <NavCard icon={User}        title="Profile"       subtitle="Update your name, email, and password"  href="/account/profile" />
+        <NavCard icon={TreePine}    title="Chakan Tree"   subtitle={membership?.isActive ? `Code: ${membership.referralCode}` : 'Join the value-sharing program'} href={membership?.isActive ? '/chakan-tree/dashboard' : '/chakan-tree'} color="var(--color-tea-green)" />
+        <NavCard icon={Settings}    title="Subscriptions" subtitle="Manage your tea subscriptions"          href="/account/subscriptions" color="var(--color-sunrise-gold)" />
+
+        {/* Sign out */}
+        <button
+          type="button"
+          onClick={handleLogout}
+          style={{
+            display:         'flex',
+            alignItems:      'center',
+            gap:             'var(--spacing-md)',
+            backgroundColor: 'white',
+            border:          '1px solid var(--color-border)',
+            borderRadius:    'var(--radius-xl)',
+            padding:         'var(--spacing-lg)',
+            cursor:          'pointer',
+            textAlign:       'left',
+            width:           '100%',
+            marginTop:       'var(--spacing-sm)',
+            transition:      'border-color var(--transition-fast)',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--color-error)'}
+          onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--color-border)'}
+        >
+          <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-md)', backgroundColor: 'rgba(214,48,49,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <LogOut size={20} color="var(--color-error)" />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 15, fontWeight: 600, color: 'var(--color-error)', margin: '0 0 2px' }}>Sign out</p>
+            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--color-text-secondary)', margin: 0 }}>Sign out of your Chakancha account</p>
+          </div>
+        </button>
       </div>
     </div>
   );

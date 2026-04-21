@@ -2,20 +2,13 @@
  * src/lib/api/client.js
  * Base Axios client — Integration Phase 1.
  *
- * What changed from the original:
- *  - baseURL now explicitly appends trailing slash to match Django's
- *    APPEND_SLASH=True behaviour (avoids 301 redirects that strip POST bodies)
- *  - Response interceptor extracts error detail from Django/DRF error shapes:
- *      { detail: "..." }          ← DRF default
- *      { errors: { field: [] } }  ← serializer validation
- *      { message: "..." }         ← custom views
- *      { error: "..." }           ← custom views
- *  - getAccessToken reads from localStorage key 'chakancha_access_token'
- *    (matches TOKEN_STORAGE_KEY in authSlice.js)
- *  - refreshToken calls the Zustand store's refreshAccessToken action
- *  - SSE helper added: createSSEStream() for the /ai/stream/ endpoint
- *  - x-session-id header helper: setSessionId() / getSessionId()
- *  - ApiError.fieldErrors property extracts DRF validation errors per-field
+ * SSE fix summary (two headers removed from createSSEStream):
+ *  - 'Cache-Control': 'no-cache'   → caused CORS preflight failure:
+ *    non-simple header not in Django's CORS_ALLOW_HEADERS, browser blocked POST
+ *  - 'Accept': 'text/event-stream' → caused HTTP 406 Not Acceptable:
+ *    DRF uses Accept to pick a renderer; text/event-stream is not registered,
+ *    so DRF rejected the request before the StreamingHttpResponse view ran
+ * Both headers are unnecessary — StreamingHttpResponse bypasses DRF renderers.
  */
 
 import axios from 'axios';
@@ -24,15 +17,12 @@ import axios from 'axios';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 const API_VERSION  = 'v1';
-const TIMEOUT_MS   = 20_000; // 20s — AI responses can be slow
+const TIMEOUT_MS   = 20_000;
 
-// Storage keys — must match authSlice.js
 const TOKEN_KEY   = 'chakancha_access_token';
 const SESSION_KEY = 'chakancha_session_id';
 
 // ─── Session ID ───────────────────────────────────────────────────────────────
-// The AI agent uses session_id to maintain conversation context.
-// Generated once per browser session, persisted to localStorage.
 
 export function getSessionId() {
   if (typeof window === 'undefined') return null;
@@ -56,54 +46,39 @@ export const apiClient = axios.create({
   timeout:         TIMEOUT_MS,
   headers: {
     'Content-Type': 'application/json',
-    'Accept':        'application/json',
+    'Accept':       'application/json',
   },
-  withCredentials: false, // JWT in Authorization header — not httpOnly cookies
+  withCredentials: false,
 });
 
-// ─── Request interceptor — inject tokens ─────────────────────────────────────
+// ─── Request interceptor ─────────────────────────────────────────────────────
 
 apiClient.interceptors.request.use(
   (config) => {
-    // Inject JWT access token
     try {
       const token = getAccessToken();
-      if (token) {
-        config.headers['Authorization'] = `Bearer ${token}`;
-      }
-    } catch {
-      // SSR — window not available
-    }
+      if (token) config.headers['Authorization'] = `Bearer ${token}`;
+    } catch { /* SSR */ }
 
-    // Inject session ID for AI chat context
     try {
       const sessionId = getSessionId();
-      if (sessionId) {
-        config.headers['X-Session-Id'] = sessionId;
-      }
-    } catch {
-      // SSR
-    }
+      if (sessionId) config.headers['X-Session-Id'] = sessionId;
+    } catch { /* SSR */ }
 
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// ─── Response interceptor — error normalisation ───────────────────────────────
+// ─── Response interceptor ────────────────────────────────────────────────────
 
 apiClient.interceptors.response.use(
-  // Success — return response as-is (caller uses .then(r => r.data))
   (response) => response,
 
   async (error) => {
     const status   = error.response?.status;
     const respData = error.response?.data;
 
-    // ── Extract the most useful error message from Django/DRF responses ───────
-    // DRF validation errors: { errors: { field: ["msg"] } }
-    // DRF detail errors:     { detail: "Not found." }
-    // Custom views:          { error: "..." } or { message: "..." }
     let message = 'Something went wrong. Please try again.';
 
     if (respData) {
@@ -114,7 +89,6 @@ apiClient.interceptors.response.use(
       } else if (typeof respData.message === 'string') {
         message = respData.message;
       } else if (respData.errors && typeof respData.errors === 'object') {
-        // First field's first error message
         const firstField = Object.keys(respData.errors)[0];
         const firstError = respData.errors[firstField];
         message = Array.isArray(firstError) ? firstError[0] : String(firstError);
@@ -125,7 +99,6 @@ apiClient.interceptors.response.use(
       message = error.message;
     }
 
-    // ── 401 — silently attempt token refresh then retry original request ──────
     if (status === 401 && !error.config._retried) {
       error.config._retried = true;
       try {
@@ -135,24 +108,16 @@ apiClient.interceptors.response.use(
           error.config.headers['Authorization'] = `Bearer ${newToken}`;
           return apiClient(error.config);
         }
-      } catch {
-        // Refresh also failed — fall through to ApiError
-      }
+      } catch { /* fall through */ }
     }
 
-    const apiError = new ApiError(status, message, respData);
-    return Promise.reject(apiError);
+    return Promise.reject(new ApiError(status, message, respData));
   }
 );
 
 // ─── Error class ──────────────────────────────────────────────────────────────
 
 export class ApiError extends Error {
-  /**
-   * @param {number|undefined} status  - HTTP status code
-   * @param {string}           message - Human-readable message
-   * @param {object|null}      data    - Raw response body
-   */
   constructor(status, message, data = null) {
     super(message);
     this.name   = 'ApiError';
@@ -167,11 +132,6 @@ export class ApiError extends Error {
   get isServerError()  { return this.status >= 500; }
   get isNetworkError() { return !this.status; }
 
-  /**
-   * fieldErrors — returns { field: "first error message" } for form use.
-   * Works with DRF serializer validation errors shape:
-   *   { errors: { email: ["Already taken."], password: ["Too short."] } }
-   */
   get fieldErrors() {
     if (!this.data?.errors) return {};
     const out = {};
@@ -182,7 +142,7 @@ export class ApiError extends Error {
   }
 }
 
-// ─── Token helpers ─────────────────────────────────────────────────────────────
+// ─── Token helpers ────────────────────────────────────────────────────────────
 
 export function getAccessToken() {
   if (typeof window === 'undefined') return null;
@@ -191,7 +151,6 @@ export function getAccessToken() {
 
 async function _silentRefresh() {
   try {
-    // Dynamic import prevents circular dependency: store → client → store
     const { useStore } = await import('@/store');
     const refreshAccessToken = useStore.getState().refreshAccessToken;
     if (!refreshAccessToken) return false;
@@ -215,48 +174,43 @@ export const api = {
 // ─── SSE Streaming helper ─────────────────────────────────────────────────────
 /**
  * createSSEStream
- * Opens an SSE connection to POST /api/v1/ai/stream/
- * Returns an AsyncGenerator that yields parsed event objects.
+ * Opens a streaming POST to /api/v1/ai/stream/ and yields parsed JSON events.
  *
- * The backend sends events in this format:
- *   data: {"type": "token",    "content": "Hello"}
- *   data: {"type": "products", "products": [...]}
- *   data: {"type": "image",    "url": "https://..."}
- *   data: {"type": "done",     "session_id": "...", "intent": "...", ...}
- *   data: {"type": "error",    "message": "..."}
+ * Headers sent: Content-Type: application/json, X-Session-Id, Authorization.
+ * No Accept or Cache-Control — both cause Django/DRF to reject the request.
  *
- * Usage:
- *   for await (const event of createSSEStream(payload)) {
- *     if (event.type === 'token') appendText(event.content);
- *     if (event.type === 'done')  finalise(event);
- *   }
+ * Yields event objects: { type, content? } | { type, products? } |
+ *                       { type, url? } | { type, intent?, follow_ups?, ... }
  */
 export async function* createSSEStream(payload) {
   const token     = getAccessToken();
   const sessionId = getSessionId();
 
   const headers = {
-    'Content-Type':  'application/json',
-    'Accept':        'text/event-stream',
-    'Cache-Control': 'no-cache',
-    'X-Session-Id':  sessionId || '',
+    'Content-Type': 'application/json',
+    'X-Session-Id': sessionId || '',
   };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const response = await fetch(
-    `${API_BASE_URL}/api/${API_VERSION}/ai/stream/`,
-    {
-      method:  'POST',
-      headers,
-      body:    JSON.stringify(payload),
-    }
-  );
+  let response;
+  try {
+    response = await fetch(
+      `${API_BASE_URL}/api/${API_VERSION}/ai/stream/`,
+      {
+        method:  'POST',
+        headers,
+        body:    JSON.stringify(payload),
+      }
+    );
+  } catch {
+    throw new ApiError(undefined, 'Network error — please check your connection.');
+  }
 
   if (!response.ok) {
     const errData = await response.json().catch(() => ({}));
     throw new ApiError(
       response.status,
-      errData?.error || errData?.detail || 'Stream request failed',
+      errData?.error || errData?.detail || errData?.message || `Stream failed (${response.status})`,
       errData,
     );
   }
@@ -271,21 +225,28 @@ export async function* createSSEStream(payload) {
 
     buffer += decoder.decode(value, { stream: true });
 
-    // SSE lines end with \n\n — split and process complete events
-    const lines = buffer.split('\n\n');
-    buffer = lines.pop(); // Keep incomplete last chunk
+    // Split on double newline — the SSE event separator
+    const blocks = buffer.split('\n\n');
+    buffer = blocks.pop(); // keep the incomplete trailing chunk
 
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed || !trimmed.startsWith('data: ')) continue;
+    for (const block of blocks) {
+      const trimmed = block.trim();
+      if (!trimmed) continue;
 
-      const jsonStr = trimmed.slice(6); // strip "data: "
+      // Find the data: line within the block
+      const dataLine = trimmed.split('\n').find((l) => l.startsWith('data: '));
+      if (!dataLine) continue;
+
+      const jsonStr = dataLine.slice(6).trim();
+      if (!jsonStr || jsonStr === '[DONE]') continue;
+
       try {
         const event = JSON.parse(jsonStr);
         yield event;
+        // Stop iterating after terminal events
         if (event.type === 'done' || event.type === 'error') return;
       } catch {
-        // Malformed JSON — skip
+        // Malformed JSON — skip this chunk silently
       }
     }
   }
