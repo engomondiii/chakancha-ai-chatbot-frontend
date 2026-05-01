@@ -65,7 +65,12 @@ export const ENDPOINTS = {
     INITIALIZE:         '/checkout/initialize/',
     CALCULATE_SHIPPING: '/checkout/shipping/',
     APPLY_COUPON:       '/checkout/coupon/',
+    // Unified payment initialisation endpoint — handles Stripe + PayPal + KG Inicis
+    // POST { payment_method, subtotal, currency, order_id }
+    // Returns: { client_secret } for Stripe, { approval_url } for PayPal
     PROCESS_PAYMENT:    '/checkout/payment/',
+    // Stripe webhook — registered in Stripe Dashboard, not called by frontend
+    STRIPE_WEBHOOK:     '/checkout/stripe/webhook/',
   },
 
   // ── Orders (/api/v1/orders/) ──────────────────────────────────────────────
@@ -143,6 +148,17 @@ export const ENDPOINTS = {
   // Phase 9 — matches search/urls.py
   SEARCH: {
     QUERY: '/search/',
+  },
+
+  // ── Payments (frontend-facing keys for Stripe.js and PayPal SDK) ──────────
+  // These are public keys safe to use in the browser
+  PAYMENTS: {
+    // Stripe publishable key — used to initialise Stripe.js
+    // Value: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+    STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '',
+    // PayPal client ID — used to load PayPal JS SDK
+    // Value: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID
+    PAYPAL_CLIENT_ID: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '',
   },
 
   // ── Contact ───────────────────────────────────────────────────────────────

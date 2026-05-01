@@ -28,7 +28,7 @@ export const siteConfig = {
       country:     'Kenya',
       countryCode: 'KE',
     },
-    email: 'hello@chakancha.com',
+    email: 'info@chakancha.com',
     phone: '+254 700 000 000',
   },
 
@@ -67,6 +67,8 @@ export const siteConfig = {
     reviews:       true,
     imageGeneration: process.env.NEXT_PUBLIC_ENABLE_IMAGE_GEN    === 'true',
     webSearch:       process.env.NEXT_PUBLIC_ENABLE_WEB_SEARCH   === 'true',
+    stripePayments:  !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+    paypalPayments:  !!process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID,
   },
 
   analytics: {
@@ -83,7 +85,7 @@ export const siteConfig = {
   },
 
   contact: {
-    email:        'hello@chakancha.com',
+    email:        'info@chakancha.com',
     supportEmail: 'support@chakancha.com',
     salesEmail:   'sales@chakancha.com',
     phone:        '+254 700 000 000',

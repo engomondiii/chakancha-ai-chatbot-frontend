@@ -11,6 +11,8 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.88.0",
     "@hookform/resolvers": "^5.2.2",
+    "@stripe/react-stripe-js": "^6.3.0",
+    "@stripe/stripe-js": "^9.4.0",
     "autoprefixer": "^10.4.27",
     "axios": "^1.15.0",
     "critters": "^0.0.25",

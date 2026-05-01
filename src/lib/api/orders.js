@@ -207,4 +207,51 @@ function getMockOrders() {
   ];
 }
 
-export default { createOrder, getOrders, getOrder, cancelOrder, trackOrder };
+// ─── Stripe payment initialisation ───────────────────────────────────────────
+
+/**
+ * Initialise a Stripe PaymentIntent.
+ * Returns client_secret for Stripe.js to confirm the card.
+ *
+ * Flow:
+ *   1. Call initStripePayment() → get client_secret
+ *   2. Use Stripe.js stripe.confirmCardPayment(client_secret, { payment_method: {...} })
+ *   3. On success, call createOrder() with stripe_payment_intent_id
+ *
+ * @param {number} subtotal  - Cart subtotal in USD
+ * @param {string} currency  - ISO 4217 (default 'USD')
+ */
+export async function initStripePayment(subtotal, currency = 'USD') {
+  const data = await api.post(ENDPOINTS.CHECKOUT.PROCESS_PAYMENT, {
+    payment_method: 'card',
+    subtotal:       parseFloat(subtotal.toFixed(2)),
+    currency,
+  });
+  return data; // { client_secret, payment_intent_id, amount, currency }
+}
+
+// ─── PayPal payment initialisation ───────────────────────────────────────────
+
+/**
+ * Initialise a PayPal order.
+ * Returns approval_url for the buyer to approve on PayPal.
+ *
+ * Flow:
+ *   1. Call initPayPalPayment() → get approval_url
+ *   2. Redirect buyer to approval_url (or show PayPal button via SDK)
+ *   3. After buyer approves, PayPal redirects to return_url with ?token=PAYPAL_ORDER_ID
+ *   4. Call createOrder() with paypal_order_id = token from URL
+ *
+ * @param {number} subtotal  - Cart subtotal in USD
+ * @param {string} currency  - ISO 4217 (default 'USD')
+ */
+export async function initPayPalPayment(subtotal, currency = 'USD') {
+  const data = await api.post(ENDPOINTS.CHECKOUT.PROCESS_PAYMENT, {
+    payment_method: 'paypal',
+    subtotal:       parseFloat(subtotal.toFixed(2)),
+    currency,
+  });
+  return data; // { paypal_order_id, approval_url, status }
+}
+
+export default { createOrder, getOrders, getOrder, cancelOrder, trackOrder, initStripePayment, initPayPalPayment };
