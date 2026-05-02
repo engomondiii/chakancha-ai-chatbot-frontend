@@ -1,12 +1,17 @@
 /**
  * src/config/site.js
- * Integration Phase 1 — minor updates only.
  *
- * What changed:
- *  - apiUrl reads NEXT_PUBLIC_API_URL (already correct)
- *  - features.aiChat enabled by default in dev (was env-var gated which broke local dev)
- *  - features.chakanTree enabled by default in dev
- *  - No other changes — site metadata is unchanged
+ * What changed from previous version:
+ *  - Feature flag logic made consistent across all flags:
+ *      !== 'false'  → defaults ON  (safe default for core features)
+ *      === 'true'   → defaults OFF (safe default for cost/optional features)
+ *  - search flag added (was missing — Phase 9 unified search)
+ *  - subscriptions changed from === 'true' to !== 'false'
+ *    so it defaults ON in production (app is fully built)
+ *  - webSearch changed from === 'true' to !== 'false'
+ *    so it defaults ON in production (Tavily key is set)
+ *  - imageGeneration stays === 'true' — defaults OFF (costs $0.04/image)
+ *  - blog stays hardcoded false (not built yet)
  */
 
 export const siteConfig = {
@@ -56,17 +61,35 @@ export const siteConfig = {
     twitterCard:  'summary_large_image',
   },
 
-  // Feature flags — defaults to true in dev so local development works
-  // without needing to set env vars
+  // ── Feature flags ─────────────────────────────────────────────────────────
+  //
+  // Two patterns used intentionally:
+  //
+  //   !== 'false'  → feature is ON by default
+  //                  turns OFF only when env var is explicitly set to 'false'
+  //                  used for: core features that should always be active
+  //
+  //   === 'true'   → feature is OFF by default
+  //                  turns ON only when env var is explicitly set to 'true'
+  //                  used for: optional/costly features you consciously enable
+  //
   features: {
+    // ── Core features — ON by default ──────────────────────────────
     aiChat:        process.env.NEXT_PUBLIC_ENABLE_AI_CHAT        !== 'false',
     chakanTree:    process.env.NEXT_PUBLIC_ENABLE_CHAKAN_TREE     !== 'false',
-    subscriptions: process.env.NEXT_PUBLIC_ENABLE_SUBSCRIPTIONS  === 'true',
+    subscriptions: process.env.NEXT_PUBLIC_ENABLE_SUBSCRIPTIONS  !== 'false',
+    search:        process.env.NEXT_PUBLIC_ENABLE_SEARCH          !== 'false',
+    webSearch:     process.env.NEXT_PUBLIC_ENABLE_WEB_SEARCH      !== 'false',
     newsletter:    true,
-    blog:          false,
     reviews:       true,
+
+    // ── Optional/costly features — OFF by default ──────────────────
+    // imageGeneration: $0.04 per DALL-E 3 image — enable consciously
     imageGeneration: process.env.NEXT_PUBLIC_ENABLE_IMAGE_GEN    === 'true',
-    webSearch:       process.env.NEXT_PUBLIC_ENABLE_WEB_SEARCH   === 'true',
+    blog:            false,   // not built yet
+
+    // ── Payment methods — ON when public keys are configured ────────
+    // Automatically enabled when the env vars are set (local or Vercel)
     stripePayments:  !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
     paypalPayments:  !!process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID,
   },
@@ -98,10 +121,10 @@ export const siteConfig = {
   },
 
   legal: {
-    privacyPolicyUrl: '/privacy',
+    privacyPolicyUrl:  '/privacy',
     termsOfServiceUrl: '/terms',
-    cookiePolicyUrl:  '/cookies',
-    refundPolicyUrl:  '/refund',
+    cookiePolicyUrl:   '/cookies',
+    refundPolicyUrl:   '/refund',
   },
 };
 
