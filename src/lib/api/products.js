@@ -1,63 +1,45 @@
 /**
- * src/lib/api/products.js — Integration Phase 3
+ * src/lib/api/products.js
  *
- * What changed from previous version:
- *  - normalizeProduct() now constructs a proper image URL from primary_image
- *    by prepending the API base URL when the value is a relative path
- *  - This fixes the tea photos not showing because backend returns paths like
- *    '/media/products/nandi-gold.jpg' without the domain
- *  - All other logic unchanged
+ * What changed:
+ *  - resolveImageUrl() now handles THREE cases:
+ *      1. Full URL (https://...)      → use as-is
+ *      2. /images/... paths           → frontend path, prepend NEXT_PUBLIC_SITE_URL
+ *         (images stored in Next.js public/ folder, served by Vercel)
+ *      3. /media/... paths            → backend path, prepend NEXT_PUBLIC_API_URL
+ *         (images uploaded via Django, served by Railway)
+ *  - This fixes tea images stored as /images/products/black-tea-1.jpg
  */
 
 import api from './client';
 import { ENDPOINTS } from './endpoints';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE  = process.env.NEXT_PUBLIC_API_URL  || 'http://localhost:8000';
+const SITE_BASE = process.env.NEXT_PUBLIC_SITE_URL || 'https://chakancha.com';
 
-// ─── Field normaliser ─────────────────────────────────────────────────────────
-
-/**
- * Resolve an image path to a full URL.
- * Backend may return:
- *   - Full URL:       https://cdn.chakancha.com/products/img.jpg  → use as-is
- *   - Relative path: /media/products/img.jpg                      → prepend API_BASE
- *   - null / ''                                                    → return null
- */
 function resolveImageUrl(path) {
   if (!path) return null;
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
-  // Relative path — prepend the backend base URL
+  // Frontend public folder — served by Vercel/Next.js
+  if (path.startsWith('/images/') || path.startsWith('/icons/') || path.startsWith('/public/')) {
+    return `${SITE_BASE}${path}`;
+  }
+  // Backend media — served by Django/Railway
   return `${API_BASE}${path.startsWith('/') ? '' : '/'}${path}`;
 }
 
-/**
- * Normalise a raw backend product into the shape expected by all components.
- * Provides both camelCase and snake_case variants for resilience.
- */
 export function normalizeProduct(raw) {
   if (!raw) return null;
-
-  // Resolve image URL — try multiple field names the backend may use
   const rawImage = raw.primary_image || raw.image || raw.thumbnail || null;
   const imageUrl = resolveImageUrl(rawImage);
-
   return {
-    // Identity
-    id:           raw.id,
-    slug:         raw.slug,
-    name:         raw.name,
-
-    // Pricing
-    price:        parseFloat(raw.price) || 0,
-
-    // Image — resolved to a full URL
-    image:        imageUrl,
-    primary_image: imageUrl,
-
-    // Category — object or string
-    category:     raw.category || null,
-
-    // Tea-specific fields — both naming conventions
+    id:             raw.id,
+    slug:           raw.slug,
+    name:           raw.name,
+    price:          parseFloat(raw.price) || 0,
+    image:          imageUrl,
+    primary_image:  imageUrl,
+    category:       raw.category || null,
     flavorProfile:  raw.flavor_profile  || raw.flavorProfile  || '',
     flavor_profile: raw.flavor_profile  || raw.flavorProfile  || '',
     tastingNotes:   raw.tasting_notes   || raw.tastingNotes   || [],
@@ -67,116 +49,56 @@ export function normalizeProduct(raw) {
     origin:         raw.origin          || '',
     weight:         raw.weight          || '',
     description:    raw.description     || '',
-
-    // Availability
-    inStock:   raw.in_stock !== false && raw.in_stock !== undefined
-                 ? (raw.in_stock ?? true)
-                 : (raw.inStock ?? true),
-    in_stock:  raw.in_stock !== false && raw.in_stock !== undefined
-                 ? (raw.in_stock ?? true)
-                 : (raw.inStock ?? true),
-
-    // Flags
-    featured: raw.featured || false,
-
-    // Gallery images — also resolve URLs
+    inStock:        raw.in_stock !== false ? (raw.in_stock ?? true) : (raw.inStock ?? true),
+    in_stock:       raw.in_stock !== false ? (raw.in_stock ?? true) : (raw.inStock ?? true),
+    featured:       raw.featured || false,
     images: Array.isArray(raw.images)
-      ? raw.images.map((img) => ({
-          ...img,
-          url: resolveImageUrl(img.url || img.image || img),
-        }))
+      ? raw.images.map((img) => ({ ...img, url: resolveImageUrl(img.url || img.image || img) }))
       : [],
   };
 }
 
-// ─── API functions ─────────────────────────────────────────────────────────────
-
-/**
- * GET /api/v1/products/
- * Returns paginated product list.
- */
 export async function getProducts(options = {}) {
   try {
     const params = {};
     if (options.category) params.category = options.category;
     if (options.limit)    params.page_size = options.limit;
-    if (options.sortBy)   params.ordering = options.sortOrder === 'desc'
-      ? `-${options.sortBy}` : options.sortBy;
+    if (options.sortBy)   params.ordering = options.sortOrder === 'desc' ? `-${options.sortBy}` : options.sortBy;
     if (options.search)   params.search = options.search;
-
     const data = await api.get(ENDPOINTS.PRODUCTS.LIST, { params });
-
     const items = data.results || data || [];
     return Array.isArray(items) ? items.map(normalizeProduct).filter(Boolean) : [];
-  } catch (err) {
-    console.error('getProducts error:', err);
-    return [];
-  }
+  } catch (err) { console.error('getProducts error:', err); return []; }
 }
 
-/**
- * GET /api/v1/products/:slug/
- */
 export async function getProduct(slug) {
   try {
     const data = await api.get(ENDPOINTS.PRODUCTS.DETAIL(slug));
     return normalizeProduct(data);
-  } catch (err) {
-    console.error('getProduct error:', err);
-    throw err;
-  }
+  } catch (err) { console.error('getProduct error:', err); throw err; }
 }
 
-/**
- * GET /api/v1/products/?featured=true
- */
 export async function getFeaturedProducts(limit = 4) {
   try {
-    const data = await api.get(ENDPOINTS.PRODUCTS.LIST, {
-      params: { featured: true, page_size: limit },
-    });
+    const data = await api.get(ENDPOINTS.PRODUCTS.LIST, { params: { featured: true, page_size: limit } });
     const items = data.results || data || [];
     return Array.isArray(items) ? items.map(normalizeProduct).filter(Boolean) : [];
-  } catch (err) {
-    console.error('getFeaturedProducts error:', err);
-    return [];
-  }
+  } catch (err) { console.error('getFeaturedProducts error:', err); return []; }
 }
 
-/**
- * GET /api/v1/products/?search=query
- */
 export async function searchProducts(query) {
   try {
-    const data = await api.get(ENDPOINTS.PRODUCTS.LIST, {
-      params: { search: query },
-    });
+    const data = await api.get(ENDPOINTS.PRODUCTS.LIST, { params: { search: query } });
     const items = data.results || data || [];
     return Array.isArray(items) ? items.map(normalizeProduct).filter(Boolean) : [];
-  } catch (err) {
-    console.error('searchProducts error:', err);
-    return [];
-  }
+  } catch (err) { console.error('searchProducts error:', err); return []; }
 }
 
-/**
- * GET /api/v1/products/categories/
- */
 export async function getCategories() {
   try {
     const data = await api.get(ENDPOINTS.PRODUCTS.CATEGORIES);
     return Array.isArray(data) ? data : (data.results || []);
-  } catch (err) {
-    console.error('getCategories error:', err);
-    return [];
-  }
+  } catch (err) { console.error('getCategories error:', err); return []; }
 }
 
-export default {
-  getProducts,
-  getProduct,
-  getFeaturedProducts,
-  searchProducts,
-  getCategories,
-  normalizeProduct,
-};
+export default { getProducts, getProduct, getFeaturedProducts, searchProducts, getCategories, normalizeProduct };
