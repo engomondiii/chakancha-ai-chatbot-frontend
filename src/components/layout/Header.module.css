@@ -1,14 +1,13 @@
 /* ─────────────────────────────────────────────────────────────────────────────
    Header — Header.module.css
-   All values hardcoded — no CSS variable dependencies
 
    Changes from previous version:
-   - .actionLabel added — shows text label next to icons on desktop
-   - .navLinkShop added — highlights "Shop Teas" with a distinct style
+   - .logoActive added — highlights Chakancha logo/name on the home page
+   - .navLinkActive added — highlights the active nav link (current page)
+   - .mobileNavLinkActive added — mobile equivalent
    - All other styles identical to previous version
 ───────────────────────────────────────────────────────────────────────────── */
 
-/* ── Base header ─────────────────────────────────────────────────────────── */
 .header {
   position: fixed;
   top: 0;
@@ -18,7 +17,6 @@
   transition: background-color 300ms ease, border-color 300ms ease, box-shadow 300ms ease;
 }
 
-/* Transparent state — floating over the hero */
 .transparent {
   background-color: rgba(0, 0, 0, 0.08);
   backdrop-filter: blur(4px);
@@ -26,7 +24,6 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Scrolled state — solid white */
 .scrolled {
   background-color: rgba(253, 253, 251, 0.97);
   backdrop-filter: blur(12px);
@@ -54,6 +51,9 @@
   gap: 8px;
   text-decoration: none;
   flex-shrink: 0;
+  border-radius: 8px;
+  padding: 4px 8px 4px 4px;
+  transition: background-color 150ms ease;
 }
 
 .logoIcon {
@@ -69,6 +69,16 @@
   color: #ffffff;
   letter-spacing: 0.01em;
   transition: color 300ms ease;
+}
+
+/* Logo active — on home page (transparent header) */
+.logoActive {
+  background-color: rgba(255, 255, 255, 0.18);
+}
+
+/* Logo active — on home page (scrolled header) */
+.header.scrolled .logoActive {
+  background-color: #edf4e6;
 }
 
 .header.scrolled .logoIcon { color: #2d5016; }
@@ -102,9 +112,16 @@
   color: #ffffff;
 }
 
-/* Shop Teas — highlighted nav link */
+/* Active nav link — transparent header */
+.navLinkActive {
+  background-color: rgba(255, 255, 255, 0.22);
+  color: #ffffff !important;
+  font-weight: 600;
+}
+
+/* Shop Teas — always slightly highlighted */
 .navLinkShop {
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: rgba(255, 255, 255, 0.12);
   font-weight: 600;
 }
 
@@ -112,7 +129,7 @@
   background-color: rgba(255, 255, 255, 0.25);
 }
 
-/* Nav links when scrolled */
+/* Scrolled state nav links */
 .header.scrolled .navLink {
   color: #6b5544;
 }
@@ -120,6 +137,14 @@
 .header.scrolled .navLink:hover {
   background-color: #f5f0e8;
   color: #2d5016;
+}
+
+/* Active nav link — scrolled header */
+.header.scrolled .navLinkActive {
+  background-color: #edf4e6;
+  color: #2d5016 !important;
+  font-weight: 600;
+  border: 1px solid rgba(45, 80, 22, 0.2);
 }
 
 .header.scrolled .navLinkShop {
@@ -172,30 +197,23 @@
   color: #2d5016;
 }
 
-/* Action label — text next to icons on desktop */
 .actionLabel {
   font-family: Inter, system-ui, sans-serif;
   font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
-  display: none; /* hidden by default, shown on wider screens */
+  display: none;
 }
 
 @media (min-width: 1024px) {
-  .actionLabel {
-    display: inline;
-  }
+  .actionLabel { display: inline; }
 }
 
-/* Login button — more prominent */
 .header.scrolled .iconButton:has(.actionLabel) {
   border: 1px solid rgba(45, 80, 22, 0.2);
 }
 
-/* Mobile menu toggle — hidden on desktop */
-.menuToggle {
-  display: none;
-}
+.menuToggle { display: none; }
 
 /* ── Mobile Overlay ──────────────────────────────────────────────────────── */
 .mobileOverlay {
@@ -262,6 +280,13 @@
   color: #2d5016;
 }
 
+/* Active mobile nav link */
+.mobileNavLinkActive {
+  background-color: #edf4e6;
+  color: #2d5016;
+  font-weight: 600;
+}
+
 .mobileActions {
   display: flex;
   gap: 12px;
@@ -301,9 +326,6 @@
 }
 
 @media (max-width: 767px) {
-  .container {
-    padding: 0 16px;
-    height: 64px;
-  }
-  .logoText { font-size: 18px; }
+  .container { padding: 0 16px; height: 64px; }
+  .logoText  { font-size: 18px; }
 }

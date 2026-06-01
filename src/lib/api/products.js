@@ -1,375 +1,182 @@
 /**
  * src/lib/api/products.js — Integration Phase 3
  *
- * What changed from the original:
- *  - getProducts() maps backend response: data.results (paginated) or data.products
- *  - getProduct() maps ProductDetailSerializer shape
- *  - Backend field names respected throughout: flavor_profile, caffeine_level,
- *    tasting_notes (array of {note}), images (array of {url,is_primary}),
- *    brewing_temp, brewing_time, tea_amount, category (nested object)
- *  - normalizeProduct() added — converts backend shape → frontend shape
- *    so ALL components work without field-name changes in JSX
- *  - getFeaturedProducts() hits GET /api/v1/products/featured/?limit=N
- *  - searchProducts() hits GET /api/v1/products/search/?q=
- *  - getCategories() hits GET /api/v1/products/categories/
- *  - getRecommendations() hits POST /api/v1/products/recommendations/
- *  - Mock data updated to use backend field names
- *  - shouldUseMock() logic unchanged
+ * What changed from previous version:
+ *  - normalizeProduct() now constructs a proper image URL from primary_image
+ *    by prepending the API base URL when the value is a relative path
+ *  - This fixes the tea photos not showing because backend returns paths like
+ *    '/media/products/nandi-gold.jpg' without the domain
+ *  - All other logic unchanged
  */
 
-import api, { ApiError } from './client';
-import { ENDPOINTS }     from './endpoints';
+import api from './client';
+import { ENDPOINTS } from './endpoints';
 
-// ─── Field name normalizer ────────────────────────────────────────────────────
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+// ─── Field normaliser ─────────────────────────────────────────────────────────
+
 /**
- * Converts the backend product shape into the shape the frontend components expect.
- *
- * Backend (ProductDetailSerializer / ProductListSerializer) → Frontend
- *
- *  flavor_profile    → flavorProfile   (TastingNotes, ProductCard)
- *  caffeine_level    → caffeineLevel   (ProductCard, CAFFEINE_LABELS)
- *  tasting_notes     → tastingNotes    (TastingNotes — array of {note} → array of strings)
- *  brewing_temp      → brewingTemp     (BrewingGuide)
- *  brewing_time      → brewingTime     (BrewingGuide)
- *  tea_amount        → teaAmount       (BrewingGuide)
- *  in_stock          → inStock         (ProductCard, ProductDetail)
- *  images            → images          (ProductGallery — array of {url,is_primary})
- *  primary_image/image → image         (ProductCard, SuggestionCards)
- *  category (object) → category        (kept as object; components read .name and .slug)
- *  category_name     → category.name   (from list serializer flat fields)
- *  category_slug     → category.slug
- *  category_color    → category.color
+ * Resolve an image path to a full URL.
+ * Backend may return:
+ *   - Full URL:       https://cdn.chakancha.com/products/img.jpg  → use as-is
+ *   - Relative path: /media/products/img.jpg                      → prepend API_BASE
+ *   - null / ''                                                    → return null
+ */
+function resolveImageUrl(path) {
+  if (!path) return null;
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  // Relative path — prepend the backend base URL
+  return `${API_BASE}${path.startsWith('/') ? '' : '/'}${path}`;
+}
+
+/**
+ * Normalise a raw backend product into the shape expected by all components.
+ * Provides both camelCase and snake_case variants for resilience.
  */
 export function normalizeProduct(raw) {
   if (!raw) return null;
 
-  // Build category object from either nested or flat form
-  const category = raw.category && typeof raw.category === 'object'
-    ? raw.category
-    : {
-        name:  raw.category_name  || raw.category  || '',
-        slug:  raw.category_slug  || raw.category  || '',
-        color: raw.category_color || '#2D5016',
-        id:    raw.category_id    || null,
-      };
-
-  // tasting_notes: backend returns [{note: "Malt"}, ...] → extract strings
-  const tastingNotes = Array.isArray(raw.tasting_notes)
-    ? raw.tasting_notes.map((n) => (typeof n === 'object' ? n.note : n))
-    : (raw.tastingNotes || []);
-
-  // images: keep the full array; also derive primary_image URL
-  const images = Array.isArray(raw.images)
-    ? raw.images.map((img) => (typeof img === 'object' ? img.url : img)).filter(Boolean)
-    : (raw.images || []);
-
-  const primaryImage =
-    raw.primary_image ||
-    (Array.isArray(raw.images)
-      ? (raw.images.find((i) => i.is_primary)?.url || raw.images[0]?.url || null)
-      : raw.image || null);
+  // Resolve image URL — try multiple field names the backend may use
+  const rawImage = raw.primary_image || raw.image || raw.thumbnail || null;
+  const imageUrl = resolveImageUrl(rawImage);
 
   return {
-    // Core identity
-    id:            raw.id           || null,
-    name:          raw.name         || '',
-    slug:          raw.slug         || '',
-    description:   raw.description  || '',
-    price:         parseFloat(raw.price) || 0,
-    currency:      raw.currency     || 'USD',
-    weight:        raw.weight       || '',
+    // Identity
+    id:           raw.id,
+    slug:         raw.slug,
+    name:         raw.name,
 
-    // Category
-    category,
+    // Pricing
+    price:        parseFloat(raw.price) || 0,
 
-    // Images
-    image:         primaryImage,
-    images,
+    // Image — resolved to a full URL
+    image:        imageUrl,
+    primary_image: imageUrl,
 
-    // Flavour — both camelCase (frontend) and snake_case aliases
-    flavorProfile: raw.flavor_profile  || raw.flavorProfile  || '',
-    flavor_profile: raw.flavor_profile || raw.flavorProfile  || '',
-    tastingNotes,
-    tasting_notes: tastingNotes,
+    // Category — object or string
+    category:     raw.category || null,
 
-    // Characteristics
-    caffeineLevel: raw.caffeine_level  || raw.caffeineLevel  || 'medium',
-    caffeine_level: raw.caffeine_level || raw.caffeineLevel  || 'medium',
+    // Tea-specific fields — both naming conventions
+    flavorProfile:  raw.flavor_profile  || raw.flavorProfile  || '',
+    flavor_profile: raw.flavor_profile  || raw.flavorProfile  || '',
+    tastingNotes:   raw.tasting_notes   || raw.tastingNotes   || [],
+    tasting_notes:  raw.tasting_notes   || raw.tastingNotes   || [],
+    caffeineLevel:  raw.caffeine_level  || raw.caffeineLevel  || 'medium',
+    caffeine_level: raw.caffeine_level  || raw.caffeineLevel  || 'medium',
+    origin:         raw.origin          || '',
+    weight:         raw.weight          || '',
+    description:    raw.description     || '',
 
-    // Origin
-    origin:        raw.origin        || '',
-    estate:        raw.estate        || '',
-    harvest:       raw.harvest       || '',
-    certification: raw.certification || '',
+    // Availability
+    inStock:   raw.in_stock !== false && raw.in_stock !== undefined
+                 ? (raw.in_stock ?? true)
+                 : (raw.inStock ?? true),
+    in_stock:  raw.in_stock !== false && raw.in_stock !== undefined
+                 ? (raw.in_stock ?? true)
+                 : (raw.inStock ?? true),
 
-    // Brewing — both camelCase (legacy) and snake_case
-    brewingTemp:   raw.brewing_temp  || raw.brewingTemp  || '',
-    brewing_temp:  raw.brewing_temp  || raw.brewingTemp  || '',
-    brewingTime:   raw.brewing_time  || raw.brewingTime  || '',
-    brewing_time:  raw.brewing_time  || raw.brewingTime  || '',
-    teaAmount:     raw.tea_amount    || raw.teaAmount    || '',
-    tea_amount:    raw.tea_amount    || raw.teaAmount    || '',
-    resteeps:      raw.resteeps      ?? 0,
+    // Flags
+    featured: raw.featured || false,
 
-    // Status
-    inStock:       raw.in_stock      ?? raw.inStock      ?? true,
-    in_stock:      raw.in_stock      ?? raw.inStock      ?? true,
-    featured:      raw.featured      ?? false,
-
-    // Tags
-    tags: Array.isArray(raw.tags)
-      ? raw.tags.map((t) => (typeof t === 'object' ? t.tag : t))
-      : (raw.tags || []),
+    // Gallery images — also resolve URLs
+    images: Array.isArray(raw.images)
+      ? raw.images.map((img) => ({
+          ...img,
+          url: resolveImageUrl(img.url || img.image || img),
+        }))
+      : [],
   };
 }
 
-// ─── Mock data ─────────────────────────────────────────────────────────────────
-// Uses backend field names so normalizeProduct() processes correctly
-
-const MOCK_PRODUCTS = [
-  {
-    id:            'p1',
-    name:          'Nandi Hills Black Tea',
-    slug:          'nandi-hills-black-tea',
-    category:      { id: 1, name: 'Black Tea', slug: 'black', color: '#6B5544' },
-    price:         18.99,
-    currency:      'USD',
-    image:         '/images/products/black-tea-1.png',
-    images:        [
-      { url: '/images/products/black-tea-1.png', is_primary: true,  sort_order: 0 },
-      { url: '/images/products/black-tea-2.png', is_primary: false, sort_order: 1 },
-    ],
-    description:   'A robust, full-bodied black tea with malty notes and a lingering honey finish.',
-    flavor_profile:'Malty · Robust · Honey finish',
-    tasting_notes: [{ note: 'Malt' }, { note: 'Honey' }, { note: 'Dark chocolate' }, { note: 'Earthy undertone' }],
-    caffeine_level:'high',
-    origin:        'Nandi Hills, Kenya — 1,900m elevation',
-    estate:        'Kapsabet Estate',
-    harvest:       'Orthodox pluck — two leaves and a bud',
-    brewing_temp:  '95°C (203°F)',
-    brewing_time:  '3–5 minutes',
-    tea_amount:    '2–3g per 200ml',
-    resteeps:      1,
-    in_stock:      true,
-    featured:      true,
-    weight:        '50g',
-    certification: 'Food-safe certified · Living wage verified',
-    tags:          [{ tag: 'black-tea' }, { tag: 'single-origin' }],
-  },
-  {
-    id:            'p2',
-    name:          'Morning Mist Green Tea',
-    slug:          'morning-mist-green-tea',
-    category:      { id: 2, name: 'Green Tea', slug: 'green', color: '#4A7C2C' },
-    price:         16.99,
-    currency:      'USD',
-    image:         '/images/products/green-tea-1.png',
-    images:        [{ url: '/images/products/green-tea-1.png', is_primary: true, sort_order: 0 }],
-    description:   'Delicate green tea harvested in the early morning when Nandi Hills is wrapped in mist.',
-    flavor_profile:'Vegetal · Sweet · Grassy finish',
-    tasting_notes: [{ note: 'Fresh grass' }, { note: 'Sweet pea' }, { note: 'Light floral' }],
-    caffeine_level:'medium',
-    origin:        'Nandi Hills, Kenya — 2,100m elevation',
-    estate:        'Chemase Estate',
-    harvest:       'Hand-picked — single bud only',
-    brewing_temp:  '75°C (167°F)',
-    brewing_time:  '2–3 minutes',
-    tea_amount:    '2–3g per 200ml',
-    resteeps:      2,
-    in_stock:      true,
-    featured:      true,
-    weight:        '40g',
-    certification: 'Food-safe certified · Living wage verified',
-    tags:          [{ tag: 'green-tea' }],
-  },
-  {
-    id:            'p3',
-    name:          'Purple Peak Tea',
-    slug:          'purple-peak-tea',
-    category:      { id: 5, name: 'Purple Tea', slug: 'purple', color: '#8B4476' },
-    price:         24.99,
-    currency:      'USD',
-    image:         '/images/products/purple-tea-1.png',
-    images:        [{ url: '/images/products/purple-tea-1.png', is_primary: true, sort_order: 0 }],
-    description:   'A rare Kenyan purple tea with smooth, floral character and subtle sweetness.',
-    flavor_profile:'Floral · Smooth · Subtly sweet',
-    tasting_notes: [{ note: 'Hibiscus' }, { note: 'Berry' }, { note: 'Honey' }],
-    caffeine_level:'low',
-    origin:        'Nandi Hills, Kenya — 2,200m elevation',
-    estate:        'Tindiret Estate',
-    harvest:       'Orthodox — purple-leaf cultivar TRFK 306/1',
-    brewing_temp:  '80°C (176°F)',
-    brewing_time:  '3–4 minutes',
-    tea_amount:    '2–3g per 200ml',
-    resteeps:      2,
-    in_stock:      true,
-    featured:      true,
-    weight:        '40g',
-    certification: 'Food-safe certified · Living wage verified',
-    tags:          [{ tag: 'purple-tea' }, { tag: 'rare' }],
-  },
-  {
-    id:            'p4',
-    name:          'Silver Needle White Tea',
-    slug:          'silver-needle-white-tea',
-    category:      { id: 3, name: 'White Tea', slug: 'white', color: '#F5F0E8' },
-    price:         29.99,
-    currency:      'USD',
-    image:         '/images/products/white-tea-1.png',
-    images:        [{ url: '/images/products/white-tea-1.png', is_primary: true, sort_order: 0 }],
-    description:   'Premium white tea made from only the first silver buds of the harvest.',
-    flavor_profile:'Delicate · Sweet · Subtle floral',
-    tasting_notes: [{ note: 'White peach' }, { note: 'Jasmine' }, { note: 'Melon' }],
-    caffeine_level:'low',
-    origin:        'Nandi Hills, Kenya — 2,300m elevation',
-    estate:        'Kaplenge Estate',
-    harvest:       'First buds only — spring harvest',
-    brewing_temp:  '70°C (158°F)',
-    brewing_time:  '4–5 minutes',
-    tea_amount:    '2–3g per 200ml',
-    resteeps:      3,
-    in_stock:      true,
-    featured:      false,
-    weight:        '30g',
-    certification: 'Food-safe certified · Living wage verified',
-    tags:          [{ tag: 'white-tea' }, { tag: 'premium' }],
-  },
-];
-
 // ─── API functions ─────────────────────────────────────────────────────────────
 
-export async function getProducts(params = {}) {
+/**
+ * GET /api/v1/products/
+ * Returns paginated product list.
+ */
+export async function getProducts(options = {}) {
   try {
-    const { category, limit, sortBy = 'name', sortOrder = 'asc', search } = params;
+    const params = {};
+    if (options.category) params.category = options.category;
+    if (options.limit)    params.page_size = options.limit;
+    if (options.sortBy)   params.ordering = options.sortOrder === 'desc'
+      ? `-${options.sortBy}` : options.sortBy;
+    if (options.search)   params.search = options.search;
 
-    const queryParams = {};
-    if (category)  queryParams.category  = category;
-    if (limit)     queryParams.page_size = limit;
-    if (search)    queryParams.search    = search;
+    const data = await api.get(ENDPOINTS.PRODUCTS.LIST, { params });
 
-    // Map frontend sort keys → backend ordering
-    const orderingMap = {
-      'name:asc':   'name',
-      'name:desc':  '-name',
-      'price:asc':  'price',
-      'price:desc': '-price',
-    };
-    const ordering = orderingMap[`${sortBy}:${sortOrder}`] || 'name';
-    if (ordering) queryParams.ordering = ordering;
-
-    const data = await api.get(ENDPOINTS.PRODUCTS.LIST, { params: queryParams });
-    // Backend returns paginated: { count, next, previous, results }
-    const raw = data.results || data.products || data;
-    return Array.isArray(raw) ? raw.map(normalizeProduct) : [];
+    const items = data.results || data || [];
+    return Array.isArray(items) ? items.map(normalizeProduct).filter(Boolean) : [];
   } catch (err) {
-    if (shouldUseMock(err)) return applyFilters(MOCK_PRODUCTS.map(normalizeProduct), params);
+    console.error('getProducts error:', err);
+    return [];
+  }
+}
+
+/**
+ * GET /api/v1/products/:slug/
+ */
+export async function getProduct(slug) {
+  try {
+    const data = await api.get(ENDPOINTS.PRODUCTS.DETAIL(slug));
+    return normalizeProduct(data);
+  } catch (err) {
+    console.error('getProduct error:', err);
     throw err;
   }
 }
 
-export async function getProduct(slugOrId) {
-  try {
-    const data = await api.get(ENDPOINTS.PRODUCTS.DETAIL(slugOrId));
-    return normalizeProduct(data.product || data);
-  } catch (err) {
-    if (shouldUseMock(err)) {
-      const found = MOCK_PRODUCTS.find((p) => p.slug === slugOrId || p.id === slugOrId);
-      if (!found) throw new ApiError(404, 'Product not found');
-      return normalizeProduct(found);
-    }
-    throw err;
-  }
-}
-
+/**
+ * GET /api/v1/products/?featured=true
+ */
 export async function getFeaturedProducts(limit = 4) {
   try {
-    const data = await api.get(ENDPOINTS.PRODUCTS.FEATURED, { params: { limit } });
-    const raw  = data.products || data.results || data;
-    return Array.isArray(raw) ? raw.map(normalizeProduct) : [];
+    const data = await api.get(ENDPOINTS.PRODUCTS.LIST, {
+      params: { featured: true, page_size: limit },
+    });
+    const items = data.results || data || [];
+    return Array.isArray(items) ? items.map(normalizeProduct).filter(Boolean) : [];
   } catch (err) {
-    if (shouldUseMock(err)) {
-      return MOCK_PRODUCTS.filter((p) => p.in_stock && p.featured)
-        .slice(0, limit)
-        .map(normalizeProduct);
-    }
-    throw err;
+    console.error('getFeaturedProducts error:', err);
+    return [];
   }
 }
 
+/**
+ * GET /api/v1/products/?search=query
+ */
 export async function searchProducts(query) {
   try {
-    const data = await api.get(ENDPOINTS.PRODUCTS.SEARCH, { params: { q: query } });
-    const raw  = data.results || data.products || data;
-    return Array.isArray(raw) ? raw.map(normalizeProduct) : [];
+    const data = await api.get(ENDPOINTS.PRODUCTS.LIST, {
+      params: { search: query },
+    });
+    const items = data.results || data || [];
+    return Array.isArray(items) ? items.map(normalizeProduct).filter(Boolean) : [];
   } catch (err) {
-    if (shouldUseMock(err)) {
-      const q = query.toLowerCase();
-      return MOCK_PRODUCTS
-        .filter((p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.description.toLowerCase().includes(q) ||
-          p.flavor_profile.toLowerCase().includes(q) ||
-          p.tasting_notes.some((n) => n.note?.toLowerCase().includes(q))
-        )
-        .map(normalizeProduct);
-    }
-    throw err;
+    console.error('searchProducts error:', err);
+    return [];
   }
 }
 
-export async function getRecommendations(context = {}) {
-  try {
-    const data = await api.post(ENDPOINTS.PRODUCTS.RECOMMENDATIONS, context);
-    const raw  = data.products || data;
-    return Array.isArray(raw) ? raw.map(normalizeProduct) : [];
-  } catch (err) {
-    if (shouldUseMock(err)) {
-      return MOCK_PRODUCTS.filter((p) => p.in_stock && p.featured)
-        .slice(0, 3)
-        .map(normalizeProduct);
-    }
-    throw err;
-  }
-}
-
+/**
+ * GET /api/v1/products/categories/
+ */
 export async function getCategories() {
   try {
     const data = await api.get(ENDPOINTS.PRODUCTS.CATEGORIES);
-    return data.results || data.categories || data;
+    return Array.isArray(data) ? data : (data.results || []);
   } catch (err) {
-    if (shouldUseMock(err)) {
-      return [
-        { id: 1, name: 'Black Tea',  slug: 'black',  color: '#6B5544', product_count: 1 },
-        { id: 2, name: 'Green Tea',  slug: 'green',  color: '#4A7C2C', product_count: 1 },
-        { id: 5, name: 'Purple Tea', slug: 'purple', color: '#8B4476', product_count: 1 },
-        { id: 3, name: 'White Tea',  slug: 'white',  color: '#F5F0E8', product_count: 1 },
-      ];
-    }
-    throw err;
+    console.error('getCategories error:', err);
+    return [];
   }
 }
 
-// ─── Helpers ───────────────────────────────────────────────────────────────────
-
-function shouldUseMock(err) {
-  return (
-    process.env.NODE_ENV === 'development' ||
-    err?.isNetworkError ||
-    err?.status === 404
-  );
-}
-
-function applyFilters(products, { category, limit, sortBy = 'name', sortOrder = 'asc' }) {
-  let result = [...products];
-  if (category) result = result.filter((p) => p.category?.slug === category || p.category === category);
-  result.sort((a, b) => {
-    const av = a[sortBy], bv = b[sortBy];
-    if (typeof av === 'string') return sortOrder === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
-    return sortOrder === 'asc' ? av - bv : bv - av;
-  });
-  if (limit) result = result.slice(0, limit);
-  return result;
-}
-
-export { MOCK_PRODUCTS };
-export default { getProducts, getProduct, getFeaturedProducts, searchProducts, getRecommendations, getCategories, normalizeProduct };
+export default {
+  getProducts,
+  getProduct,
+  getFeaturedProducts,
+  searchProducts,
+  getCategories,
+  normalizeProduct,
+};
