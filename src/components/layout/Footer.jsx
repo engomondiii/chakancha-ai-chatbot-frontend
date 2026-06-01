@@ -1,13 +1,11 @@
 /**
  * src/components/layout/Footer.jsx — Integration Phase 4
  *
- * What changed from the original:
- *  - handleSubscribe() now calls POST /api/v1/newsletter/subscribe/
- *    via the Axios api client instead of the // TODO comment
- *  - Sends { email, source: 'footer' } matching SubscribeSerializer
- *  - Shows server error message if subscription fails (e.g. invalid email)
- *  - isSubmitting loading state added to disable the button during request
- *  - Everything else unchanged (links, social icons, copyright)
+ * What changed from previous version:
+ *  - Contact email updated to contact@chakancha.com everywhere
+ *  - Added contact email link in the Support column
+ *  - handleSubscribe() logic unchanged
+ *  - All other links, social icons, copyright unchanged
  */
 
 'use client';
@@ -64,7 +62,7 @@ export function Footer() {
 
   const footerLinks = {
     discover: [
-      { name: 'Our Teas',     href: '/products' },
+      { name: 'Shop Teas',    href: '/products' },
       { name: 'Origin Story', href: '/origin' },
       { name: 'Traceability', href: '/origin/traceability' },
       { name: 'About Us',     href: '/about' },
@@ -80,10 +78,10 @@ export function Footer() {
       { name: 'Subscriptions', href: '/account/subscriptions' },
     ],
     support: [
-      { name: 'Account',  href: '/account' },
-      { name: 'Orders',   href: '/account/orders' },
-      { name: 'Shipping', href: '/help/shipping' },
-      { name: 'Contact',  href: '/contact' },
+      { name: 'Account',               href: '/account' },
+      { name: 'Orders',                href: '/account/orders' },
+      { name: 'Shipping',              href: '/help/shipping' },
+      { name: 'contact@chakancha.com', href: 'mailto:contact@chakancha.com' },
     ],
   };
 
@@ -94,7 +92,6 @@ export function Footer() {
     { name: 'LinkedIn',  href: 'https://linkedin.com/company/chakancha', Icon: IconLinkedIn  },
   ];
 
-  // Phase 4: wired to POST /api/v1/newsletter/subscribe/
   const handleSubscribe = async (e) => {
     e.preventDefault();
     if (!email.trim() || isSubmitting) return;
@@ -136,6 +133,27 @@ export function Footer() {
               From the tea fields of Nandi Hills to your cup.
               <br />Ask anything.
             </p>
+
+            {/* Contact email */}
+            <a
+              href="mailto:contact@chakancha.com"
+              style={{
+                display:        'flex',
+                alignItems:     'center',
+                gap:            6,
+                fontFamily:     'Inter, system-ui, sans-serif',
+                fontSize:       13,
+                color:          'rgba(255,255,255,0.6)',
+                textDecoration: 'none',
+                transition:     'color 150ms ease',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.color = '#d4a574'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
+            >
+              <Mail size={13} />
+              contact@chakancha.com
+            </a>
+
             <div className={styles.social}>
               {socialLinks.map(({ name, href, Icon }) => (
                 <a
@@ -175,7 +193,7 @@ export function Footer() {
             ))}
           </div>
 
-          {/* Newsletter — Phase 4: wired to real backend */}
+          {/* Newsletter */}
           <div className={styles.newsletterColumn}>
             <h4 className={styles.columnTitle}>Stay Connected</h4>
             <p className={styles.newsletterText}>

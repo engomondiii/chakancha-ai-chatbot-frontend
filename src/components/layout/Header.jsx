@@ -1,22 +1,19 @@
 /**
  * src/components/layout/Header.jsx — Integration Phase 4
  *
- * What changed from the original:
- *  - Auth state connected: reads isAuthenticated + user from useAuth()
- *  - Account icon: shows User avatar with initials when logged in,
- *    plain User icon when logged out — both link to /account
- *  - Cart badge: reads cartItemCount from Zustand store and shows badge
- *  - CartDrawer import added so it renders at root level from the Header
- *    (avoids needing to add it to every page separately)
- *  - scrolled/transparent logic unchanged
- *  - Mobile menu unchanged
+ * What changed from previous version:
+ *  - User icon now shows "Login" label when logged out (tooltip + visible label on desktop)
+ *  - "Our Teas" nav link updated to "Shop Teas" with a more action-oriented label
+ *  - Account button shows "My Account" label when logged in on desktop
+ *  - Cart button shows "Cart" label on desktop
+ *  - All other logic (scroll, auth, cart badge, mobile menu) unchanged
  */
 
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ShoppingCart, User, Menu, X, Leaf } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, Leaf, LogIn } from 'lucide-react';
 import { useStore }  from '@/store';
 import { useAuth }   from '@/lib/hooks/useAuth';
 import { CartDrawer } from '@/components/cart/CartDrawer';
@@ -42,7 +39,7 @@ export function Header() {
   }, [mobileMenuOpen]);
 
   const navLinks = [
-    { href: '/products',    label: 'Our Teas' },
+    { href: '/products',    label: 'Shop Teas' },
     { href: '/origin',      label: 'Origin' },
     { href: '/impact',      label: 'Impact' },
     { href: '/chakan-tree', label: 'Chakan Tree' },
@@ -60,6 +57,11 @@ export function Header() {
         .slice(0, 2) || '?'
     : null;
 
+  // First name for greeting
+  const firstName = isAuthenticated && user
+    ? (user.name || '').trim().split(/\s+/)[0] || 'Account'
+    : null;
+
   return (
     <>
       <header className={`${styles.header} ${scrolled ? styles.scrolled : styles.transparent}`}>
@@ -74,7 +76,10 @@ export function Header() {
           {/* Desktop Nav */}
           <nav className={styles.desktopNav} aria-label="Main navigation">
             {navLinks.map((link) => (
-              <Link key={link.href} href={link.href} className={styles.navLink}>
+              <Link key={link.href} href={link.href} className={`${styles.navLink} ${link.href === '/products' ? styles.navLinkShop : ''}`}>
+                {link.href === '/products' && (
+                  <Leaf size={13} style={{ marginRight: 4, opacity: 0.7 }} />
+                )}
                 {link.label}
               </Link>
             ))}
@@ -82,15 +87,18 @@ export function Header() {
 
           {/* Actions */}
           <div className={styles.actions}>
-            {/* Cart button with badge */}
+
+            {/* Cart button with badge and label */}
             <button
               className={styles.iconButton}
               onClick={openCart}
               aria-label={`Shopping cart${cartItemCount > 0 ? `, ${cartItemCount} items` : ''}`}
               type="button"
+              title="View cart"
               style={{ position: 'relative' }}
             >
               <ShoppingCart size={20} />
+              <span className={styles.actionLabel}>Cart</span>
               {cartItemCount > 0 && (
                 <span style={{
                   position:        'absolute',
@@ -114,27 +122,39 @@ export function Header() {
               )}
             </button>
 
-            {/* Account button — avatar when logged in, icon when logged out */}
-            <Link href="/account" className={styles.iconButton} aria-label="Account">
+            {/* Account / Login button */}
+            <Link
+              href={isAuthenticated ? '/account' : '/login'}
+              className={styles.iconButton}
+              aria-label={isAuthenticated ? 'My Account' : 'Login'}
+              title={isAuthenticated ? `Hi, ${firstName}` : 'Login to your account'}
+            >
               {isAuthenticated && initials ? (
-                <div style={{
-                  width:           28,
-                  height:          28,
-                  borderRadius:    '50%',
-                  backgroundColor: 'var(--color-tea-green)',
-                  display:         'flex',
-                  alignItems:      'center',
-                  justifyContent:  'center',
-                  fontSize:        11,
-                  fontWeight:      700,
-                  color:           'white',
-                  fontFamily:      'var(--font-sans)',
-                  lineHeight:      1,
-                }}>
-                  {initials}
-                </div>
+                <>
+                  <div style={{
+                    width:           28,
+                    height:          28,
+                    borderRadius:    '50%',
+                    backgroundColor: 'var(--color-tea-green)',
+                    display:         'flex',
+                    alignItems:      'center',
+                    justifyContent:  'center',
+                    fontSize:        11,
+                    fontWeight:      700,
+                    color:           'white',
+                    fontFamily:      'var(--font-sans)',
+                    lineHeight:      1,
+                    flexShrink:      0,
+                  }}>
+                    {initials}
+                  </div>
+                  <span className={styles.actionLabel}>{firstName}</span>
+                </>
               ) : (
-                <User size={20} />
+                <>
+                  <LogIn size={20} />
+                  <span className={styles.actionLabel} style={{ fontWeight: 600 }}>Login</span>
+                </>
               )}
             </Link>
 
@@ -185,7 +205,7 @@ export function Header() {
                   className={styles.mobileNavLink}
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  {link.label}
+                  {link.href === '/products' ? '🍃 Shop Teas' : link.label}
                 </Link>
               ))}
             </div>
@@ -200,9 +220,16 @@ export function Header() {
                 <ShoppingCart size={18} />
                 Cart {cartItemCount > 0 && `(${cartItemCount})`}
               </button>
-              <Link href="/account" className={styles.mobileActionLink} onClick={() => setMobileMenuOpen(false)}>
-                <User size={18} />
-                {isAuthenticated ? (user?.name?.split(' ')[0] || 'Account') : 'Account'}
+              <Link
+                href={isAuthenticated ? '/account' : '/login'}
+                className={styles.mobileActionLink}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {isAuthenticated ? (
+                  <><User size={18} /> {firstName || 'Account'}</>
+                ) : (
+                  <><LogIn size={18} /> Login</>
+                )}
               </Link>
             </div>
           </nav>

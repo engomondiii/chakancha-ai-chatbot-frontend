@@ -1,6 +1,11 @@
 /* ─────────────────────────────────────────────────────────────────────────────
    Header — Header.module.css
    All values hardcoded — no CSS variable dependencies
+
+   Changes from previous version:
+   - .actionLabel added — shows text label next to icons on desktop
+   - .navLinkShop added — highlights "Shop Teas" with a distinct style
+   - All other styles identical to previous version
 ───────────────────────────────────────────────────────────────────────────── */
 
 /* ── Base header ─────────────────────────────────────────────────────────── */
@@ -57,11 +62,6 @@
   flex-shrink: 0;
 }
 
-.scrolled .logoIcon,
-.header.scrolled .logoIcon {
-  color: #2d5016;
-}
-
 .logoText {
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 20px;
@@ -71,12 +71,6 @@
   transition: color 300ms ease;
 }
 
-.scrolled .logoText,
-.header.scrolled .logoText {
-  color: #6b5544;
-}
-
-/* Override colors when scrolled — applied via parent class */
 .header.scrolled .logoIcon { color: #2d5016; }
 .header.scrolled .logoText { color: #6b5544; }
 
@@ -90,6 +84,8 @@
 }
 
 .navLink {
+  display: flex;
+  align-items: center;
   font-family: Inter, system-ui, sans-serif;
   font-size: 14px;
   font-weight: 500;
@@ -106,6 +102,16 @@
   color: #ffffff;
 }
 
+/* Shop Teas — highlighted nav link */
+.navLinkShop {
+  background-color: rgba(255, 255, 255, 0.15);
+  font-weight: 600;
+}
+
+.navLinkShop:hover {
+  background-color: rgba(255, 255, 255, 0.25);
+}
+
 /* Nav links when scrolled */
 .header.scrolled .navLink {
   color: #6b5544;
@@ -114,6 +120,17 @@
 .header.scrolled .navLink:hover {
   background-color: #f5f0e8;
   color: #2d5016;
+}
+
+.header.scrolled .navLinkShop {
+  background-color: #edf4e6;
+  color: #2d5016;
+  border: 1px solid rgba(45, 80, 22, 0.2);
+}
+
+.header.scrolled .navLinkShop:hover {
+  background-color: #2d5016;
+  color: #ffffff;
 }
 
 /* ── Actions ─────────────────────────────────────────────────────────────── */
@@ -128,8 +145,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
+  gap: 6px;
+  min-width: 40px;
   height: 40px;
+  padding: 0 10px;
   background: none;
   border: none;
   color: rgba(255, 255, 255, 0.9);
@@ -137,7 +156,6 @@
   border-radius: 8px;
   text-decoration: none;
   transition: background-color 150ms ease, color 150ms ease;
-  padding: 0;
 }
 
 .iconButton:hover {
@@ -152,6 +170,26 @@
 .header.scrolled .iconButton:hover {
   background-color: #f5f0e8;
   color: #2d5016;
+}
+
+/* Action label — text next to icons on desktop */
+.actionLabel {
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  display: none; /* hidden by default, shown on wider screens */
+}
+
+@media (min-width: 1024px) {
+  .actionLabel {
+    display: inline;
+  }
+}
+
+/* Login button — more prominent */
+.header.scrolled .iconButton:has(.actionLabel) {
+  border: 1px solid rgba(45, 80, 22, 0.2);
 }
 
 /* Mobile menu toggle — hidden on desktop */
@@ -192,7 +230,6 @@
   flex-shrink: 0;
 }
 
-/* Override logo colors inside mobile menu (always on white bg) */
 .mobileMenu .logoIcon { color: #2d5016 !important; }
 .mobileMenu .logoText { color: #6b5544 !important; }
 .mobileMenu .iconButton { color: #6b5544 !important; }
@@ -258,13 +295,9 @@
 
 /* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 1023px) {
-  .desktopNav {
-    display: none;
-  }
-
-  .menuToggle {
-    display: flex;
-  }
+  .desktopNav { display: none; }
+  .menuToggle { display: flex; }
+  .actionLabel { display: none !important; }
 }
 
 @media (max-width: 767px) {
@@ -272,8 +305,5 @@
     padding: 0 16px;
     height: 64px;
   }
-
-  .logoText {
-    font-size: 18px;
-  }
+  .logoText { font-size: 18px; }
 }
