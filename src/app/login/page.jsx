@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
-import { Leaf, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Leaf, Eye, EyeOff, Loader2, Mail } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
 
 function LoginForm() {
@@ -13,13 +12,13 @@ function LoginForm() {
 
   const { login, isAuthenticated, authLoading } = useAuth();
 
-  const [email,    setEmail]    = useState('');
-  const [password, setPassword] = useState('');
-  const [showPw,   setShowPw]   = useState(false);
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState('');
+  const [email,      setEmail]      = useState('');
+  const [password,   setPassword]   = useState('');
+  const [showPw,     setShowPw]     = useState(false);
+  const [loading,    setLoading]    = useState(false);
+  const [error,      setError]      = useState('');
+  const [unverified, setUnverified] = useState(false);
 
-  // Already logged in — send them where they were going
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
       router.replace(redirect);
@@ -31,12 +30,19 @@ function LoginForm() {
     if (!email.trim() || !password) return;
     setLoading(true);
     setError('');
+    setUnverified(false);
 
     const result = await login(email.trim(), password);
     if (result?.success) {
       router.replace(redirect);
     } else {
-      setError(result?.error || 'Invalid email or password.');
+      const msg = result?.error || 'Invalid email or password.';
+      // Detect unverified account error from backend
+      if (msg.toLowerCase().includes('verify your email')) {
+        setUnverified(true);
+      } else {
+        setError(msg);
+      }
       setLoading(false);
     }
   };
@@ -82,6 +88,28 @@ function LoginForm() {
           </div>
         </div>
 
+        {/* Unverified account banner */}
+        {unverified && (
+          <div style={{
+            display:         'flex',
+            gap:             12,
+            backgroundColor: 'rgba(255, 165, 0, 0.06)',
+            border:          '1.5px solid rgba(255, 165, 0, 0.3)',
+            borderRadius:    'var(--radius-md)',
+            padding:         'var(--spacing-md)',
+          }}>
+            <Mail size={18} color="#D97706" style={{ flexShrink: 0, marginTop: 1 }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, color: '#92400E', margin: 0 }}>
+                Please verify your email
+              </p>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#92400E', margin: 0, lineHeight: 1.5 }}>
+                Check your inbox for the verification link we sent when you signed up. The link expires after 24 hours.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Form */}
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
           {/* Email */}
@@ -92,7 +120,7 @@ function LoginForm() {
             <input
               type="email"
               value={email}
-              onChange={(e) => { setEmail(e.target.value); setError(''); }}
+              onChange={(e) => { setEmail(e.target.value); setError(''); setUnverified(false); }}
               placeholder="you@example.com"
               required
               autoComplete="email"
@@ -120,7 +148,7 @@ function LoginForm() {
               <input
                 type={showPw ? 'text' : 'password'}
                 value={password}
-                onChange={(e) => { setPassword(e.target.value); setError(''); }}
+                onChange={(e) => { setPassword(e.target.value); setError(''); setUnverified(false); }}
                 placeholder="Your password"
                 required
                 autoComplete="current-password"
