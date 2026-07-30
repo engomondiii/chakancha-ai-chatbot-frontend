@@ -67,14 +67,14 @@ export function HeroSection() {
     }
   };
 
-  const handleChatMode = () => {
-    setHeroMode('chat');
-    setSearchResults(null);
-  };
+  // const handleChatMode = () => {
+  //   setHeroMode('chat');
+  //   setSearchResults(null);
+  // };
 
-  const handleSearchMode = () => {
-    setHeroMode('search');
-  };
+  // const handleSearchMode = () => {
+  //   setHeroMode('search');
+  // };
 
   const handleOpenChat = (query) => {
     router.push(`/chat?q=${encodeURIComponent(query || searchQuery)}`);
@@ -93,17 +93,17 @@ export function HeroSection() {
         <div className={styles.viewportContent}>
           <div className={styles.contentInner}>
 
-            <p className={styles.eyebrow}>Single-origin · Nandi Hills, Kenya</p>
+            {/* <p className={styles.eyebrow}>Single-origin · Nandi Hills, Kenya</p> */}
 
             <h1 className={styles.headline}>
-              From the tea fields of<br />
-              <span className={styles.headlineAccent}>Nandi Hills</span>{' '}
+              From { ' '}
+              <span className={styles.headlineAccent}>Nandi Hills</span>{' '}<br/>
               to your cup.
             </h1>
-            <p className={styles.subheadline}>Ask anything.</p>
+            {/* <p className={styles.subheadline}>Ask anything.</p> */}
 
             {/* Mode toggle */}
-            <div className={styles.modeToggle}>
+            {/* <div className={styles.modeToggle}>
               <button
                 className={`${styles.modeBtn} ${heroMode === 'chat' ? styles.modeBtnActive : ''}`}
                 onClick={handleChatMode}
@@ -118,7 +118,7 @@ export function HeroSection() {
               >
                 Search
               </button>
-            </div>
+            </div> */}
 
             <div className={styles.promptWrapper}>
               <PromptInput

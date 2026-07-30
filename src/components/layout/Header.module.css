@@ -7,79 +7,90 @@
    - .mobileNavLinkActive added — mobile equivalent
    - All other styles identical to previous version
 ───────────────────────────────────────────────────────────────────────────── */
-
 .header {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   z-index: 1000;
-  transition: background-color 300ms ease, border-color 300ms ease, box-shadow 300ms ease;
+
+  transition:
+    background 300ms ease,
+    border-color 300ms ease,
+    box-shadow 300ms ease,
+    backdrop-filter 300ms ease;
 }
 
+/* Header over hero image */
 .transparent {
-  background-color: rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(12, 18, 13, 0.18);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+/* Header after scrolling */
 .scrolled {
-  background-color: rgba(253, 253, 251, 0.97);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(184, 197, 214, 0.4);
-  box-shadow: 0 1px 20px rgba(45, 80, 22, 0.06);
+  background: rgba(253, 253, 251, 0.94);
+
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+
+  border-bottom: 1px solid rgba(45, 80, 22, 0.1);
+  box-shadow: 0 8px 30px rgba(20, 30, 20, 0.08);
 }
 
-/* ── Container ───────────────────────────────────────────────────────────── */
 .container {
-  max-width: 1200px;
+  width: 100%;
+  max-width: 1320px;
+  height: 68px;
+
   margin: 0 auto;
-  padding: 0 24px;
-  height: 72px;
+  padding: 0 32px;
+
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
 }
 
-/* ── Logo ────────────────────────────────────────────────────────────────── */
 .logo {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
+  flex-shrink: 0;
+
+  width: auto;
+  height: auto;
+  padding: 0;
+
   text-decoration: none;
-  flex-shrink: 0;
-  border-radius: 8px;
-  padding: 4px 8px 4px 4px;
-  transition: background-color 150ms ease;
+  line-height: 0;
 }
 
-.logoIcon {
-  color: #ffffff;
-  transition: color 300ms ease;
-  flex-shrink: 0;
+.logoLockup {
+  display: block;
+  width: 160px;
+  height: auto;
 }
 
-.logoText {
+/* .logoText {
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 20px;
   font-weight: 600;
   color: #ffffff;
   letter-spacing: 0.01em;
   transition: color 300ms ease;
-}
+} */
 
 /* Logo active — on home page (transparent header) */
-.logoActive {
+/* .logoActive {
   background-color: rgba(255, 255, 255, 0.18);
-}
+} */
 
 /* Logo active — on home page (scrolled header) */
-.header.scrolled .logoActive {
+/* .header.scrolled .logoActive {
   background-color: #edf4e6;
-}
+} */
 
 .header.scrolled .logoIcon { color: #2d5016; }
 .header.scrolled .logoText { color: #6b5544; }
@@ -94,21 +105,27 @@
 }
 
 .navLink {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+
   font-family: Inter, system-ui, sans-serif;
   font-size: 14px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.9);
+
+  color: rgba(255, 255, 255, 0.84);
   text-decoration: none;
-  padding: 8px 14px;
+
+  padding: 8px 13px;
   border-radius: 8px;
-  transition: background-color 150ms ease, color 150ms ease;
   white-space: nowrap;
+
+  transition:
+    background-color 160ms ease,
+    color 160ms ease;
 }
 
 .navLink:hover {
-  background-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.1);
   color: #ffffff;
 }
 

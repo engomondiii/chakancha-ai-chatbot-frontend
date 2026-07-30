@@ -14,7 +14,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ShoppingCart, User, Menu, X, Leaf, LogIn } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, LogIn } from 'lucide-react';
+import { LogoLockup, LogoMark } from '../common/Logo';
 import { useStore }   from '@/store';
 import { useAuth }    from '@/lib/hooks/useAuth';
 import { CartDrawer } from '@/components/cart/CartDrawer';
@@ -42,7 +43,7 @@ export function Header() {
   }, [mobileMenuOpen]);
 
   const navLinks = [
-    { href: '/products',    label: 'Shop Teas' },
+    { href: '/products',    label: 'Order Teas' },
     { href: '/origin',      label: 'Origin' },
     { href: '/impact',      label: 'Impact' },
     { href: '/chakan-tree', label: 'Chakan Tree' },
@@ -79,13 +80,18 @@ export function Header() {
         <div className={styles.container}>
 
           {/* Logo — highlighted when on home page */}
-          <Link
-            href="/"
-            className={`${styles.logo} ${isHome ? styles.logoActive : ''}`}
-          >
-            <Leaf size={22} className={styles.logoIcon} />
-            <span className={styles.logoText}>Chakancha</span>
-          </Link>
+         <Link
+  href="/"
+  className={`${styles.logo} ${isHome ? styles.logoActive : ''}`}
+  aria-label="Chakancha home"
+>
+  <LogoLockup
+    tone={scrolled ? 'dark' : 'white'}
+    size={155}
+    clickable={false}
+    className={styles.LogoMark}
+  />
+</Link>
 
           {/* Desktop Nav */}
           <nav className={styles.desktopNav} aria-label="Main navigation">
@@ -102,10 +108,7 @@ export function Header() {
                     active  ? styles.navLinkActive  : '',
                   ].filter(Boolean).join(' ')}
                 >
-                  {isShop && (
-                    <Leaf size={13} style={{ marginRight: 4, opacity: 0.7 }} />
-                  )}
-                  {link.label}
+                {link.label}
                 </Link>
               );
             })}
@@ -209,7 +212,7 @@ export function Header() {
           >
             <div className={styles.mobileMenuHeader}>
               <Link href="/" className={styles.logo} onClick={() => setMobileMenuOpen(false)}>
-                <Leaf size={20} className={styles.logoIcon} />
+                <LogoMark size={20} className={styles.logoIcon} />
                 <span className={styles.logoText}>Chakancha</span>
               </Link>
               <button
@@ -238,7 +241,7 @@ export function Header() {
                   className={`${styles.mobileNavLink} ${isNavActive(link.href) ? styles.mobileNavLinkActive : ''}`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  {link.href === '/products' ? '🍃 Shop Teas' : link.label}
+                  {link.href === '/products' ? 'Shop Teas' : link.label}
                 </Link>
               ))}
             </div>

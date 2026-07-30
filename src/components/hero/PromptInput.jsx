@@ -13,8 +13,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Send, Sparkles, Loader2 } from 'lucide-react';
+import { Sparkles, Loader2, Icon } from 'lucide-react';
 import styles from './PromptInput.module.css';
+import Image from 'next/image';
 
 export function PromptInput({ onSubmit, placeholder, isLoading = false, chat = false }) {
   const [value,     setValue]     = useState('');
@@ -56,13 +57,13 @@ export function PromptInput({ onSubmit, placeholder, isLoading = false, chat = f
 
         <div className={styles.iconLeft}>
           <Sparkles
-            size={20}
+            size={16}
             style={{
               color:      chat
                 ? (value.trim() ? '#2D5016' : '#B8C5D6')
                 : (value.trim() ? '#2D5016' : 'rgba(255,255,255,0.6)'),
               transition: 'color 150ms ease',
-              flexShrink: 0,
+              flexShrink: 0
             }}
           />
         </div>
@@ -97,23 +98,26 @@ export function PromptInput({ onSubmit, placeholder, isLoading = false, chat = f
               style={{ animation: 'spin 0.8s linear infinite' }}
             />
           ) : (
-            <Send
-              size={17}
-              style={{
-                transform:  value.trim() ? 'translateX(1px)' : 'none',
-                transition: 'transform 150ms ease',
-              }}
-            />
+          <Image
+  src="/images/icons/chakancha-mark-white.svg"
+  alt="Chakancha logo"
+  width={10}
+  height={10}
+  style={{
+    transform: value.trim() ? "translateX(1px)" : "none",
+    transition: "transform 150ms ease",
+  }}
+/>
           )}
         </button>
       </div>
 
       {/* Helper text only shown in hero mode, not in chat */}
-      {!chat && (
+      {/* {!chat && (
         <p className={styles.helperText}>
           Ask about our teas, origin story, brewing tips, or anything else
         </p>
-      )}
+      )} */}
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </form>
