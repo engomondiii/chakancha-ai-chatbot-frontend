@@ -211,19 +211,30 @@ export function Header() {
             aria-label="Mobile navigation"
           >
             <div className={styles.mobileMenuHeader}>
-              <Link href="/" className={styles.logo} onClick={() => setMobileMenuOpen(false)}>
-                <LogoMark size={20} className={styles.logoIcon} />
-                <span className={styles.logoText}>Chakancha</span>
-              </Link>
-              <button
-                className={styles.iconButton}
-                onClick={() => setMobileMenuOpen(false)}
-                aria-label="Close menu"
-                type="button"
-              >
-                <X size={22} />
-              </button>
-            </div>
+  <Link
+    href="/"
+    className={styles.logo}
+    onClick={() => setMobileMenuOpen(false)}
+    aria-label="Chakancha home"
+  >
+    <LogoMark
+      size="sm"
+      clickable={false}
+      className={styles.logoIcon}
+    />
+
+    <span className={styles.logoText}>Chakancha</span>
+  </Link>
+
+  <button
+    className={styles.iconButton}
+    onClick={() => setMobileMenuOpen(false)}
+    aria-label="Close menu"
+    type="button"
+  >
+    <X size={22} />
+  </button>
+</div>
 
             <div className={styles.mobileNavLinks}>
               {/* Home link at top of mobile menu */}
