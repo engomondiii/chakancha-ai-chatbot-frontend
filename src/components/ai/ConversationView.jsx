@@ -9,35 +9,62 @@
  *  - Everything else (scroll, clear, empty state) unchanged
  */
 
-'use client';
+"use client";
 
-import React, { useEffect, useRef, useCallback, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { Leaf, RotateCcw, Trash2, ChevronDown } from 'lucide-react';
-import { useAI } from '@/lib/hooks/useAI';
-import { MessageBubble }   from './MessageBubble';
-import { TypingIndicator } from './TypingIndicator';
-import { SuggestionCards } from './SuggestionCards';
-import { PromptInput }     from '@/components/hero/PromptInput';
-import { shouldShowProductSuggestions } from '@/lib/ai/intentDetection';
-import styles from './ConversationView.module.css';
+import React, { useEffect, useRef, useCallback, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import Image from "next/image";
+import { RotateCcw, Trash2, ChevronDown } from "lucide-react";
+import { useAI } from "@/lib/hooks/useAI";
+import { MessageBubble } from "./MessageBubble";
+import { TypingIndicator } from "./TypingIndicator";
+import { SuggestionCards } from "./SuggestionCards";
+import { PromptInput } from "@/components/hero/PromptInput";
+import { shouldShowProductSuggestions } from "@/lib/ai/intentDetection";
+import styles from "./ConversationView.module.css";
+
+const CHAKANCHA_MARK = "/images/icons/chakancha-mark-dark.svg";
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
 
 function EmptyState({ onChipClick }) {
   const chips = [
-    { text: 'Find my tea',    prompt: 'Help me find the perfect tea for my taste preferences' },
-    { text: 'Origin story',   prompt: 'Tell me about Nandi Hills and where Chakancha tea comes from' },
-    { text: 'Living wage',    prompt: 'How does Chakancha ensure living wages for tea pickers?' },
-    { text: 'Brewing tips',   prompt: 'What are the best practices for brewing premium tea?' },
-    { text: 'What teas?',     prompt: 'What teas do you currently have available?' },
-    { text: 'Chakan Tree',    prompt: 'What is the Chakan Tree and how does it work?' },
+    {
+      text: "Find my tea",
+      prompt: "Help me find the perfect tea for my taste preferences",
+    },
+    {
+      text: "Origin story",
+      prompt: "Tell me about Nandi Hills and where Chakancha tea comes from",
+    },
+    {
+      text: "Living wage",
+      prompt: "How does Chakancha ensure living wages for tea pickers?",
+    },
+    {
+      text: "Brewing tips",
+      prompt: "What are the best practices for brewing premium tea?",
+    },
+    {
+      text: "What teas?",
+      prompt: "What teas do you currently have available?",
+    },
+    {
+      text: "Chakan Tree",
+      prompt: "What is the Chakan Tree and how does it work?",
+    },
   ];
 
   return (
     <div className={styles.emptyState}>
       <div className={styles.emptyMark}>
-        <Leaf size={28} color="var(--color-tea-green)" />
+        <Image
+          src={CHAKANCHA_MARK}
+          alt=""
+          width={28}
+          height={28}
+          aria-hidden="true"
+        />
       </div>
       <h2 className={styles.emptyTitle}>Ask anything about Chakancha</h2>
       <p className={styles.emptySubtitle}>
@@ -45,7 +72,12 @@ function EmptyState({ onChipClick }) {
       </p>
       <div className={styles.emptyChips}>
         {chips.map((c) => (
-          <button key={c.text} className={styles.emptyChip} onClick={() => onChipClick(c.prompt)} type="button">
+          <button
+            key={c.text}
+            className={styles.emptyChip}
+            onClick={() => onChipClick(c.prompt)}
+            type="button"
+          >
             {c.text}
           </button>
         ))}
@@ -59,7 +91,7 @@ function EmptyState({ onChipClick }) {
 function ScrollToBottomBtn({ onClick, visible }) {
   return (
     <button
-      className={`${styles.scrollBtn} ${visible ? styles.scrollBtnVisible : ''}`}
+      className={`${styles.scrollBtn} ${visible ? styles.scrollBtnVisible : ""}`}
       onClick={onClick}
       type="button"
       aria-label="Scroll to latest message"
@@ -81,7 +113,7 @@ export function ConversationView() {
     suggestedFollowUps,
     error,
     hasMessages,
-    productCards,       // Phase 2: from SSE 'products' event
+    productCards, // Phase 2: from SSE 'products' event
     sendMessage,
     clearConversation,
     retryLastMessage,
@@ -91,23 +123,25 @@ export function ConversationView() {
     showProductSuggestions,
   } = useAI();
 
-  const messagesEndRef  = useRef(null);
+  const messagesEndRef = useRef(null);
   const messagesAreaRef = useRef(null);
-  const hasInitialised  = useRef(false);
+  const hasInitialised = useRef(false);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
-  const [confirmClear,  setConfirmClear]  = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
 
   // ── Init from ?q= ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (hasInitialised.current) return;
     hasInitialised.current = true;
-    const query = searchParams?.get('q');
+    const query = searchParams?.get("q");
     if (query) initFromQuery(decodeURIComponent(query));
   }, [searchParams, initFromQuery]);
 
   // ── Auto-scroll ────────────────────────────────────────────────────────────
   const scrollToBottom = useCallback((smooth = true) => {
-    messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'instant' });
+    messagesEndRef.current?.scrollIntoView({
+      behavior: smooth ? "smooth" : "instant",
+    });
   }, []);
 
   useEffect(() => {
@@ -121,8 +155,8 @@ export function ConversationView() {
     const onScroll = () => {
       setShowScrollBtn(el.scrollHeight - el.scrollTop - el.clientHeight > 200);
     };
-    el.addEventListener('scroll', onScroll, { passive: true });
-    return () => el.removeEventListener('scroll', onScroll);
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
   }, []);
 
   // ── Clear with confirm ─────────────────────────────────────────────────────
@@ -137,18 +171,25 @@ export function ConversationView() {
   };
 
   // ── Show suggestion cards ─────────────────────────────────────────────────
-  const lastAIMessage = [...messages].reverse().find((m) => m.type === 'ai' && !m.isStreaming);
+  const lastAIMessage = [...messages]
+    .reverse()
+    .find((m) => m.type === "ai" && !m.isStreaming);
   // Phase 2: show if backend sent product cards OR intent warrants it
   const showSuggestions =
     lastAIMessage && (productCards.length > 0 || showProductSuggestions);
 
   return (
     <div className={styles.container}>
-
       {/* Top bar */}
       <div className={styles.topBar}>
         <div className={styles.topBarLeft}>
-          <Leaf size={16} color="var(--color-tea-green)" />
+          <Image
+            src={CHAKANCHA_MARK}
+            alt=""
+            width={16}
+            height={16}
+            aria-hidden="true"
+          />
           <span className={styles.topBarTitle}>Chakancha AI</span>
           {currentIntent && (
             <span className={styles.intentBadge}>{currentIntent}</span>
@@ -157,13 +198,15 @@ export function ConversationView() {
         {hasMessages && (
           <div className={styles.topBarActions}>
             <button
-              className={`${styles.topBtn} ${confirmClear ? styles.topBtnDanger : ''}`}
+              className={`${styles.topBtn} ${confirmClear ? styles.topBtnDanger : ""}`}
               onClick={handleClear}
               type="button"
-              title={confirmClear ? 'Click again to confirm' : 'Clear conversation'}
+              title={
+                confirmClear ? "Click again to confirm" : "Clear conversation"
+              }
             >
               <Trash2 size={14} />
-              {confirmClear ? 'Confirm?' : 'Clear'}
+              {confirmClear ? "Confirm?" : "Clear"}
             </button>
           </div>
         )}
@@ -189,7 +232,7 @@ export function ConversationView() {
             })}
 
             {/* Typing indicator — only when waiting for first token */}
-            {isStreaming && messages[messages.length - 1]?.content === '' && (
+            {isStreaming && messages[messages.length - 1]?.content === "" && (
               <TypingIndicator />
             )}
 
@@ -206,7 +249,11 @@ export function ConversationView() {
             {error && !isStreaming && (
               <div className={styles.errorBar}>
                 <span className={styles.errorText}>{error}</span>
-                <button className={styles.retryBtn} onClick={retryLastMessage} type="button">
+                <button
+                  className={styles.retryBtn}
+                  onClick={retryLastMessage}
+                  type="button"
+                >
                   <RotateCcw size={13} /> Retry
                 </button>
               </div>
@@ -217,23 +264,26 @@ export function ConversationView() {
         )}
       </div>
 
-      <ScrollToBottomBtn visible={showScrollBtn} onClick={() => scrollToBottom()} />
+      <ScrollToBottomBtn
+        visible={showScrollBtn}
+        onClick={() => scrollToBottom()}
+      />
 
       {/* Input bar */}
       {/* Input bar */}
-<div className={styles.inputBar}>
-  <div
-    className={styles.inputWrap}
-    data-loading={isStreaming ? 'true' : 'false'}
-  >
-    <PromptInput
-      onSubmit={sendMessage}
-      placeholder="Ask about our teas, origin, impact…"
-      isLoading={isStreaming}
-      chat
-    />
-  </div>
-</div>
+      <div className={styles.inputBar}>
+        <div
+          className={styles.inputWrap}
+          data-loading={isStreaming ? "true" : "false"}
+        >
+          <PromptInput
+            onSubmit={sendMessage}
+            placeholder="Ask about our teas, origin, impact…"
+            isLoading={isStreaming}
+            chat
+          />
+        </div>
+      </div>
     </div>
   );
 }
