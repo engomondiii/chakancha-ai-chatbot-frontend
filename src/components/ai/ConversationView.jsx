@@ -220,16 +220,20 @@ export function ConversationView() {
       <ScrollToBottomBtn visible={showScrollBtn} onClick={() => scrollToBottom()} />
 
       {/* Input bar */}
-      <div className={styles.inputBar}>
-        <div className={styles.inputWrap}>
-          <PromptInput
-            onSubmit={sendMessage}
-            placeholder="Ask about our teas, origin, impact…"
-            isLoading={isStreaming}
-            chat
-          />
-        </div>
-      </div>
+      {/* Input bar */}
+<div className={styles.inputBar}>
+  <div
+    className={styles.inputWrap}
+    data-loading={isStreaming ? 'true' : 'false'}
+  >
+    <PromptInput
+      onSubmit={sendMessage}
+      placeholder="Ask about our teas, origin, impact…"
+      isLoading={isStreaming}
+      chat
+    />
+  </div>
+</div>
     </div>
   );
 }

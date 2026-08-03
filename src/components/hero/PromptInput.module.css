@@ -52,6 +52,60 @@
     0 0 0 2px rgba(45, 80, 22, 0.16),
     inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
+/* ── Chat-page variant ───────────────────────────────────────────────────── */
+
+.inputWrapper.chatMode {
+  background: var(--color-warm-cream, #F5F0E8);
+  border-color: var(--color-border, #DFE6E9);
+
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+
+  box-shadow:
+    0 8px 24px rgba(45, 52, 54, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.inputWrapper.chatMode:hover {
+  background: var(--color-soft-white, #FDFDFB);
+  border-color: rgba(45, 80, 22, 0.28);
+}
+
+.inputWrapper.chatMode.focused {
+  background: var(--color-soft-white, #FDFDFB);
+  border-color: var(--color-tea-green-light, #4A7C2C);
+
+  box-shadow:
+    0 0 0 3px rgba(74, 124, 44, 0.14),
+    0 10px 28px rgba(45, 52, 54, 0.1);
+}
+
+/* AI is generating a response */
+.inputWrapper.chatMode.loading {
+  background: var(--color-warm-cream, #F5F0E8);
+  border-color: var(--color-muted-olive, #8B8C5A);
+
+  box-shadow:
+    0 0 0 2px rgba(139, 140, 90, 0.12),
+    0 8px 22px rgba(45, 52, 54, 0.08);
+}
+
+/* Dark text for the white chat page */
+.textarea.textareaChat {
+  color: var(--color-text-primary, #2D3436);
+  caret-color: var(--color-tea-green, #2D5016);
+}
+
+.textarea.textareaChat::placeholder {
+  color: var(--color-text-secondary, #636E72);
+  opacity: 0.82;
+}
+
+.textarea.textareaChat:disabled {
+  color: var(--color-text-secondary, #636E72);
+  -webkit-text-fill-color: var(--color-text-secondary, #636E72);
+  opacity: 1;
+}
 
 .iconLeft {
   display: flex;
@@ -130,19 +184,25 @@
 
 /* Submit button — chat mode disabled/empty state */
 .submitButton.submitChat {
-  background-color: #f1f5f9;
-  color: #94a3b8;
+  background-color: var(--color-muted-olive, #8B8C5A);
+  color: #ffffff;
+  border-color: rgba(139, 140, 90, 0.45);
+  opacity: 0.65;
 }
 
-/* Submit button — chat mode active (has content) */
 .submitButton.submitChat.submitActive {
-  background-color: #2D5016;
+  background-color: var(--color-tea-green, #2D5016);
   color: #ffffff;
-  box-shadow: 0 2px 8px rgba(45, 80, 22, 0.3);
+  border-color: var(--color-tea-green, #2D5016);
+  opacity: 1;
+
+  box-shadow:
+    0 2px 8px rgba(45, 80, 22, 0.3);
 }
 
 .submitButton.submitChat.submitActive:hover {
-  background-color: #4A7C2C;
+  background-color: var(--color-tea-green-light, #4A7C2C);
+  border-color: var(--color-tea-green-light, #4A7C2C);
   transform: translateY(-1px);
 }
 
@@ -172,7 +232,7 @@
 }
 
 /* ── Responsive ─────────────────────────────────────────────────────────── */
-@@media (max-width: 767px) {
+@media (max-width: 767px) {
   .inputWrapper {
     padding: 9px 9px 9px 14px;
     gap: 10px;

@@ -31,13 +31,13 @@
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 
-  border: 1px solid rgba(255, 255, 255, 0.30);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 999px;
 
   font-family: Inter, system-ui, sans-serif;
   font-size: 13px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.90);
+  color: rgba(255, 255, 255, 0.9);
 
   cursor: pointer;
   white-space: nowrap;
@@ -45,17 +45,17 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 
   transition:
-    background     150ms ease,
-    border-color   150ms ease,
-    color          150ms ease,
-    transform      150ms ease,
-    box-shadow     150ms ease;
+    background 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    transform 150ms ease,
+    box-shadow 150ms ease;
 }
 
 /* Hover — fills with tea-green */
 .chip:hover {
-  background: #2D5016;
-  border-color: #2D5016;
+  background: #2d5016;
+  border-color: #2d5016;
   color: #ffffff;
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(45, 80, 22, 0.35);
@@ -67,7 +67,7 @@
 }
 
 .chip:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.8);
+  outline: 2px solid rgba(0, 0, 0, 0.12);
   outline-offset: 2px;
 }
 
@@ -75,7 +75,9 @@
 .icon {
   flex-shrink: 0;
   opacity: 0.85;
-  transition: opacity 150ms ease, transform 150ms ease;
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease;
 }
 
 .chip:hover .icon {
@@ -90,7 +92,9 @@
 
 /* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 767px) {
-  .chips { gap: 6px; }
+  .chips {
+    gap: 6px;
+  }
 
   .chip {
     padding: 8px 14px;
@@ -113,5 +117,7 @@
     width: 100%;
   }
 
-  .chip { justify-content: center; }
+  .chip {
+    justify-content: center;
+  }
 }

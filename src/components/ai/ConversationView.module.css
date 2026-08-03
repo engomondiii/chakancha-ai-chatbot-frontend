@@ -284,6 +284,7 @@
 .inputWrap :global(.PromptInput_form__*),
 .inputWrap form {
   width: 100%;
+  
 }
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */

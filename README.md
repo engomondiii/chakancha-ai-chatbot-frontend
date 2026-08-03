@@ -1,36 +1,102 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Recent Frontend Updates
 
-## Getting Started
+The Chakancha frontend has been refined to better match the official brand identity, improve the hero experience, resolve production errors, and create a more consistent chatbot interface.
 
-First, run the development server:
+### Brand Assets and Visual Identity
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Added additional hero background images featuring Nandi Hills and Chakancha tea fields.
+- Added and updated icons, logo marks, wordmarks, and lockup logo assets.
+- Improved the visual quality of the Nandi Hills hero scenery.
+- Updated hero controls and buttons to match the Chakancha brand system.
+- Updated the Send/Enter button to use the Chakancha logo mark.
+- Added an image to the Review section.
+
+### Hero Section Improvements
+
+- Improved hero image transitions to reduce noticeable pauses between slides.
+- Removed the **“Ask anything”** text.
+- Replaced the hero headline with:
+
+  > From Nandi Hills to your cup.
+
+- Removed the **AI Chat** and **Search** mode options.
+- Reduced the size of the hero prompt input for a cleaner and more balanced layout.
+- Removed the **“Single Origin Nandi Hills”** text.
+- Refined the hero layout and scenery to make the Nandi Hills presentation more visually engaging.
+
+### Header Navigation Updates
+
+Changed the header navigation label from:
+
+```text
+Shop Teas
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+to:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```text
+Order Teas
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Chat Input Refinement
 
-## Learn More
+Resolved a color clash affecting the active prompt input on the white conversation page.
 
-To learn more about Next.js, take a look at the following resources:
+The shared `PromptInput` component was originally designed for the dark Nandi Hills hero image. Its dark glass background and white text were also being applied inside the chatbot conversation page.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The following improvements were made:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Added chat-specific styling through the existing `chatMode` class.
+- Added dark text styling through the existing `textareaChat` class.
+- Added a dedicated loading state for the conversation prompt.
+- Preserved the original dark glass-morphism design on the hero page.
+- Changed the conversation input to use a warm cream background.
+- Changed the focused state to soft white with a tea-green border.
+- Changed the loading state to use muted olive accents.
+- Updated the active submit button to use Chakancha tea green.
+- Improved disabled text and placeholder readability.
+- Kept the white Chakancha mark visible on the submit button.
+- Corrected the invalid `@@media` responsive rule.
+- Removed the unused `Icon` import from `PromptInput.jsx`.
 
-## Deploy on Vercel
+The prompt input now behaves differently according to its context:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Context | Visual treatment |
+|---|---|
+| Hero page | Dark translucent glass input with white text |
+| Chat page | Warm cream input with dark text |
+| Focused chat input | Soft white background with green focus border |
+| Loading state | Warm cream with muted olive emphasis |
+| Active submit button | Chakancha tea green |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Error Fixes
+
+#### Missing Dark Logo Error
+
+Resolved the `404` error for:
+
+```text
+/images/icons/chakancha-lockup-dark.svg
+```
+
+The logo filename was corrected so that the browser path matches the asset inside the public images directory.
+
+#### React Hydration Errors
+
+Resolved React hydration errors `#418` and `#423`.
+
+The issue was caused by a clickable logo component being rendered inside an existing navigation link, which created nested anchor elements.
+
+The mobile logo was updated to disable its internal clickable behavior when it is already wrapped by the navigation link.
+
+### Result
+
+The frontend now provides:
+
+- Smoother hero transitions.
+- More consistent Chakancha branding.
+- Improved logo and icon reliability.
+- Cleaner header navigation.
+- Better chatbot input readability.
+- Separate visual treatments for hero and conversation inputs.
+- Fewer hydration and asset-loading errors.
