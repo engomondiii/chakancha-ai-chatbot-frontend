@@ -59,12 +59,12 @@ The following changes were made:
 
 The chatbot now uses the following mark treatment:
 
-| Location | Chakancha asset treatment |
-|---|---|
-| Chat top header | Standard Chakancha mark on a light surface |
-| Chat empty state | Standard Chakancha mark |
-| AI response avatar | White Chakancha mark on `--color-background-dark` |
-| Streaming avatar ring | `--color-accent-muted-gold` |
+| Location              | Chakancha asset treatment                         |
+| --------------------- | ------------------------------------------------- |
+| Chat top header       | Standard Chakancha mark on a light surface        |
+| Chat empty state      | Standard Chakancha mark                           |
+| AI response avatar    | White Chakancha mark on `--color-background-dark` |
+| Streaming avatar ring | `--color-accent-muted-gold`                       |
 
 ### Chat Input Refinement
 
@@ -93,13 +93,13 @@ The following improvements were made:
 
 The prompt input now behaves differently according to its context:
 
-| Context | Visual treatment |
-|---|---|
-| Hero page | Dark translucent glass input with inverse text |
-| Chat page | `--color-background-soft` with `--color-text-primary` |
-| Focused chat input | `--color-surface-card` with muted-gold border |
-| Loading state | `--color-background-muted` with muted-gold emphasis |
-| Active submit button | `--color-background-dark` with inverse content |
+| Context              | Visual treatment                                      |
+| -------------------- | ----------------------------------------------------- |
+| Hero page            | Dark translucent glass input with inverse text        |
+| Chat page            | `--color-background-soft` with `--color-text-primary` |
+| Focused chat input   | `--color-surface-card` with muted-gold border         |
+| Loading state        | `--color-background-muted` with muted-gold emphasis   |
+| Active submit button | `--color-background-dark` with inverse content        |
 
 ### Global CSS and Design Token Consolidation
 
@@ -144,22 +144,22 @@ The following updates were made:
 
 The canonical color palette now includes:
 
-| Token | Value |
-|---|---|
-| `--color-background-main` | `#FBFAF7` |
-| `--color-background-soft` | `#F7F4EE` |
-| `--color-background-muted` | `#ECE8E1` |
-| `--color-background-dark` | `#111111` |
+| Token                         | Value     |
+| ----------------------------- | --------- |
+| `--color-background-main`     | `#FBFAF7` |
+| `--color-background-soft`     | `#F7F4EE` |
+| `--color-background-muted`    | `#ECE8E1` |
+| `--color-background-dark`     | `#111111` |
 | `--color-background-charcoal` | `#2B2B2B` |
-| `--color-text-primary` | `#111111` |
-| `--color-text-secondary` | `#2B2B2B` |
-| `--color-text-muted` | `#4A4A4A` |
-| `--color-text-inverse` | `#F7F4EE` |
-| `--color-accent-muted-gold` | `#B9A777` |
-| `--color-accent-sand` | `#D2C59A` |
-| `--color-accent-dark-olive` | `#3C4031` |
-| `--color-border-soft` | `#D6D0C5` |
-| `--color-surface-card` | `#FFFFFF` |
+| `--color-text-primary`        | `#111111` |
+| `--color-text-secondary`      | `#2B2B2B` |
+| `--color-text-muted`          | `#4A4A4A` |
+| `--color-text-inverse`        | `#F7F4EE` |
+| `--color-accent-muted-gold`   | `#B9A777` |
+| `--color-accent-sand`         | `#D2C59A` |
+| `--color-accent-dark-olive`   | `#3C4031` |
+| `--color-border-soft`         | `#D6D0C5` |
+| `--color-surface-card`        | `#FFFFFF` |
 
 ### Footer Brand Alignment
 
@@ -224,11 +224,11 @@ public/
 The intended usage is:
 
 | Background | Logo treatment |
-|---|---|
-| White | Dark logo |
-| Off-white | Dark logo |
-| Black | Light logo |
-| Charcoal | Light logo |
+| ---------- | -------------- |
+| White      | Dark logo      |
+| Off-white  | Dark logo      |
+| Black      | Light logo     |
+| Charcoal   | Light logo     |
 
 ### Header Logo Clear Space
 
@@ -245,7 +245,7 @@ The following updates were made:
 - Corrected the CSS Module class-name mismatch between:
 
 ```jsx
-styles.LogoMark
+styles.LogoMark;
 ```
 
 and the previous selector:
@@ -298,16 +298,16 @@ The following improvements were made:
 
 The conversation page now follows this visual structure:
 
-| Element | Token treatment |
-|---|---|
-| Main conversation background | `--color-background-main` |
-| Sticky top bar | Translucent `--color-background-main` |
-| Borders | `--color-border-soft` |
-| Main text | `--color-text-primary` |
-| Supporting text | `--color-text-muted` |
-| Interactive emphasis | `--color-accent-muted-gold` |
-| Limited contextual accent | `--color-accent-dark-olive` |
-| Scroll button | `--color-background-charcoal` |
+| Element                      | Token treatment                       |
+| ---------------------------- | ------------------------------------- |
+| Main conversation background | `--color-background-main`             |
+| Sticky top bar               | Translucent `--color-background-main` |
+| Borders                      | `--color-border-soft`                 |
+| Main text                    | `--color-text-primary`                |
+| Supporting text              | `--color-text-muted`                  |
+| Interactive emphasis         | `--color-accent-muted-gold`           |
+| Limited contextual accent    | `--color-accent-dark-olive`           |
+| Scroll button                | `--color-background-charcoal`         |
 
 ### Message Bubble Design-System Alignment
 
@@ -336,15 +336,15 @@ The following improvements were made:
 
 The message treatment is now:
 
-| Message type | Visual treatment |
-|---|---|
-| User message | Charcoal background with inverse text |
-| AI message | White card surface with dark text |
-| System message | Soft off-white pill |
-| User-message link | Sand accent |
-| AI-message link | Dark olive with muted-gold underline |
-| Code block | Charcoal background with inverse text |
-| Blockquote | Muted text with muted-gold border |
+| Message type      | Visual treatment                      |
+| ----------------- | ------------------------------------- |
+| User message      | Charcoal background with inverse text |
+| AI message        | White card surface with dark text     |
+| System message    | Soft off-white pill                   |
+| User-message link | Sand accent                           |
+| AI-message link   | Dark olive with muted-gold underline  |
+| Code block        | Charcoal background with inverse text |
+| Blockquote        | Muted text with muted-gold border     |
 
 ### CSS Module and Global Variable Architecture
 
@@ -375,6 +375,41 @@ Implementation rules:
 - Updated components should use canonical variables instead of hardcoded colors.
 - Compatibility aliases remain temporary and should be removed gradually.
 - New components should use canonical tokens directly.
+
+### Logo Mark Replacement Across Frontend Pages
+
+The official Chakancha logo mark was expanded beyond the chatbot and applied across additional frontend pages.
+
+The following updates were made:
+
+- Updated the centralized `LogoMark` width so the official mark displays at the correct visual scale.
+- Replaced the previous generic `Leaf` icon on the login page.
+- Replaced the previous generic `Leaf` icon on the signup page.
+- Replaced the leaf icon used in the product page headline.
+- Replaced the previous generic `Leaf` icon on the forgot-password page.
+- Replaced the leaf icon shown in the empty-cart state.
+- Reused the centralized `LogoMark` component instead of repeating direct SVG paths across pages.
+- Used the dark mark on light surfaces and the white mark on dark surfaces.
+- Continued using the SVG assets stored under:
+
+```text
+public/images/icons/
+```
+
+- Preserved `clickable={false}` where the logo mark is decorative and should not create a nested link.
+- Improved consistency between authentication pages, product pages, and cart states.
+
+The updated logo mark coverage now includes:
+
+| Location              | Logo mark treatment          |
+| --------------------- | ---------------------------- |
+| Login page            | Official Chakancha logo mark |
+| Signup page           | Official Chakancha logo mark |
+| Product page headline | Official Chakancha logo mark |
+| Forgot-password page  | Official Chakancha logo mark |
+| Empty-cart state      | Official Chakancha logo mark |
+| Chatbot interface     | Official Chakancha logo mark |
+| AI response avatar    | White mark on a dark surface |
 
 ### Error Fixes
 
@@ -413,6 +448,9 @@ This prevents the legacy green-and-brown token system from overriding the Brand 
 ### Result
 
 The frontend now provides:
+
+- Correctly scaled Chakancha logo marks across authentication, product, and cart interfaces.
+- Replaced remaining generic leaf icons on login, signup, product headline, forgot-password, and empty-cart views.
 
 - Smoother hero transitions.
 - More consistent Chakancha branding.
