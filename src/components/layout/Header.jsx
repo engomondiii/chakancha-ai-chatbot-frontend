@@ -9,106 +9,113 @@
  *  - All other logic unchanged
  */
 
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { ShoppingCart, User, Menu, X, LogIn } from 'lucide-react';
-import { LogoLockup, LogoMark } from '../common/Logo';
-import { useStore }   from '@/store';
-import { useAuth }    from '@/lib/hooks/useAuth';
-import { CartDrawer } from '@/components/cart/CartDrawer';
-import styles from './Header.module.css';
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { ShoppingCart, User, Menu, X, LogIn } from "lucide-react";
+import { LogoLockup, LogoMark } from "../common/Logo";
+import { useStore } from "@/store";
+import { useAuth } from "@/lib/hooks/useAuth";
+import { CartDrawer } from "@/components/cart/CartDrawer";
+import styles from "./Header.module.css";
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [scrolled,       setScrolled]       = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   const pathname = usePathname();
 
   const { user, isAuthenticated } = useAuth();
-  const cartItemCount             = useStore((s) => s.cartItemCount);
-  const openCart                  = useStore((s) => s.openCart);
+  const cartItemCount = useStore((s) => s.cartItemCount);
+  const openCart = useStore((s) => s.openCart);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 40);
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   useEffect(() => {
-    document.body.style.overflow = mobileMenuOpen ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
+    document.body.style.overflow = mobileMenuOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [mobileMenuOpen]);
 
   const navLinks = [
-    { href: '/products',    label: 'Order Teas' },
-    { href: '/origin',      label: 'Origin' },
-    { href: '/impact',      label: 'Impact' },
-    { href: '/chakan-tree', label: 'Chakan Tree' },
-    { href: '/about',       label: 'About' },
+    { href: "/products", label: "Order Teas" },
+    { href: "/origin", label: "Origin" },
+    { href: "/impact", label: "Impact" },
+    { href: "/chakan-tree", label: "Chakan Tree" },
+    { href: "/about", label: "About" },
   ];
 
   // Determine which nav link is active
   const isNavActive = (href) => {
-    if (href === '/') return pathname === '/';
+    if (href === "/") return pathname === "/";
     return pathname.startsWith(href);
   };
 
   // Home page = no nav link active, logo is highlighted
-  const isHome = pathname === '/';
+  const isHome = pathname === "/";
 
   // Derive initials for avatar
-  const initials = isAuthenticated && user
-    ? (user.name || user.email || '')
-        .trim()
-        .split(/\s+/)
-        .map((w) => w[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2) || '?'
-    : null;
+  const initials =
+    isAuthenticated && user
+      ? (user.name || user.email || "")
+          .trim()
+          .split(/\s+/)
+          .map((w) => w[0])
+          .join("")
+          .toUpperCase()
+          .slice(0, 2) || "?"
+      : null;
 
-  const firstName = isAuthenticated && user
-    ? (user.name || '').trim().split(/\s+/)[0] || 'Account'
-    : null;
+  const firstName =
+    isAuthenticated && user
+      ? (user.name || "").trim().split(/\s+/)[0] || "Account"
+      : null;
 
   return (
     <>
-      <header className={`${styles.header} ${scrolled ? styles.scrolled : styles.transparent}`}>
+      <header
+        className={`${styles.header} ${scrolled ? styles.scrolled : styles.transparent}`}
+      >
         <div className={styles.container}>
-
           {/* Logo — highlighted when on home page */}
-         <Link
-  href="/"
-  className={`${styles.logo} ${isHome ? styles.logoActive : ''}`}
-  aria-label="Chakancha home"
->
-  <LogoLockup
-    tone={scrolled ? 'dark' : 'white'}
-    size={155}
-    clickable={false}
-    className={styles.LogoMark}
-  />
-</Link>
+          <Link
+            href="/"
+            className={`${styles.logo} ${isHome ? styles.logoActive : ""}`}
+            aria-label="Chakancha home"
+          >
+            <LogoLockup
+              tone={scrolled ? "dark" : "white"}
+              size={120}
+              clickable={false}
+              className={styles.LogoMark}
+            />
+          </Link>
 
           {/* Desktop Nav */}
           <nav className={styles.desktopNav} aria-label="Main navigation">
             {navLinks.map((link) => {
               const active = isNavActive(link.href);
-              const isShop = link.href === '/products';
+              const isShop = link.href === "/products";
               return (
                 <Link
                   key={link.href}
                   href={link.href}
                   className={[
                     styles.navLink,
-                    isShop  ? styles.navLinkShop   : '',
-                    active  ? styles.navLinkActive  : '',
-                  ].filter(Boolean).join(' ')}
+                    isShop ? styles.navLinkShop : "",
+                    active ? styles.navLinkActive : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
                 >
-                {link.label}
+                  {link.label}
                 </Link>
               );
             })}
@@ -116,65 +123,70 @@ export function Header() {
 
           {/* Actions */}
           <div className={styles.actions}>
-
             {/* Cart */}
             <button
               className={styles.iconButton}
               onClick={openCart}
-              aria-label={`Shopping cart${cartItemCount > 0 ? `, ${cartItemCount} items` : ''}`}
+              aria-label={`Shopping cart${cartItemCount > 0 ? `, ${cartItemCount} items` : ""}`}
               type="button"
               title="View cart"
-              style={{ position: 'relative' }}
+              style={{ position: "relative" }}
             >
               <ShoppingCart size={20} />
               <span className={styles.actionLabel}>Cart</span>
               {cartItemCount > 0 && (
-                <span style={{
-                  position:        'absolute',
-                  top:             -4,
-                  right:           -4,
-                  width:           16,
-                  height:          16,
-                  borderRadius:    '50%',
-                  backgroundColor: 'var(--color-tea-green)',
-                  color:           'white',
-                  fontSize:        9,
-                  fontWeight:      700,
-                  display:         'flex',
-                  alignItems:      'center',
-                  justifyContent:  'center',
-                  fontFamily:      'var(--font-sans)',
-                  lineHeight:      1,
-                }}>
-                  {cartItemCount > 9 ? '9+' : cartItemCount}
+                <span
+                  style={{
+                    position: "absolute",
+                    top: -4,
+                    right: -4,
+                    width: 16,
+                    height: 16,
+                    borderRadius: "50%",
+                    backgroundColor: "var(--color-tea-green)",
+                    color: "white",
+                    fontSize: 9,
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontFamily: "var(--font-sans)",
+                    lineHeight: 1,
+                  }}
+                >
+                  {cartItemCount > 9 ? "9+" : cartItemCount}
                 </span>
               )}
             </button>
 
             {/* Account / Login */}
             <Link
-              href={isAuthenticated ? '/account' : '/login'}
+              href={isAuthenticated ? "/account" : "/login"}
               className={styles.iconButton}
-              aria-label={isAuthenticated ? 'My Account' : 'Login'}
-              title={isAuthenticated ? `Hi, ${firstName}` : 'Login to your account'}
+              aria-label={isAuthenticated ? "My Account" : "Login"}
+              title={
+                isAuthenticated ? `Hi, ${firstName}` : "Login to your account"
+              }
             >
               {isAuthenticated && initials ? (
                 <>
-                  <div style={{
-                    width:           28,
-                    height:          28,
-                    borderRadius:    '50%',
-                    backgroundColor: 'var(--color-tea-green)',
-                    display:         'flex',
-                    alignItems:      'center',
-                    justifyContent:  'center',
-                    fontSize:        11,
-                    fontWeight:      700,
-                    color:           'white',
-                    fontFamily:      'var(--font-sans)',
-                    lineHeight:      1,
-                    flexShrink:      0,
-                  }}>
+                  <div
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: "50%",
+                      backgroundColor: "var(--color-tea-green)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: "white",
+                      fontFamily: "var(--font-sans)",
+                      lineHeight: 1,
+                      flexShrink: 0,
+                    }}
+                  >
                     {initials}
                   </div>
                   <span className={styles.actionLabel}>{firstName}</span>
@@ -182,7 +194,12 @@ export function Header() {
               ) : (
                 <>
                   <LogIn size={20} />
-                  <span className={styles.actionLabel} style={{ fontWeight: 600 }}>Login</span>
+                  <span
+                    className={styles.actionLabel}
+                    style={{ fontWeight: 600 }}
+                  >
+                    Login
+                  </span>
                 </>
               )}
             </Link>
@@ -204,43 +221,46 @@ export function Header() {
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className={styles.mobileOverlay} onClick={() => setMobileMenuOpen(false)}>
+        <div
+          className={styles.mobileOverlay}
+          onClick={() => setMobileMenuOpen(false)}
+        >
           <nav
             className={styles.mobileMenu}
             onClick={(e) => e.stopPropagation()}
             aria-label="Mobile navigation"
           >
             <div className={styles.mobileMenuHeader}>
-  <Link
-    href="/"
-    className={styles.logo}
-    onClick={() => setMobileMenuOpen(false)}
-    aria-label="Chakancha home"
-  >
-    <LogoMark
-      size="sm"
-      clickable={false}
-      className={styles.logoIcon}
-    />
+              <Link
+                href="/"
+                className={styles.logo}
+                onClick={() => setMobileMenuOpen(false)}
+                aria-label="Chakancha home"
+              >
+                <LogoMark
+                  size="sm"
+                  clickable={false}
+                  className={styles.logoIcon}
+                />
 
-    <span className={styles.logoText}>Chakancha</span>
-  </Link>
+                <span className={styles.logoText}>Chakancha</span>
+              </Link>
 
-  <button
-    className={styles.iconButton}
-    onClick={() => setMobileMenuOpen(false)}
-    aria-label="Close menu"
-    type="button"
-  >
-    <X size={22} />
-  </button>
-</div>
+              <button
+                className={styles.iconButton}
+                onClick={() => setMobileMenuOpen(false)}
+                aria-label="Close menu"
+                type="button"
+              >
+                <X size={22} />
+              </button>
+            </div>
 
             <div className={styles.mobileNavLinks}>
               {/* Home link at top of mobile menu */}
               <Link
                 href="/"
-                className={`${styles.mobileNavLink} ${isHome ? styles.mobileNavLinkActive : ''}`}
+                className={`${styles.mobileNavLink} ${isHome ? styles.mobileNavLinkActive : ""}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 🏠 Home
@@ -249,10 +269,10 @@ export function Header() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`${styles.mobileNavLink} ${isNavActive(link.href) ? styles.mobileNavLinkActive : ''}`}
+                  className={`${styles.mobileNavLink} ${isNavActive(link.href) ? styles.mobileNavLinkActive : ""}`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  {link.href === '/products' ? 'Shop Teas' : link.label}
+                  {link.href === "/products" ? "Shop Teas" : link.label}
                 </Link>
               ))}
             </div>
@@ -260,22 +280,33 @@ export function Header() {
             <div className={styles.mobileActions}>
               <button
                 className={styles.mobileActionLink}
-                onClick={() => { openCart(); setMobileMenuOpen(false); }}
+                onClick={() => {
+                  openCart();
+                  setMobileMenuOpen(false);
+                }}
                 type="button"
-                style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                }}
               >
                 <ShoppingCart size={18} />
                 Cart {cartItemCount > 0 && `(${cartItemCount})`}
               </button>
               <Link
-                href={isAuthenticated ? '/account' : '/login'}
+                href={isAuthenticated ? "/account" : "/login"}
                 className={styles.mobileActionLink}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {isAuthenticated ? (
-                  <><User size={18} /> {firstName || 'Account'}</>
+                  <>
+                    <User size={18} /> {firstName || "Account"}
+                  </>
                 ) : (
-                  <><LogIn size={18} /> Login</>
+                  <>
+                    <LogIn size={18} /> Login
+                  </>
                 )}
               </Link>
             </div>

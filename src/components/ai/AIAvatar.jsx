@@ -4,8 +4,8 @@ import React from "react";
 import Image from "next/image";
 
 export function AIAvatar({ isStreaming = false, size = "md" }) {
-  const sizeMap = { sm: 28, md: 36, lg: 44 };
-  const px = sizeMap[size] || 36;
+  const sizeMap = { sm: 28, md: 32, lg: 44 };
+  const px = sizeMap[size] || 32;
 
   return (
     <div
@@ -27,7 +27,7 @@ export function AIAvatar({ isStreaming = false, size = "md" }) {
       aria-label="Chakancha AI"
     >
       <Image
-        src="/images/icons/chakancha-mark-dark.svg"
+        src="/images/icons/chakancha-mark-white.svg"
         alt="Chakancha AI"
         width={Math.round(px * 0.5)}
         height={Math.round(px * 0.5)}

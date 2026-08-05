@@ -1,28 +1,28 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
+import Link from "next/link";
 
 const logoFiles = {
   mark: {
-    dark: '/images/icons/chakancha-mark-dark.svg',
-    white: '/images/icons/chakancha-mark-white.svg',
+    dark: "/images/icons/chakancha-mark-dark.svg",
+    white: "/images/icons/chakancha-mark-white.svg",
   },
 
   wordmark: {
-    dark: '/images/icons/chakancha-wordmark-dark.svg',
-    white: '/images/icons/chakancha-wordmark-white.svg',
+    dark: "/images/icons/chakancha-wordmark-dark.svg",
+    white: "/images/icons/chakancha-wordmark-white.svg",
   },
 
   lockup: {
-    dark: '/images/icons/chakancha-lockup-dark.svg',
-    white: '/images/icons/chakancha-lockup-white.svg',
+    dark: "/images/icons/chakancha-lockup-dark.svg",
+    white: "/images/icons/chakancha-lockup-white.svg",
   },
 };
 
 const logoWidths = {
   mark: {
     sm: 32,
-    md: 40,
+    md: 32,
     lg: 52,
   },
 
@@ -33,27 +33,24 @@ const logoWidths = {
   },
 
   lockup: {
-    sm: 140,
-    md: 180,
+    sm: 84,
+    md: 90,
     lg: 220,
   },
 };
 
 export function Logo({
-  variant = 'lockup',
-  tone = 'dark',
-  size = 'md',
+  variant = "lockup",
+  tone = "dark",
+  size = "md",
   clickable = true,
-  className = '',
+  className = "",
 }) {
-  const normalizedVariant =
-    variant === 'full' ? 'lockup' : variant;
+  const normalizedVariant = variant === "full" ? "lockup" : variant;
 
-  const selectedVariant =
-    logoFiles[normalizedVariant] || logoFiles.lockup;
+  const selectedVariant = logoFiles[normalizedVariant] || logoFiles.lockup;
 
-  const selectedSizes =
-    logoWidths[normalizedVariant] || logoWidths.lockup;
+  const selectedSizes = logoWidths[normalizedVariant] || logoWidths.lockup;
 
   const src = selectedVariant[tone] || selectedVariant.dark;
   const width = selectedSizes[size] || selectedSizes.md;
@@ -66,9 +63,9 @@ export function Logo({
       className={className}
       draggable="false"
       style={{
-        display: 'block',
+        display: "block",
         width: `${width}px`,
-        height: 'auto',
+        height: "auto",
       }}
     />
   );
@@ -82,9 +79,9 @@ export function Logo({
       href="/"
       aria-label="Chakancha home"
       style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        textDecoration: 'none',
+        display: "inline-flex",
+        alignItems: "center",
+        textDecoration: "none",
       }}
     >
       {logoImage}
@@ -92,18 +89,10 @@ export function Logo({
   );
 }
 
-export const LogoMark = (props) => (
-  <Logo variant="mark" {...props} />
-);
+export const LogoMark = (props) => <Logo variant="mark" {...props} />;
 
-export const LogoWordmark = (props) => (
-  <Logo variant="wordmark" {...props} />
-);
+export const LogoWordmark = (props) => <Logo variant="wordmark" {...props} />;
 
-export const LogoLockup = (props) => (
-  <Logo variant="lockup" {...props} />
-);
+export const LogoLockup = (props) => <Logo variant="lockup" {...props} />;
 
-export const LogoFull = (props) => (
-  <Logo variant="lockup" {...props} />
-);
+export const LogoFull = (props) => <Logo variant="lockup" {...props} />;

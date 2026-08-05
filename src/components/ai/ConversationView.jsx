@@ -23,7 +23,7 @@ import { PromptInput } from "@/components/hero/PromptInput";
 import { shouldShowProductSuggestions } from "@/lib/ai/intentDetection";
 import styles from "./ConversationView.module.css";
 
-const CHAKANCHA_MARK = "/images/icons/chakancha-mark-dark.svg";
+const CHAKANCHA_MARK = "/images/icons/chakancha-mark-white.svg";
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
 

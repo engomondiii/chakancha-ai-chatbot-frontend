@@ -67,10 +67,9 @@
   line-height: 0;
 }
 
-.logoLockup {
-  display: block;
-  width: 160px;
-  height: auto;
+
+.container .logo {
+ margin-top: 14px;
 }
 
 /* .logoText {
@@ -92,8 +91,12 @@
   background-color: #edf4e6;
 } */
 
-.header.scrolled .logoIcon { color: #2d5016; }
-.header.scrolled .logoText { color: #6b5544; }
+.header.scrolled .logoIcon {
+  color: #2d5016;
+}
+.header.scrolled .logoText {
+  color: #6b5544;
+}
 
 /* ── Desktop Nav ─────────────────────────────────────────────────────────── */
 .desktopNav {
@@ -196,7 +199,9 @@
   cursor: pointer;
   border-radius: 8px;
   text-decoration: none;
-  transition: background-color 150ms ease, color 150ms ease;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
 }
 
 .iconButton:hover {
@@ -222,14 +227,18 @@
 }
 
 @media (min-width: 1024px) {
-  .actionLabel { display: inline; }
+  .actionLabel {
+    display: inline;
+  }
 }
 
 .header.scrolled .iconButton:has(.actionLabel) {
   border: 1px solid rgba(45, 80, 22, 0.2);
 }
 
-.menuToggle { display: none; }
+.menuToggle {
+  display: none;
+}
 
 /* ── Mobile Overlay ──────────────────────────────────────────────────────── */
 .mobileOverlay {
@@ -264,9 +273,15 @@
   flex-shrink: 0;
 }
 
-.mobileMenu .logoIcon { color: #2d5016 !important; }
-.mobileMenu .logoText { color: #6b5544 !important; }
-.mobileMenu .iconButton { color: #6b5544 !important; }
+.mobileMenu .logoIcon {
+  color: #2d5016 !important;
+}
+.mobileMenu .logoText {
+  color: #6b5544 !important;
+}
+.mobileMenu .iconButton {
+  color: #6b5544 !important;
+}
 .mobileMenu .iconButton:hover {
   background-color: #f5f0e8 !important;
   color: #2d5016 !important;
@@ -288,7 +303,9 @@
   text-decoration: none;
   padding: 14px 16px;
   border-radius: 10px;
-  transition: background-color 150ms ease, color 150ms ease;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
 }
 
 .mobileNavLink:hover {
@@ -325,7 +342,9 @@
   border: 1px solid rgba(184, 197, 214, 0.5);
   border-radius: 10px;
   padding: 12px;
-  transition: background-color 150ms ease, color 150ms ease;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
 }
 
 .mobileActionLink:hover {
@@ -336,12 +355,23 @@
 
 /* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 1023px) {
-  .desktopNav { display: none; }
-  .menuToggle { display: flex; }
-  .actionLabel { display: none !important; }
+  .desktopNav {
+    display: none;
+  }
+  .menuToggle {
+    display: flex;
+  }
+  .actionLabel {
+    display: none !important;
+  }
 }
 
 @media (max-width: 767px) {
-  .container { padding: 0 16px; height: 64px; }
-  .logoText  { font-size: 18px; }
+  .container {
+    padding: 0 16px;
+    height: 64px;
+  }
+  .logoText {
+    font-size: 18px;
+  }
 }

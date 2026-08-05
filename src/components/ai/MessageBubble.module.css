@@ -1,146 +1,355 @@
 /* ─────────────────────────────────────────────────────────────────────────────
    MessageBubble.module.css
-   Uses CSS variables from globals.css — no hardcoded values.
+
+   All colors, typography, spacing, radii, shadows, and transitions are
+   controlled by src/app/globals.css.
 ───────────────────────────────────────────────────────────────────────────── */
 
 /* ── System message ──────────────────────────────────────────────────────── */
+
 .systemMessage {
-  display:         flex;
+  display: flex;
   justify-content: center;
-  padding:         var(--spacing-sm) 0;
+
+  padding: var(--space-1) 0;
 }
 
 .systemText {
-  font-family: var(--font-sans);
-  font-size:   13px;
-  color:       var(--color-text-secondary);
-  background:  var(--color-warm-cream);
-  border:      1px solid var(--color-border);
-  border-radius: var(--radius-pill);
-  padding:     4px 14px;
+  margin: 0;
+
+  padding: var(--spacing-xs) var(--space-2);
+
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-caption);
+
+  color: var(--color-text-muted);
+  background-color: var(--color-background-soft);
+
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-button);
 }
 
 /* ── User message row ────────────────────────────────────────────────────── */
+
 .userRow {
-  display:         flex;
+  display: flex;
+  align-items: flex-end;
   justify-content: flex-end;
-  align-items:     flex-end;
-  gap:             var(--spacing-xs);
-  animation:       fadeUp var(--transition-standard) var(--ease-out);
+
+  gap: var(--spacing-xs);
+
+  animation: fadeUp var(--transition-standard) var(--ease-out);
 }
 
 .userBubble {
-  max-width:        72%;
-  background-color: var(--color-tea-green);
-  color:            #ffffff;
-  border-radius:    18px 18px 4px 18px;
-  padding:          12px 18px;
-  box-shadow:       var(--shadow-sm);
+  max-width: 72%;
+
+  padding: var(--space-2) var(--space-3);
+
+  color: var(--color-text-inverse);
+  background-color: var(--color-background-charcoal);
+
+  border: 1px solid
+    color-mix(in srgb, var(--color-text-inverse) 10%, transparent);
+
+  border-radius: var(--radius-card) var(--radius-card) var(--radius-sm)
+    var(--radius-card);
+
+  box-shadow: var(--shadow-sm);
 }
 
 .userText {
-  font-family: var(--font-sans);
-  font-size:   var(--font-size-body);
-  line-height: 1.6;
-  margin:      0;
+  margin: 0;
+
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-body);
+
+  color: inherit;
+
   white-space: pre-wrap;
-  word-break:  break-word;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/*
+ * Prevent global paragraph colors from overriding text inside
+ * the dark user message bubble.
+ */
+.userText p,
+.userText span,
+.userText strong,
+.userText em,
+.userText li,
+.userBubble p {
+  color: inherit;
+}
+
+.userText a,
+.userBubble a {
+  color: var(--color-accent-sand);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.userText a:hover,
+.userBubble a:hover {
+  color: var(--color-text-inverse);
 }
 
 .userActions {
-  display:     flex;
+  display: flex;
   align-items: center;
-  gap:         2px;
-  opacity:     0;
-  animation:   fadeIn var(--transition-fast) var(--ease-out) forwards;
+
+  gap: var(--spacing-xs);
+
+  opacity: 0;
+
+  transition: opacity var(--transition-fast) var(--ease-out);
 }
 
-.userRow:hover .userActions {
+.userRow:hover .userActions,
+.userRow:focus-within .userActions {
   opacity: 1;
 }
 
 /* ── AI message row ──────────────────────────────────────────────────────── */
+
 .aiRow {
-  display:     flex;
+  display: flex;
   align-items: flex-start;
-  gap:         var(--spacing-sm);
-  animation:   fadeUp var(--transition-standard) var(--ease-out);
+
+  gap: var(--space-1);
+
+  animation: fadeUp var(--transition-standard) var(--ease-out);
 }
 
 .aiContent {
-  flex:      1;
-  min-width: 0; /* prevent overflow */
+  flex: 1;
+  min-width: 0;
 }
 
 .aiText {
-  background:    white;
-  border:        1px solid var(--color-border);
-  border-radius: 4px 18px 18px 18px;
-  padding:       14px 18px;
-  box-shadow:    var(--shadow-sm);
-  font-family:   var(--font-sans);
+  padding: var(--space-2) var(--space-3);
+
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-body);
+
+  color: var(--color-text-secondary);
+  background-color: var(--color-surface-card);
+
+  border: 1px solid var(--color-border-soft);
+
+  border-radius: var(--radius-sm) var(--radius-card) var(--radius-card)
+    var(--radius-card);
+
+  box-shadow: var(--shadow-sm);
+
+  overflow-wrap: anywhere;
 }
 
-/* ── Action buttons (shared) ─────────────────────────────────────────────── */
+.aiText p,
+.aiText span,
+.aiText li {
+  color: inherit;
+}
+
+.aiText p + p {
+  margin-top: var(--space-2);
+}
+
+.aiText ul,
+.aiText ol {
+  margin-top: var(--space-1);
+  margin-bottom: var(--space-1);
+  padding-left: var(--space-3);
+}
+
+.aiText ul {
+  list-style: disc;
+}
+
+.aiText ol {
+  list-style: decimal;
+}
+
+.aiText a {
+  color: var(--color-accent-dark-olive);
+
+  text-decoration: underline;
+  text-decoration-color: var(--color-accent-muted-gold);
+  text-underline-offset: 3px;
+}
+
+.aiText a:hover {
+  color: var(--color-text-primary);
+}
+
+.aiText code {
+  padding: var(--spacing-xs) var(--space-1);
+
+  font-family: var(--font-family-mono);
+  font-size: 0.9em;
+
+  color: var(--color-text-primary);
+  background-color: var(--color-background-muted);
+
+  border-radius: var(--radius-sm);
+}
+
+.aiText pre {
+  max-width: 100%;
+
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-2);
+  padding: var(--space-2);
+
+  overflow-x: auto;
+
+  color: var(--color-text-inverse);
+  background-color: var(--color-background-charcoal);
+
+  border-radius: var(--radius-card);
+}
+
+.aiText pre code {
+  padding: 0;
+
+  color: inherit;
+  background-color: transparent;
+
+  border-radius: 0;
+}
+
+.aiText blockquote {
+  margin: var(--space-2) 0;
+
+  padding-left: var(--space-2);
+
+  color: var(--color-text-muted);
+
+  border-left: 3px solid var(--color-accent-muted-gold);
+}
+
+/* ── Action buttons ──────────────────────────────────────────────────────── */
+
 .actionBtn {
-  display:          flex;
-  align-items:      center;
-  justify-content:  center;
-  width:            26px;
-  height:           26px;
-  background:       none;
-  border:           none;
-  cursor:           pointer;
-  border-radius:    var(--radius-sm);
-  color:            var(--color-text-secondary);
-  transition:       background-color var(--transition-fast) var(--ease-out),
-                    color            var(--transition-fast) var(--ease-out);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: calc(var(--space-3) + var(--spacing-xs));
+  height: calc(var(--space-3) + var(--spacing-xs));
+
+  padding: 0;
+
+  color: var(--color-text-muted);
+  background-color: transparent;
+
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+
+  cursor: pointer;
+
+  transition:
+    color var(--transition-fast) var(--ease-out),
+    background-color var(--transition-fast) var(--ease-out),
+    border-color var(--transition-fast) var(--ease-out),
+    transform var(--transition-fast) var(--ease-out);
 }
 
 .actionBtn:hover {
-  background-color: var(--color-warm-cream);
-  color:            var(--color-tea-green);
+  color: var(--color-text-primary);
+  background-color: var(--color-background-soft);
+  border-color: var(--color-border-soft);
+
+  transform: translateY(-1px);
+}
+
+.actionBtn:focus-visible {
+  outline: 2px solid var(--color-accent-muted-gold);
+  outline-offset: 3px;
+}
+
+.actionBtn:active {
+  transform: translateY(0);
 }
 
 /* ── AI action bar ───────────────────────────────────────────────────────── */
+
 .aiActions {
-  display:         flex;
-  align-items:     center;
+  display: flex;
+  align-items: center;
   justify-content: space-between;
-  padding:         4px 4px 0;
-  opacity:         0;
-  transition:      opacity var(--transition-fast) var(--ease-out);
+
+  padding: var(--spacing-xs) var(--spacing-xs) 0;
+
+  opacity: 0;
+
+  transition: opacity var(--transition-fast) var(--ease-out);
 }
 
-.aiActionsVisible {
-  opacity: 1;
-}
-
-.aiRow:hover .aiActions {
+.aiActionsVisible,
+.aiRow:hover .aiActions,
+.aiRow:focus-within .aiActions {
   opacity: 1;
 }
 
 .timestamp {
-  font-family: var(--font-sans);
-  font-size:   11px;
-  color:       var(--color-text-secondary);
-  opacity:     0.7;
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-caption);
+
+  color: var(--color-text-muted);
 }
 
 .aiActionBtns {
-  display:     flex;
+  display: flex;
   align-items: center;
-  gap:         2px;
+
+  gap: var(--spacing-xs);
 }
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */
+
 @media (max-width: 767px) {
   .userBubble {
     max-width: 86%;
+
+    padding: var(--space-1) var(--space-2);
   }
 
-  .userBubble,
   .aiText {
-    padding: 10px 14px;
+    padding: var(--space-1) var(--space-2);
+  }
+
+  /*
+   * Touch devices do not have reliable hover states,
+   * so message actions remain visible.
+   */
+  .userActions,
+  .aiActions {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 479px) {
+  .userBubble {
+    max-width: 90%;
+  }
+
+  .aiRow {
+    gap: var(--spacing-xs);
+  }
+
+  .actionBtn {
+    width: var(--space-4);
+    height: var(--space-4);
   }
 }
