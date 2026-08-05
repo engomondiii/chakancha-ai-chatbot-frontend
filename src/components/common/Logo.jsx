@@ -21,9 +21,9 @@ const logoFiles = {
 
 const logoWidths = {
   mark: {
-    sm: 32,
-    md: 32,
-    lg: 52,
+    sm: 16,
+    md: 24,
+    lg: 32,
   },
 
   wordmark: {
