@@ -1,6 +1,6 @@
 ## Recent Frontend Updates
 
-The Chakancha frontend has been refined to better match the official brand identity, improve the hero experience, resolve production errors, and create a more consistent chatbot interface.
+The Chakancha frontend has been refined to better match the official brand identity, improve the hero and product experiences, resolve production errors, and create a more consistent chatbot interface.
 
 ### Brand Assets and Visual Identity
 
@@ -411,6 +411,126 @@ The updated logo mark coverage now includes:
 | Chatbot interface     | Official Chakancha logo mark |
 | AI response avatar    | White mark on a dark surface |
 
+### Product Page Brand-Manual Alignment
+
+The `/products` experience was updated to present Chakancha's current tea range more clearly and consistently with the Brand Manual. The page is now focused on **Nandi Gold** and **Nandi Black**, while recipe and preparation imagery supports the broader product story.
+
+The following page-level changes were made:
+
+- Updated `src/app/products/page.jsx` with a more focused product introduction and brand-aligned layout.
+- Replaced legacy green-and-brown visual treatments with the canonical tokens from `src/app/globals.css`.
+- Used the official Chakancha `LogoMark` instead of generic tea-leaf decoration where a brand symbol is appropriate.
+- Removed the previous broad catalog language that referred to black, green, purple, and white tea ranges.
+- Simplified the product area so the frontend no longer depends on product-category filter pills or marketplace-style sorting controls.
+- Kept product data connected to the existing Django product API through `useProducts()` and `useProduct()`.
+- Structured the page around the two active Chakancha products rather than the previous four-product demonstration catalog.
+
+#### Product Grid Updates
+
+`ProductGrid.jsx` and `ProductGrid.module.css` were updated to support the focused two-product range.
+
+The following improvements were made:
+
+- Removed frontend category filtering and name/price sorting from the product grid.
+- Added a fixed editorial ordering that places Nandi Gold before Nandi Black when matching names or slugs are available.
+- Reduced the loading state from four skeleton products to two.
+- Added dedicated empty and error states.
+- Updated the desktop layout to show two products side by side.
+- Updated tablet and mobile layouts to show one product per row.
+- Replaced inline grid styling with `ProductGrid.module.css` classes.
+- Applied canonical spacing, borders, surfaces, radii, shadows, typography, and reduced-motion handling.
+
+The product layout now behaves as follows:
+
+| Viewport | Product layout |
+| -------- | -------------- |
+| Desktop  | Nandi Gold and Nandi Black side by side |
+| Tablet   | One product per row |
+| Mobile   | One compact product card per row |
+
+#### Product Card Updates
+
+`ProductCard.jsx` and `ProductCard.module.css` were redesigned from marketplace-style tiles into focused editorial product cards.
+
+The following changes were made:
+
+- Added product numbering for the two-product presentation.
+- Displayed the product name, short description, price, detail link, package image, and cart action.
+- Removed category labels, caffeine color coding, quick-view overlays, featured badges, and compact tasting-note chips from the catalog card.
+- Replaced the generic leaf-emoji fallback with the official Chakancha logo mark.
+- Added support for image values returned as strings or image objects.
+- Added support for `image`, `primaryImage`, `primary_image`, and `images` fields.
+- Replaced the fully clickable article pattern with proper product links and a separate add-to-cart button.
+- Preserved the existing cart-store integration and success notification behavior.
+- Updated product images to use `object-fit: contain` so package artwork is not cropped.
+- Updated purchase buttons to use the approved dark background and muted-gold interaction treatment.
+
+#### Product Detail Updates
+
+`ProductDetail.jsx` and `ProductDetail.module.css` were aligned with the product-card treatment and the global design system.
+
+The following improvements were made:
+
+- Improved normalization of backend product images returned as URL strings or objects.
+- Added primary-image fallback support through `image`, `primaryImage`, and `primary_image`.
+- Removed the unused `sendMessage` store selector.
+- Preserved support for camelCase and snake_case product fields.
+- Changed certification display so the interface shows the actual certification value instead of automatically labeling every certification as living-wage verification.
+- Added optional support for an explicit `livingWageVerified` or `living_wage_verified` field.
+- Removed the hardcoded shipping-note claim and now displays a note only when product data provides one.
+- Improved quantity controls, disabled states, cart wording, wishlist interaction, and keyboard focus treatment.
+- Updated the product-specific AI prompt to ask about the tea, brewing guidance, and relevant recipes.
+- Updated page layout, pricing, buttons, borders, surfaces, and responsive behavior using canonical design tokens.
+
+#### Brewing Guide Updates
+
+`BrewingGuide.jsx` was refined while preserving its backend compatibility.
+
+The following changes were made:
+
+- Continued supporting both camelCase and snake_case brewing fields.
+- Replaced the decorative leaf heading icon with the official Chakancha logo mark.
+- Replaced the tea-amount leaf icon with the functional `Scale` icon.
+- Added accessible expanded/collapsed attributes.
+- Updated brewing cards to use neutral surfaces, soft borders, dark text, and limited muted-gold or dark-olive emphasis.
+- Preserved dynamic temperature, steeping time, tea amount, and resteep values from each product record.
+
+#### Product and Origin Image Assets
+
+The following product assets were added:
+
+```text
+public/images/products/ColdMilkTea.png
+public/images/products/HotMilkTea.png
+public/images/products/HotStaightBlackTea.png
+public/images/products/IcedStraightBlackTea.png
+public/images/products/NandiBlackLeaves.png
+public/images/products/NandiBlackPackage.svg
+public/images/products/NandiGoldLeaves.png
+public/images/products/NandiGoldPackage.svg
+public/images/products/landImg.svg
+public/images/products/originHero2.svg
+public/images/products/peopleImg.svg
+```
+
+The following origin assets were added:
+
+```text
+public/images/origin/landImg.svg
+public/images/origin/originHero2.svg
+public/images/origin/peopleImg.svg
+```
+
+The following previous demonstration-product images were removed:
+
+```text
+public/images/products/green-tea-1.png
+public/images/products/purple-tea-1.png
+public/images/products/white-tea-1.png
+```
+
+Product-image relationships remain controlled by the Django product data. Image URLs can be entered through the Django Admin product-image inline and returned through the product serializers to `ProductCard`, `ProductDetail`, and the product gallery.
+
 ### Error Fixes
 
 #### Missing Dark Logo Error
@@ -448,6 +568,12 @@ This prevents the legacy green-and-brown token system from overriding the Brand 
 ### Result
 
 The frontend now provides:
+
+- A product page aligned with the Chakancha Brand Manual.
+- A focused two-product presentation for Nandi Gold and Nandi Black.
+- Brand-aligned product cards, product details, brewing guidance, and responsive product-grid states.
+- Updated product, preparation, and origin image assets.
+- Removal of obsolete green, purple, and white demonstration-product imagery.
 
 - Correctly scaled Chakancha logo marks across authentication, product, and cart interfaces.
 - Replaced remaining generic leaf icons on login, signup, product headline, forgot-password, and empty-cart views.

@@ -1,80 +1,108 @@
 /**
- * src/components/products/ProductGrid.jsx — Integration Phase 3
+ * src/components/products/ProductGrid.jsx
  *
- * What changed from the original:
- *  - Category filter: uses cat.slug (not cat.id) as the activeCategory key
- *    because products.js getProducts() sends category=<slug> to the backend
- *  - Category filter button uses cat.slug for comparison
- *  - Product filtering in sorted list uses product.category?.slug correctly
- *  - Everything else unchanged
+ * Displays Chakancha's current tea collection:
+ *  - 01 Nandi Gold
+ *  - 02 Nandi Black
+ *
+ * Product filtering has been removed because recipe filters will be
+ * handled separately in the recipe section.
  */
 
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { ProductCard }  from './ProductCard';
-import { Skeleton }     from '@/components/ui/Skeleton';
+import React from "react";
 
-const SORT_OPTIONS = [
-  { value: 'name:asc',   label: 'Name A–Z' },
-  { value: 'price:asc',  label: 'Price: Low to high' },
-  { value: 'price:desc', label: 'Price: High to low' },
-];
+import { Skeleton } from "@/components/ui/Skeleton";
+import { ProductCard } from "./ProductCard";
 
-function FilterBar({ categories, activeCategory, onCategory, sortValue, onSort }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      flexWrap: 'wrap', gap: 'var(--spacing-sm)', marginBottom: 'var(--spacing-xl)' }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--spacing-xs)' }}>
-        <button type="button" onClick={() => onCategory(null)} style={pillStyle(activeCategory === null)}>
-          All teas
-        </button>
-        {categories.map((cat) => (
-          <button
-            key={cat.slug || cat.id}
-            type="button"
-            onClick={() => onCategory(cat.slug || cat.id)}
-            style={pillStyle(activeCategory === (cat.slug || cat.id))}
-          >
-            {cat.name}
-          </button>
-        ))}
-      </div>
-      <select value={sortValue} onChange={(e) => onSort(e.target.value)}
-        style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--color-text-primary)',
-          backgroundColor: 'white', border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-md)', padding: '7px 12px', cursor: 'pointer', outline: 'none' }}
-        aria-label="Sort products">
-        {SORT_OPTIONS.map((opt) => (
-          <option key={opt.value} value={opt.value}>{opt.label}</option>
-        ))}
-      </select>
-    </div>
-  );
+import styles from "./ProductGrid.module.css";
+
+/**
+ * Keeps the intended editorial product order without hiding
+ * products whose backend slugs may be different.
+ */
+function getProductOrder(product) {
+  const slug = String(product?.slug || "").toLowerCase();
+  const name = String(product?.name || "").toLowerCase();
+
+  if (
+    slug === "nandi-gold" ||
+    name.includes("nandi gold")
+  ) {
+    return 0;
+  }
+
+  if (
+    slug === "nandi-black" ||
+    name.includes("nandi black")
+  ) {
+    return 1;
+  }
+
+  return 99;
 }
 
-function pillStyle(active) {
-  return {
-    backgroundColor: active ? 'var(--color-tea-green)' : 'white',
-    color:           active ? 'white' : 'var(--color-text-primary)',
-    border:          `1px solid ${active ? 'var(--color-tea-green)' : 'var(--color-border)'}`,
-    borderRadius:    'var(--radius-pill)', padding: '6px 16px',
-    fontFamily:      'var(--font-sans)', fontSize: 13, fontWeight: active ? 600 : 400,
-    cursor: 'pointer', transition: 'background-color 150ms ease, color 150ms ease', whiteSpace: 'nowrap',
-  };
-}
-
-function SkeletonGrid({ count = 4 }) {
+function SkeletonGrid({ count = 2 }) {
   return (
-    <div style={gridStyle}>
-      {Array.from({ length: count }).map((_, i) => (
-        <div key={i} style={{ borderRadius: 'var(--radius-xl)', overflow: 'hidden', border: '1px solid var(--color-border)' }}>
-          <Skeleton variant="rect" height="220px" />
-          <div style={{ padding: 'var(--spacing-md)', display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <Skeleton variant="text" height="12px" width="50%" />
-            <Skeleton variant="text" height="18px" width="80%" />
-            <Skeleton variant="text" height="14px" width="65%" />
-            <Skeleton variant="text" height="36px" width="100%" />
+    <div
+      className={styles.grid}
+      aria-label="Loading teas"
+      aria-busy="true"
+    >
+      {Array.from({ length: count }).map((_, index) => (
+        <div
+          key={index}
+          className={styles.skeletonCard}
+          aria-hidden="true"
+        >
+          <div className={styles.skeletonContent}>
+            <Skeleton
+              variant="text"
+              height="12px"
+              width="32px"
+            />
+
+            <Skeleton
+              variant="text"
+              height="30px"
+              width="75%"
+            />
+
+            <Skeleton
+              variant="text"
+              height="14px"
+              width="100%"
+            />
+
+            <Skeleton
+              variant="text"
+              height="14px"
+              width="85%"
+            />
+
+            <Skeleton
+              variant="text"
+              height="20px"
+              width="35%"
+            />
+
+            <Skeleton
+              variant="rect"
+              height="44px"
+              width="100%"
+              style={{
+                borderRadius: "var(--radius-button)",
+              }}
+            />
+          </div>
+
+          <div className={styles.skeletonImage}>
+            <Skeleton
+              variant="rect"
+              height="100%"
+              width="100%"
+            />
           </div>
         </div>
       ))}
@@ -82,75 +110,104 @@ function SkeletonGrid({ count = 4 }) {
   );
 }
 
-const gridStyle = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-  gap: 'var(--spacing-lg)',
-};
-
-export function ProductGrid({ products = [], isLoading = false, error = null, showFilters = true, categories = [] }) {
-  const [activeCategory, setActiveCategory] = useState(null);
-  const [sortValue,      setSortValue]      = useState('name:asc');
-
-  if (isLoading) return <SkeletonGrid count={4} />;
-
-  if (error) {
-    return (
-      <div style={{ padding: 'var(--spacing-2xl)', textAlign: 'center',
-        color: 'var(--color-text-secondary)', fontFamily: 'var(--font-sans)', fontSize: 14 }}>
-        <p style={{ marginBottom: 8 }}>Could not load products.</p>
-        <p style={{ color: 'var(--color-error)', fontSize: 12 }}>{error}</p>
-      </div>
-    );
-  }
-
-  // Filter by category slug
-  const filtered = activeCategory
-    ? products.filter((p) => {
-        const catSlug = p.category?.slug || p.category;
-        return catSlug === activeCategory;
-      })
-    : products;
-
-  // Sort
-  const [sortBy, sortOrder] = sortValue.split(':');
-  const sorted = [...filtered].sort((a, b) => {
-    const av = a[sortBy], bv = b[sortBy];
-    if (typeof av === 'string') return sortOrder === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
-    return sortOrder === 'asc' ? av - bv : bv - av;
-  });
+function ProductGridError({ error }) {
+  const errorMessage =
+    typeof error === "string"
+      ? error
+      : error?.message || "";
 
   return (
-    <div>
-      {showFilters && categories.length > 0 && (
-        <FilterBar
-          categories={categories}
-          activeCategory={activeCategory}
-          onCategory={setActiveCategory}
-          sortValue={sortValue}
-          onSort={setSortValue}
-        />
-      )}
+    <div
+      className={`${styles.state} ${styles.errorState}`}
+      role="alert"
+    >
+      <h3 className={styles.stateTitle}>
+        We could not load the teas
+      </h3>
 
-      {sorted.length === 0 ? (
-        <div style={{ padding: 'var(--spacing-2xl)', textAlign: 'center',
-          color: 'var(--color-text-secondary)', fontFamily: 'var(--font-sans)', fontSize: 15 }}>
-          No teas found in this category.
-        </div>
-      ) : (
-        <div style={gridStyle}>
-          {sorted.map((product, idx) => (
-            <ProductCard key={product.id || product.slug} product={product} priority={idx < 2} />
-          ))}
-        </div>
-      )}
+      <p className={styles.stateMessage}>
+        Please refresh the page or try again shortly.
+      </p>
 
-      {sorted.length > 0 && (
-        <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13,
-          color: 'var(--color-text-secondary)', marginTop: 'var(--spacing-lg)', textAlign: 'center' }}>
-          Showing {sorted.length} {sorted.length === 1 ? 'tea' : 'teas'}
+      {errorMessage && (
+        <p className={styles.errorMessage}>
+          {errorMessage}
         </p>
       )}
+    </div>
+  );
+}
+
+function EmptyProductGrid() {
+  return (
+    <div
+      className={styles.state}
+      role="status"
+    >
+      <h3 className={styles.stateTitle}>
+        No teas are currently available
+      </h3>
+
+      <p className={styles.stateMessage}>
+        Nandi Gold and Nandi Black will appear here when they are
+        available.
+      </p>
+    </div>
+  );
+}
+
+export function ProductGrid({
+  products = [],
+  isLoading = false,
+  error = null,
+}) {
+  if (isLoading) {
+    return <SkeletonGrid count={2} />;
+  }
+
+  if (error) {
+    return <ProductGridError error={error} />;
+  }
+
+  const orderedProducts = Array.isArray(products)
+    ? [...products].sort((firstProduct, secondProduct) => {
+        const orderDifference =
+          getProductOrder(firstProduct) -
+          getProductOrder(secondProduct);
+
+        if (orderDifference !== 0) {
+          return orderDifference;
+        }
+
+        return String(firstProduct?.name || "").localeCompare(
+          String(secondProduct?.name || ""),
+        );
+      })
+    : [];
+
+  if (orderedProducts.length === 0) {
+    return <EmptyProductGrid />;
+  }
+
+  return (
+    <div className={styles.wrapper}>
+      <div
+        className={styles.grid}
+        aria-label="Chakancha tea products"
+      >
+        {orderedProducts.map((product, index) => (
+          <ProductCard
+            key={
+              product?.id ??
+              product?.slug ??
+              `product-${index}`
+            }
+            product={product}
+            productNumber={index + 1}
+            priority={index < 2}
+          />
+        ))}
+      </div>
     </div>
   );
 }

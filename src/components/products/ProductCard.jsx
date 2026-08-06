@@ -1,122 +1,233 @@
 /**
- * src/components/products/ProductCard.jsx — Integration Phase 3
+ * src/components/products/ProductCard.jsx
  *
- * What changed from the original:
- *  - All field names updated to handle both camelCase and snake_case variants
- *    (products.js normalizeProduct() provides both, so components are resilient)
- *  - caffeineLevel read from both caffeineLevel and caffeine_level
- *  - flavorProfile read from both flavorProfile and flavor_profile
- *  - inStock read from both inStock and in_stock
- *  - image read from image OR primary_image
- *  - category displayed from category.name (object) or category (string)
- *  - addToCart uses product fields that match cartSlice.addToCart expectations
- *  - Everything else unchanged
+ * Brand-aligned product card for Chakancha's two tea products:
+ *  - Nandi Gold
+ *  - Nandi Black
+ *
+ * Supports both camelCase and snake_case backend fields.
  */
 
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { ShoppingCart, Eye } from 'lucide-react';
-import { useStore } from '@/store';
-import { TastingNotes } from './TastingNotes';
-import styles from './ProductCard.module.css';
+import React, { useState } from "react";
+import Link from "next/link";
+import { ShoppingCart, ArrowRight } from "lucide-react";
 
-const CAFFEINE_LABELS = {
-  low:    { label: 'Low caffeine',      color: '#4A7C2C' },
-  medium: { label: 'Moderate caffeine', color: '#D4A574' },
-  high:   { label: 'High caffeine',     color: '#6B5544' },
-};
+import { useStore } from "@/store";
+import { LogoMark } from "@/components/common/Logo";
 
-export function ProductCard({ product, priority = false }) {
-  const router      = useRouter();
+import styles from "./ProductCard.module.css";
+
+/**
+ * Resolve a usable image URL from normalized or raw backend data.
+ */
+function getProductImage(product) {
+  const image =
+    product?.image ||
+    product?.primaryImage ||
+    product?.primary_image ||
+    null;
+
+  if (typeof image === "string") {
+    return image;
+  }
+
+  if (image && typeof image === "object") {
+    return image.url || image.src || null;
+  }
+
+  if (Array.isArray(product?.images)) {
+    const primaryImage =
+      product.images.find(
+        (item) =>
+          item?.isPrimary === true ||
+          item?.is_primary === true
+      ) || product.images[0];
+
+    if (typeof primaryImage === "string") {
+      return primaryImage;
+    }
+
+    return primaryImage?.url || primaryImage?.src || null;
+  }
+
+  return null;
+}
+
+export function ProductCard({
+  product,
+  productNumber,
+  priority = false,
+}) {
   const [adding, setAdding] = useState(false);
-  const addToCart   = useStore((s) => s.addToCart);
-  const openCart    = useStore((s) => s.openCart);
-  const showSuccess = useStore((s) => s.showSuccess);
-  const isInCart    = useStore((s) => s.isInCart(product?.id));
+
+  const addToCart = useStore((state) => state.addToCart);
+  const openCart = useStore((state) => state.openCart);
+  const showSuccess = useStore((state) => state.showSuccess);
+
+  const productId = product?.id;
+
+  const isInCart = useStore((state) =>
+    state.isInCart(productId)
+  );
 
   if (!product) return null;
 
-  // Accept both camelCase (mock) and snake_case (backend) field names
-  const name          = product.name;
-  const slug          = product.slug;
-  const price         = parseFloat(product.price) || 0;
-  const image         = product.image || product.primary_image || null;
-  const flavorProfile = product.flavorProfile || product.flavor_profile || '';
-  const tastingNotes  = product.tastingNotes  || product.tasting_notes  || [];
-  const caffeineLevel = product.caffeineLevel || product.caffeine_level || 'medium';
-  const inStock       = product.inStock !== undefined ? product.inStock : (product.in_stock !== false);
-  const featured      = product.featured || false;
+  // Support both camelCase and snake_case field names.
+  const name = product.name || "Chakancha Tea";
+  const slug = product.slug || "";
+  const price = Number.parseFloat(product.price) || 0;
+  const image = getProductImage(product);
 
-  // Category: might be an object {name, slug} or a plain string
-  const categoryName = product.category?.name || product.category || '';
-  const caffeine     = CAFFEINE_LABELS[caffeineLevel] || CAFFEINE_LABELS.medium;
+  const flavorProfile =
+    product.flavorProfile ||
+    product.flavor_profile ||
+    "";
 
-  const handleAddToCart = async (e) => {
-    e.stopPropagation();
+  const shortDescription =
+    product.shortDescription ||
+    product.short_description ||
+    flavorProfile ||
+    product.description ||
+    "";
+
+  const inStock =
+    product.inStock !== undefined
+      ? product.inStock
+      : product.in_stock !== false;
+
+  const productHref = slug
+    ? `/products/${slug}`
+    : "/products";
+
+  const displayNumber =
+    productNumber !== undefined &&
+    productNumber !== null
+      ? String(productNumber).padStart(2, "0")
+      : null;
+
+  const handleAddToCart = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
     if (!inStock || adding) return;
+
     setAdding(true);
+
     addToCart(product, 1);
     openCart();
     showSuccess(`${name} added to cart`);
-    setTimeout(() => setAdding(false), 800);
+
+    window.setTimeout(() => {
+      setAdding(false);
+    }, 800);
   };
 
-  const handleView = () => router.push(`/products/${slug}`);
-
   return (
-    <article
-      className={styles.card}
-      onClick={handleView}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => e.key === 'Enter' && handleView()}
-      aria-label={`View ${name}`}
-    >
-      <div className={styles.imageWrapper}>
+    <article className={styles.card}>
+      <div className={styles.content}>
+        {displayNumber && (
+          <span className={styles.productNumber}>
+            {displayNumber}
+          </span>
+        )}
+
+        <Link
+          href={productHref}
+          className={styles.titleLink}
+          aria-label={`View ${name}`}
+        >
+          <h3 className={styles.name}>{name}</h3>
+        </Link>
+
+        {shortDescription && (
+          <p className={styles.summary}>
+            {shortDescription}
+          </p>
+        )}
+
+        <div className={styles.productActions}>
+          <span className={styles.price}>
+            ${price.toFixed(2)}
+          </span>
+
+          <Link
+            href={productHref}
+            className={styles.viewLink}
+          >
+            View tea
+            <ArrowRight
+              size={14}
+              aria-hidden="true"
+            />
+          </Link>
+        </div>
+
+        <button
+          type="button"
+          className={`${styles.cartBtn} ${
+            isInCart ? styles.cartBtnInCart : ""
+          }`}
+          onClick={handleAddToCart}
+          disabled={!inStock || adding}
+          aria-label={
+            !inStock
+              ? `${name} is out of stock`
+              : isInCart
+                ? `${name} is already in the cart`
+                : `Add ${name} to cart`
+          }
+        >
+          <ShoppingCart
+            size={15}
+            aria-hidden="true"
+          />
+
+          {!inStock
+            ? "Out of stock"
+            : adding
+              ? "Adding…"
+              : isInCart
+                ? "In cart"
+                : "Add to cart"}
+        </button>
+      </div>
+
+      <Link
+        href={productHref}
+        className={styles.imageWrapper}
+        aria-label={`View ${name}`}
+      >
         {image ? (
-          <img src={image} alt={name} className={styles.image} loading={priority ? 'eager' : 'lazy'} />
+          <img
+            src={image}
+            alt={`${name} tea package`}
+            className={styles.image}
+            loading={priority ? "eager" : "lazy"}
+            fetchPriority={priority ? "high" : "auto"}
+            draggable="false"
+          />
         ) : (
           <div className={styles.imagePlaceholder}>
-            <span className={styles.placeholderEmoji}>🍃</span>
+            <LogoMark
+              tone="dark"
+              size="lg"
+              clickable={false}
+            />
+
+            <span className={styles.placeholderText}>
+              {name}
+            </span>
           </div>
         )}
-        <div className={styles.imageBadges}>
-          {featured  && <span className={styles.featuredBadge}>Featured</span>}
-          {!inStock  && <span className={styles.outOfStockBadge}>Out of stock</span>}
-        </div>
-        <div className={styles.imageOverlay}>
-          <span className={styles.quickView}><Eye size={14} /> Quick view</span>
-        </div>
-      </div>
 
-      <div className={styles.body}>
-        <div className={styles.meta}>
-          <span className={styles.category}>{categoryName} tea</span>
-          <span className={styles.caffeine} style={{ color: caffeine.color }}>
-            {caffeine.label}
+        {!inStock && (
+          <span className={styles.outOfStockBadge}>
+            Out of stock
           </span>
-        </div>
-
-        <h3 className={styles.name}>{name}</h3>
-
-        <TastingNotes flavorProfile={flavorProfile} compact />
-
-        <div className={styles.footer}>
-          <span className={styles.price}>${price.toFixed(2)}</span>
-          <button
-            className={`${styles.cartBtn} ${isInCart ? styles.cartBtnInCart : ''}`}
-            onClick={handleAddToCart}
-            disabled={!inStock || adding}
-            type="button"
-            aria-label={isInCart ? 'Already in cart' : `Add ${name} to cart`}
-          >
-            <ShoppingCart size={14} />
-            {adding ? 'Adding…' : isInCart ? 'In cart' : 'Add'}
-          </button>
-        </div>
-      </div>
+        )}
+      </Link>
     </article>
   );
 }

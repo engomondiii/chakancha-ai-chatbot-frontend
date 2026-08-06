@@ -1,59 +1,232 @@
-/* ProductGrid Styles */
+/* ─────────────────────────────────────────────────────────────────────────────
+   ProductGrid.module.css
+
+   Product collection layout for:
+   - 01 Nandi Gold
+   - 02 Nandi Black
+
+   Recipe filters are handled separately from this product grid.
+───────────────────────────────────────────────────────────────────────────── */
+
+/* ── Grid wrapper ────────────────────────────────────────────────────────── */
+
+.wrapper {
+  width: 100%;
+}
+
+/* ── Product grid ────────────────────────────────────────────────────────── */
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: var(--spacing-xl);
-  animation: fadeIn var(--transition-standard) ease-out;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  width: 100%;
+
+  gap: var(--space-3);
+
+  animation: productGridFadeIn var(--transition-standard) var(--ease-out);
 }
 
-.loading {
+/* ── Loading skeleton ────────────────────────────────────────────────────── */
+
+.skeletonCard {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    180px;
+
+  width: 100%;
+  min-height: 320px;
+
+  overflow: hidden;
+
+  background-color: var(--color-surface-card);
+
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-card);
+
+  box-shadow: var(--shadow-sm);
+}
+
+.skeletonContent {
   display: flex;
+  flex-direction: column;
+
+  min-width: 0;
+
+  gap: var(--space-2);
+  padding: var(--space-3);
+}
+
+.skeletonContent > :last-child {
+  margin-top: auto;
+}
+
+.skeletonImage {
+  min-width: 0;
+  min-height: 320px;
+
+  overflow: hidden;
+
+  background-color: var(--color-background-soft);
+
+  border-left: 1px solid var(--color-divider-soft);
+}
+
+/* ── Empty and error states ──────────────────────────────────────────────── */
+
+.state {
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 400px;
-}
 
-.empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 400px;
-  padding: var(--spacing-2xl);
-}
+  width: 100%;
+  min-height: 240px;
 
-.emptyMessage {
-  font-size: var(--font-size-body-lg);
-  color: var(--color-text-secondary);
+  gap: var(--space-1);
+  padding: var(--space-4);
+
   text-align: center;
+
+  background-color: var(--color-background-soft);
+
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-card);
 }
 
-@keyframes fadeIn {
+.errorState {
+  background-color: var(--color-background-main);
+  border-color: var(--color-accent-sand);
+}
+
+.stateTitle {
+  margin: 0;
+
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-h3);
+  line-height: var(--line-height-h3);
+
+  color: var(--color-text-primary);
+}
+
+.stateMessage {
+  max-width: 480px;
+
+  margin: 0;
+
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-body);
+
+  color: var(--color-text-muted);
+}
+
+.errorMessage {
+  max-width: 520px;
+
+  margin: var(--space-1) 0 0;
+
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-caption);
+
+  color: var(--color-text-secondary);
+
+  overflow-wrap: anywhere;
+}
+
+/* ── Entrance animation ──────────────────────────────────────────────────── */
+
+@keyframes productGridFadeIn {
   from {
     opacity: 0;
+    transform: translateY(8px);
   }
+
   to {
     opacity: 1;
+    transform: translateY(0);
   }
 }
 
-/* Responsive */
-@media (max-width: 767px) {
+/* ── Tablet ──────────────────────────────────────────────────────────────── */
+
+@media (max-width: 1023px) {
   .grid {
     grid-template-columns: 1fr;
-    gap: var(--spacing-lg);
+
+    max-width: 720px;
+
+    margin: 0 auto;
+  }
+
+  .skeletonCard {
+    grid-template-columns:
+      minmax(0, 1fr)
+      180px;
   }
 }
 
-@media (min-width: 768px) and (max-width: 1023px) {
+/* ── Mobile ──────────────────────────────────────────────────────────────── */
+
+@media (max-width: 767px) {
   .grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--spacing-lg);
+    gap: var(--space-2);
+  }
+
+  .skeletonCard {
+    grid-template-columns:
+      minmax(0, 1fr)
+      150px;
+
+    min-height: 280px;
+  }
+
+  .skeletonContent {
+    padding: var(--space-2);
+  }
+
+  .skeletonImage {
+    min-height: 280px;
+  }
+
+  .state {
+    min-height: 200px;
+
+    padding: var(--space-3);
   }
 }
 
-@media (min-width: 1024px) {
+@media (max-width: 479px) {
+  .skeletonCard {
+    grid-template-columns:
+      minmax(0, 1fr)
+      120px;
+
+    min-height: 250px;
+  }
+
+  .skeletonImage {
+    min-height: 250px;
+  }
+
+  .stateTitle {
+    font-size: var(--font-size-body-large);
+  }
+
+  .stateMessage {
+    font-size: var(--font-size-caption);
+  }
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
   .grid {
-    grid-template-columns: repeat(3, 1fr);
+    animation: none;
   }
 }

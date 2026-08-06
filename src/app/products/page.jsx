@@ -287,15 +287,16 @@ function ProductCatalog() {
             fontFamily: "var(--font-sans)",
             fontSize: 16,
             fontWeight: 600,
-            color: "#2d5016",
+            color: "var( --color-accent-sand)",
             textDecoration: "none",
-            borderBottom: "2px solid rgba(45,80,22,0.3)",
-            paddingBottom: 2,
+            borderBottom: "1px solid var(--color-accent-muted-gold)",
+            paddingBottom: 0,
             transition: "border-color 150ms ease, color 150ms ease",
           }}
         >
-          Ask our AI — it knows every leaf 🍃
+          Ask our AI — it knows every leaf   
         </a>
+        <span><LogoMark tone="dark" size="sm" clickable={true} /></span>
       </div>
     </div>
   );

@@ -1,91 +1,322 @@
 /**
- * src/components/products/BrewingGuide.jsx — Integration Phase 3
+ * src/components/products/BrewingGuide.jsx
  *
- * What changed from the original:
- *  - Reads brewing fields via both camelCase and snake_case aliases:
- *      brewingTemp  || brewing_temp
- *      brewingTime  || brewing_time
- *      teaAmount    || tea_amount
- *  - Fixed a bug: var_spacing_md() helper was returning a string literal
- *    instead of the CSS variable value — replaced with inline string
- *  - Everything else unchanged
+ * Product-specific brewing instructions.
+ *
+ * Supports both camelCase and snake_case backend fields:
+ *  - brewingTemp || brewing_temp
+ *  - brewingTime || brewing_time
+ *  - teaAmount   || tea_amount
  */
 
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { Thermometer, Clock, Leaf, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useId, useState } from "react";
+import {
+  Thermometer,
+  Clock,
+  Scale,
+  RotateCcw,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 
-function BrewingStep({ icon: Icon, label, value, highlight = false }) {
+import { LogoMark } from "@/components/common/Logo";
+
+function BrewingStep({
+  icon: Icon,
+  label,
+  value,
+  highlight = false,
+}) {
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-      padding: '14px 12px',
-      backgroundColor: highlight ? 'rgba(45,80,22,0.06)' : 'white',
-      border: `1px solid ${highlight ? 'rgba(45,80,22,0.2)' : 'var(--color-border)'}`,
-      borderRadius: 'var(--radius-lg)', flex: 1, minWidth: 80, textAlign: 'center',
-      transition: 'background-color var(--transition-fast)',
-    }}>
-      <Icon size={18} color={highlight ? 'var(--color-tea-green)' : 'var(--color-muted-olive)'} />
-      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700,
-        color: highlight ? 'var(--color-tea-green)' : 'var(--color-earth-brown)', lineHeight: 1.3 }}>
+    <div
+      style={{
+        display: "flex",
+        flex: 1,
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+
+        minWidth: 96,
+        minHeight: 112,
+
+        gap: "var(--space-1)",
+        padding: "var(--space-2)",
+
+        textAlign: "center",
+
+        color: "var(--color-text-primary)",
+        backgroundColor: highlight
+          ? "var(--color-background-muted)"
+          : "var(--color-surface-card)",
+
+        border: `1px solid ${
+          highlight
+            ? "var(--color-accent-sand)"
+            : "var(--color-border-soft)"
+        }`,
+
+        borderRadius: "var(--radius-card)",
+
+        transition: `
+          background-color var(--transition-fast) var(--ease-out),
+          border-color var(--transition-fast) var(--ease-out)
+        `,
+      }}
+    >
+      <Icon
+        size={18}
+        color={
+          highlight
+            ? "var(--color-accent-dark-olive)"
+            : "var(--color-text-muted)"
+        }
+        aria-hidden="true"
+      />
+
+      <span
+        style={{
+          fontFamily: "var(--font-family-primary)",
+          fontSize: "var(--font-size-caption)",
+          fontWeight: "var(--font-weight-semibold)",
+          lineHeight: "var(--line-height-caption)",
+
+          color: "var(--color-text-primary)",
+        }}
+      >
         {value}
       </span>
-      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'var(--color-text-secondary)',
-        textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+
+      <span
+        style={{
+          fontFamily: "var(--font-family-primary)",
+          fontSize: "var(--font-size-small)",
+          fontWeight: "var(--font-weight-medium)",
+          lineHeight: "var(--line-height-caption)",
+
+          color: "var(--color-text-muted)",
+
+          textTransform: "uppercase",
+          letterSpacing: "var(--letter-spacing-wide)",
+        }}
+      >
         {label}
       </span>
     </div>
   );
 }
 
-export function BrewingGuide({ product, collapsed = false }) {
+export function BrewingGuide({
+  product,
+  collapsed = false,
+}) {
   const [isExpanded, setIsExpanded] = useState(!collapsed);
+  const contentId = useId();
 
   if (!product) return null;
 
-  // Accept both camelCase (mock) and snake_case (backend) field names
-  const brewingTemp = product.brewingTemp || product.brewing_temp || '';
-  const brewingTime = product.brewingTime || product.brewing_time || '';
-  const teaAmount   = product.teaAmount   || product.tea_amount   || '';
-  const resteeps    = product.resteeps    ?? null;
+  // Support both frontend and backend naming formats.
+  const brewingTemp =
+    product.brewingTemp ||
+    product.brewing_temp ||
+    "";
 
-  if (!brewingTemp && !brewingTime) return null;
+  const brewingTime =
+    product.brewingTime ||
+    product.brewing_time ||
+    "";
+
+  const teaAmount =
+    product.teaAmount ||
+    product.tea_amount ||
+    "";
+
+  const resteeps =
+    product.resteeps ??
+    product.re_steeps ??
+    null;
+
+  const hasBrewingData =
+    brewingTemp ||
+    brewingTime ||
+    teaAmount ||
+    resteeps !== null;
+
+  if (!hasBrewingData) return null;
 
   return (
-    <div style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)',
-      overflow: 'hidden', backgroundColor: 'var(--color-warm-cream)' }}>
+    <section
+      style={{
+        overflow: "hidden",
 
-      <button type="button" onClick={() => setIsExpanded((v) => !v)}
-        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '14px var(--spacing-lg)', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Leaf size={16} color="var(--color-tea-green)" />
-          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600,
-            color: 'var(--color-earth-brown)' }}>Brewing Guide</span>
-        </div>
-        {isExpanded
-          ? <ChevronUp size={16} color="var(--color-text-secondary)" />
-          : <ChevronDown size={16} color="var(--color-text-secondary)" />
-        }
+        backgroundColor: "var(--color-background-soft)",
+
+        border: "1px solid var(--color-border-soft)",
+        borderRadius: "var(--radius-card)",
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => setIsExpanded((current) => !current)}
+        aria-expanded={isExpanded}
+        aria-controls={contentId}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+
+          width: "100%",
+
+          gap: "var(--space-2)",
+          padding: "var(--space-2) var(--space-3)",
+
+          color: "var(--color-text-primary)",
+          backgroundColor: "transparent",
+
+          border: "none",
+
+          cursor: "pointer",
+          textAlign: "left",
+
+          transition: `
+            background-color var(--transition-fast) var(--ease-out)
+          `,
+        }}
+      >
+        <span
+          style={{
+            display: "flex",
+            alignItems: "center",
+
+            gap: "var(--space-1)",
+          }}
+        >
+          <span
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+
+              width: 32,
+              height: 32,
+
+              backgroundColor: "var(--color-background-main)",
+
+              border: "1px solid var(--color-border-soft)",
+              borderRadius: "var(--radius-button)",
+            }}
+          >
+            <LogoMark
+              tone="dark"
+              size="sm"
+              clickable={false}
+            />
+          </span>
+
+          <span
+            style={{
+              fontFamily: "var(--font-family-primary)",
+              fontSize: "var(--font-size-caption)",
+              fontWeight: "var(--font-weight-semibold)",
+              lineHeight: "var(--line-height-caption)",
+
+              color: "var(--color-text-primary)",
+            }}
+          >
+            Brewing Guide
+          </span>
+        </span>
+
+        {isExpanded ? (
+          <ChevronUp
+            size={17}
+            color="var(--color-text-muted)"
+            aria-hidden="true"
+          />
+        ) : (
+          <ChevronDown
+            size={17}
+            color="var(--color-text-muted)"
+            aria-hidden="true"
+          />
+        )}
       </button>
 
       {isExpanded && (
-        <div style={{ padding: '0 var(--spacing-lg) var(--spacing-lg)',
-          display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {brewingTemp && <BrewingStep icon={Thermometer} label="Temperature" value={brewingTemp} highlight />}
-            {brewingTime && <BrewingStep icon={Clock}       label="Steep Time"  value={brewingTime} highlight />}
-            {teaAmount   && <BrewingStep icon={Leaf}        label="Per Cup"     value={teaAmount}             />}
-            {resteeps != null && <BrewingStep icon={RotateCcw} label="Resteeps" value={`${resteeps}×`}        />}
+        <div
+          id={contentId}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+
+            gap: "var(--space-2)",
+            padding:
+              "0 var(--space-3) var(--space-3)",
+          }}
+        >
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(110px, 1fr))",
+
+              gap: "var(--space-1)",
+            }}
+          >
+            {brewingTemp && (
+              <BrewingStep
+                icon={Thermometer}
+                label="Temperature"
+                value={brewingTemp}
+                highlight
+              />
+            )}
+
+            {brewingTime && (
+              <BrewingStep
+                icon={Clock}
+                label="Steep time"
+                value={brewingTime}
+                highlight
+              />
+            )}
+
+            {teaAmount && (
+              <BrewingStep
+                icon={Scale}
+                label="Per cup"
+                value={teaAmount}
+              />
+            )}
+
+            {resteeps !== null && (
+              <BrewingStep
+                icon={RotateCcw}
+                label="Resteeps"
+                value={`${resteeps}×`}
+              />
+            )}
           </div>
-          <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12,
-            color: 'var(--color-text-secondary)', margin: 0, lineHeight: 1.6 }}>
-            For best results, use filtered water and pre-warm your cup. Adjust steeping time to taste.
+
+          <p
+            style={{
+              margin: 0,
+
+              fontFamily: "var(--font-family-primary)",
+              fontSize: "var(--font-size-small)",
+              fontWeight: "var(--font-weight-regular)",
+              lineHeight: "var(--line-height-body)",
+
+              color: "var(--color-text-muted)",
+            }}
+          >
+            For best results, use filtered water and pre-warm your cup.
+            Adjust the steeping time according to your preferred strength.
           </p>
         </div>
       )}
-    </div>
+    </section>
   );
 }
 
