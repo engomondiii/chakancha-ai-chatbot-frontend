@@ -565,6 +565,37 @@ The styling architecture was updated so this file controls the global design tok
 
 This prevents the legacy green-and-brown token system from overriding the Brand Manual palette.
 
+#### Production Build Import Resolution
+
+Resolved a production build failure caused by an invalid import path for the centralized Chakancha logo component.
+
+The affected files were importing the logo with an incorrect alias and filename casing:
+
+```jsx
+import { LogoMark } from "@components/common/logo";
+```
+
+The import was corrected to the project alias and the exact case-sensitive component filename:
+
+```jsx
+import { LogoMark } from "@/components/common/Logo";
+```
+
+The following improvements were made:
+
+- Added the missing `/` after the `@` path alias.
+- Updated `logo` to `Logo` so the import matches `src/components/common/Logo.jsx`.
+- Corrected the import in the affected authentication routes, including the verify-email and forgot-password pages.
+- Removed the `Module not found: Can't resolve '@components/common/logo'` error that was blocking the optimized Next.js production build.
+- Standardized logo imports so development and production environments resolve the same component path consistently.
+
+Build validation command:
+
+```bash
+npm run build
+```
+
+
 ### Result
 
 The frontend now provides:

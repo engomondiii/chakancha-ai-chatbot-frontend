@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, CheckCircle } from "lucide-react";
-import { LogoMark } from "@components/common/logo";
+import { LogoMark } from "@/components/common/Logo";
 import { forgotPassword } from "@/lib/api/auth";
 
 export default function ForgotPasswordPage() {

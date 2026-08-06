@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, CheckCircle, XCircle, Mail } from "lucide-react";
-import { LogoMark } from "@components/common/logo";
+import { LogoMark } from "@/components/common/Logo";
 import { verifyEmail } from "@/lib/api/auth";
 
 function VerifyEmailContent() {
