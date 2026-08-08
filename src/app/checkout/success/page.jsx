@@ -7,7 +7,8 @@
 
 import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { CheckCircle, Package, Leaf, ArrowRight } from 'lucide-react';
+import { CheckCircle, Package, ArrowRight } from 'lucide-react';
+import {LogoMark} from '@components/common/Logo'
 import { getOrder } from '@/lib/api/orders';
 
 function SuccessContent() {
@@ -86,7 +87,7 @@ function SuccessContent() {
           <Package size={15} /> Track your order
         </button>
         <button type="button" onClick={() => router.push('/products')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, backgroundColor: 'transparent', color: 'var(--color-tea-green)', border: '1px solid var(--color-tea-green)', borderRadius: 'var(--radius-md)', padding: '12px 24px', fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
-          <Leaf size={15} /> Browse more teas <ArrowRight size={14} />
+          <LogoMark size='sm' variant='dark'/> Browse more teas <ArrowRight size={14} />
         </button>
       </div>
     </div>

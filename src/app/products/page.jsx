@@ -52,8 +52,8 @@ function ProductCatalog() {
           overflow: "hidden",
         }}
       >
-        {/* Decorative leaf background */}
-        <div
+        {/* Decorative leaf background */} 
+        {/* <div
           style={{
             position: "absolute",
             right: -20,
@@ -65,8 +65,8 @@ function ProductCatalog() {
           }}
         >
           🍃
-        </div>
-
+        </div> */}
+{/* 
         {/* Origin badge */}
         <div
           style={{
@@ -294,9 +294,11 @@ function ProductCatalog() {
             transition: "border-color 150ms ease, color 150ms ease",
           }}
         >
-          Ask our AI — it knows every leaf   
+          Ask our AI — it knows every leaf
         </a>
-        <span><LogoMark tone="dark" size="sm" clickable={true} /></span>
+        <span>
+          <LogoMark tone="dark" size="sm" clickable={true} />
+        </span>
       </div>
     </div>
   );

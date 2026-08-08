@@ -11,6 +11,7 @@
 
 import { Suspense } from 'react';
 import { ConversationView } from '@/components/ai/ConversationView';
+import { LogoMark } from '@/components/common/Logo';
 
 /* ── Metadata ────────────────────────────────────────────────────────────── */
 export const metadata = {
@@ -56,7 +57,7 @@ function ChatFallback() {
             animation:       'pulse 1.5s ease-in-out infinite',
           }}
         >
-          <span style={{ fontSize: 18 }}>🍃</span>
+          <span style={{ fontSize: 18 }}><LogoMark size='sm' variant='dark'/></span>
         </div>
         Loading conversation…
       </div>
