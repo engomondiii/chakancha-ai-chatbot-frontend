@@ -8,7 +8,7 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { CheckCircle, Package, ArrowRight } from 'lucide-react';
-import {LogoMark} from '@components/common/Logo'
+import { LogoMark } from "@/components/common/Logo";
 import { getOrder } from '@/lib/api/orders';
 
 function SuccessContent() {

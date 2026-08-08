@@ -575,6 +575,7 @@ The following changes were made:
 - Continued using the dark Chakancha mark on light product surfaces.
 - Standardized product-page logo usage around:
 
+
 ```jsx
 import { LogoMark } from "@/components/common/Logo";
 ```
