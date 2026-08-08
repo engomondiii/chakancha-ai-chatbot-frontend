@@ -16,19 +16,43 @@ import { ENDPOINTS } from "./endpoints";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const SITE_BASE = process.env.NEXT_PUBLIC_SITE_URL || "https://chakancha.com";
-
 function resolveImageUrl(path) {
   if (!path) return null;
-  if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  // Frontend public folder — served by Vercel/Next.js
-  if (
-    path.startsWith("/images/") ||
-    path.startsWith("/icons/") ||
-    path.startsWith("/public/")
-  ) {
-    return `${SITE_BASE}${path}`;
+
+  // Full URL
+  if (path.startsWith("http://") || path.startsWith("https://")) {
+    try {
+      const imageUrl = new URL(path);
+      const siteUrl = new URL(SITE_BASE);
+
+      // Images belonging to our own Next.js public folder
+      // should be treated as local assets.
+      if (
+        imageUrl.origin === siteUrl.origin &&
+        (imageUrl.pathname.startsWith("/images/") ||
+          imageUrl.pathname.startsWith("/icons/"))
+      ) {
+        return imageUrl.pathname;
+      }
+
+      // Truly external image
+      return path;
+    } catch {
+      return path;
+    }
   }
-  // Backend media — served by Django/Railway
+
+  // Next.js public assets are referenced from "/".
+  if (path.startsWith("/images/") || path.startsWith("/icons/")) {
+    return path;
+  }
+
+  // Remove accidental "/public" prefix.
+  if (path.startsWith("/public/")) {
+    return path.replace("/public", "");
+  }
+
+  // Django / Railway media
   return `${API_BASE}${path.startsWith("/") ? "" : "/"}${path}`;
 }
 
