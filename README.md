@@ -479,8 +479,9 @@ The current implementation uses:
 - recursive child rendering
 - descendant leaf counting for horizontal layout
 - horizontal scrolling for wide trees
-- referral-level labels
-- referral-code labels where available
+- plain participant names beneath each node
+- no generation labels inside the tree; generation is communicated by position
+- no referral codes inside tree nodes; referral codes remain available elsewhere in the dashboard
 - direct-child count badges
 
 All branch connectors are drawn in one SVG layer.

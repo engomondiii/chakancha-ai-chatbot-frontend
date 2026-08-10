@@ -197,7 +197,6 @@ function Branch({ from, to }) {
 /* =========================================================
    MEMBER NODE
 ========================================================= */
-
 function MemberNode({ layout }) {
   const { node, x, y, level, radius } = layout;
 
@@ -211,8 +210,6 @@ function MemberNode({ layout }) {
       node?.full_name ||
       "Participant";
 
-  const referralCode = node?.referralCode || node?.referral_code || null;
-
   const children = getChildren(node);
 
   const childCount = children.length;
@@ -224,11 +221,6 @@ function MemberNode({ layout }) {
         .join(" ")}
       style={{
         left: `${x}px`,
-
-        /*
-         * y represents the centre
-         * of the circle.
-         */
         top: `${y - radius}px`,
       }}
     >
@@ -248,17 +240,10 @@ function MemberNode({ layout }) {
         <span className={styles.name} title={name}>
           {name}
         </span>
-
-        <span className={styles.level}>
-          {isRoot ? "Root" : `Level ${level}`}
-        </span>
-
-        {referralCode && <span className={styles.code}>{referralCode}</span>}
       </div>
     </div>
   );
 }
-
 /* =========================================================
    REFERRAL TREE
 ========================================================= */

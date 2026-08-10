@@ -56,39 +56,31 @@ The detailed referral table remains available and was not replaced by the tree.
 
 ---
 
-**#### Realistic Chakan Tree Visualisation**
+**#### Chakan Tree Node Label Simplification**
 
-Added the visual tree implementation:
+The visual MGM nodes were simplified to reduce unnecessary information inside
+the tree.
 
-```text
-src/components/chakan-tree/chakanTree.jsx
-src/components/chakan-tree/chakanTree.module.css
-```
+The following changes were made:
 
-The visual network uses:
+- removed `Root`, `Level 1`, `Level 2`, and other generation labels from nodes
+- removed referral codes from the visual tree
+- removed the rounded label background beneath participant circles
+- kept only the participant name as plain text beneath each node
+- kept the Chakancha logo circle as the primary visual representation of each participant
+- kept referral codes available through the existing referral-code and referral-detail areas of the dashboard
 
-- the current participant as the root
-- the root label **You**
-- hollow circular participant nodes
-- the official Chakancha `LogoMark` inside every node
-- muted-gold root emphasis
-- recursive child rendering
-- child-count badges
-- generation / level labels
-- referral-code labels where available
-- descendant leaf counting for horizontal layout
-- horizontal scrolling for wide networks
-- responsive label treatment
-- reduced-motion handling
+Generation is now communicated naturally through each participant's vertical
+position in the tree rather than repeated text labels.
 
-All connectors are rendered inside one SVG layer.
+The resulting node treatment is:
 
-Each parent-child path starts at the edge of the parent circle and terminates at
-the edge of the child circle.
-
-Curved SVG branches replace detached CSS line elements, giving the network a
-continuous and more organic tree-like structure.
-
+````text
+       ◯
+      You
+       │
+       ◯
+     issac
 ---
 
 **#### Chakan Tree Component Architecture**
@@ -103,7 +95,8 @@ ParticipantDashboard.jsx
 chakanTree.jsx
         ↓
 chakanTree.module.css
-```
+
+````
 
 The dashboard route is responsible for authentication and membership access.
 
