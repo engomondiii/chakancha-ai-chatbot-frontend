@@ -113,7 +113,13 @@
 
   z-index: 2;
 
-  transform: translate(-50%, -50%);
+  /*
+   * JS already positions the top edge of the circle
+   * using y - radius.
+   *
+   * Therefore we only centre horizontally.
+   */
+  transform: translateX(-50%);
 
   display: flex;
   flex-direction: column;
@@ -143,15 +149,15 @@
   align-items: center;
   justify-content: center;
 
-  /*
-   * Hollow / light interior.
-   * The Chakancha mark sits inside.
-   */
   background: rgba(251, 250, 247, 0.96);
 
   border: 2px solid var(--color-background-charcoal);
 
-  cursor: pointer;
+  /*
+   * The node currently displays information
+   * but does not perform an action.
+   */
+  cursor: default;
 
   box-shadow: 0 5px 14px rgba(17, 17, 17, 0.08);
 
@@ -169,12 +175,6 @@
   box-shadow:
     0 10px 26px rgba(17, 17, 17, 0.13),
     0 0 0 5px rgba(185, 167, 119, 0.1);
-}
-
-.circle:focus-visible {
-  outline: 3px solid rgba(185, 167, 119, 0.35);
-
-  outline-offset: 4px;
 }
 
 /* =========================================================
@@ -260,6 +260,8 @@
   background: rgba(251, 250, 247, 0.9);
 
   backdrop-filter: blur(4px);
+
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .name {
@@ -377,15 +379,17 @@
     border-radius: var(--radius-card);
   }
 
-  .circle {
-    width: 60px;
-    height: 60px;
-  }
-
-  .rootCircle {
-    width: 76px;
-    height: 76px;
-  }
+  /*
+   * Keep the actual circle dimensions unchanged.
+   *
+   * chakanTree.jsx calculates branch endpoints using:
+   *
+   * NODE_RADIUS = 34  → 68px circle
+   * ROOT_RADIUS = 43  → 86px circle
+   *
+   * Changing those CSS dimensions here would cause
+   * branch endpoints to miss the circles.
+   */
 
   .member {
     min-width: 105px;
@@ -411,18 +415,12 @@
 ========================================================= */
 
 @media (max-width: 480px) {
-  .circle {
-    width: 56px;
-    height: 56px;
-  }
-
-  .rootCircle {
-    width: 70px;
-    height: 70px;
-  }
-
   .member {
     min-width: 95px;
+  }
+
+  .name {
+    max-width: 95px;
   }
 }
 

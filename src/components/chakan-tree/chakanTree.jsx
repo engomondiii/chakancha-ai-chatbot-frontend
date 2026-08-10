@@ -1,166 +1,325 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
-import styles from "./chakanTree.module.css";
+import React from "react";
 
 import { LogoMark } from "@/components/common/Logo";
-import { ParticipantDashboard } from "@/components/chakan-tree/ParticipantDashboard";
-import { useStore } from "@/store";
 
-export default function ChakanTreeDashboardPage() {
-  const router = useRouter();
+import styles from "./chakanTree.module.css";
 
-  const membership = useStore((s) => s.membership);
+/* =========================================================
+   TREE DIMENSIONS
+========================================================= */
 
-  const isAuthenticated = useStore((s) => s.isAuthenticated);
+const LEAF_WIDTH = 160;
+const LEVEL_HEIGHT = 165;
 
-  const fetchMembership = useStore((s) => s.fetchMembership);
+const SIDE_PADDING = 110;
+const TOP_PADDING = 100;
 
-  const [checked, setChecked] = useState(false);
+const ROOT_RADIUS = 43;
+const NODE_RADIUS = 34;
 
-  useEffect(() => {
-    let active = true;
+/* =========================================================
+   TREE HELPERS
+========================================================= */
 
-    const checkMembership = async () => {
-      if (!isAuthenticated) {
-        router.replace("/chakan-tree/join");
-        return;
-      }
+function getChildren(node) {
+  return Array.isArray(node?.children) ? node.children : [];
+}
 
-      try {
-        await fetchMembership();
-      } finally {
-        if (active) {
-          setChecked(true);
-        }
-      }
+function countLeaves(node) {
+  const children = getChildren(node);
+
+  if (children.length === 0) {
+    return 1;
+  }
+
+  return children.reduce((total, child) => total + countLeaves(child), 0);
+}
+
+function getDepth(node) {
+  const children = getChildren(node);
+
+  if (children.length === 0) {
+    return 0;
+  }
+
+  return 1 + Math.max(...children.map(getDepth));
+}
+
+/* =========================================================
+   TREE LAYOUT
+========================================================= */
+
+function createTreeLayout(root) {
+  if (!root) {
+    return null;
+  }
+
+  const leafCount = Math.max(countLeaves(root), 1);
+
+  const depth = getDepth(root);
+
+  const width = Math.max(900, leafCount * LEAF_WIDTH + SIDE_PADDING * 2);
+
+  const height = Math.max(480, TOP_PADDING * 2 + depth * LEVEL_HEIGHT + 160);
+
+  const nodes = [];
+  const edges = [];
+
+  function walk(node, left, right, level, parentLayout = null, path = "root") {
+    const isRoot = level === 0;
+
+    const radius = isRoot ? ROOT_RADIUS : NODE_RADIUS;
+
+    const x = (left + right) / 2;
+
+    const y = TOP_PADDING + level * LEVEL_HEIGHT;
+
+    const layoutNode = {
+      node,
+      x,
+      y,
+      level,
+      radius,
+      path,
     };
 
-    checkMembership();
+    nodes.push(layoutNode);
 
-    return () => {
-      active = false;
-    };
-  }, [isAuthenticated, fetchMembership, router]);
-
-  useEffect(() => {
-    if (checked && !membership?.isActive) {
-      router.replace("/chakan-tree/join");
+    if (parentLayout) {
+      edges.push({
+        from: parentLayout,
+        to: layoutNode,
+      });
     }
-  }, [checked, membership, router]);
 
-  if (!checked || !membership?.isActive) {
-    return (
+    const children = getChildren(node);
+
+    if (children.length === 0) {
+      return;
+    }
+
+    const totalLeaves = children.reduce(
+      (total, child) => total + countLeaves(child),
+      0,
+    );
+
+    const availableWidth = right - left;
+
+    let cursor = left;
+
+    children.forEach((child, index) => {
+      const childLeaves = countLeaves(child);
+
+      const childWidth = availableWidth * (childLeaves / totalLeaves);
+
+      walk(
+        child,
+        cursor,
+        cursor + childWidth,
+        level + 1,
+        layoutNode,
+        `${path}-${index}`,
+      );
+
+      cursor += childWidth;
+    });
+  }
+
+  walk(root, SIDE_PADDING, width - SIDE_PADDING, 0);
+
+  return {
+    width,
+    height,
+    nodes,
+    edges,
+  };
+}
+
+/* =========================================================
+   BRANCH
+========================================================= */
+
+function Branch({ from, to }) {
+  /*
+   * Start exactly at the bottom
+   * edge of the parent circle.
+   */
+  const startX = from.x;
+
+  const startY = from.y + from.radius;
+
+  /*
+   * Finish exactly at the top
+   * edge of the child circle.
+   */
+  const endX = to.x;
+
+  const endY = to.y - to.radius;
+
+  const verticalDistance = endY - startY;
+
+  /*
+   * All children initially travel
+   * vertically from the parent.
+   *
+   * This creates the common trunk
+   * before the branch curves outward.
+   */
+  const splitY = startY + verticalDistance * 0.32;
+
+  const curveY = splitY + verticalDistance * 0.28;
+
+  const path = `
+    M ${startX} ${startY}
+    L ${startX} ${splitY}
+    C
+      ${startX} ${curveY},
+      ${endX} ${curveY},
+      ${endX} ${endY}
+  `;
+
+  return (
+    <g>
+      {/* Soft branch shadow */}
+      <path d={path} className={styles.branchShadow} strokeWidth="8" />
+
+      {/* Main branch */}
+      <path d={path} className={styles.branch} strokeWidth="4.5" />
+
+      {/* Subtle branch highlight */}
+      <path d={path} className={styles.branchHighlight} strokeWidth="1.2" />
+    </g>
+  );
+}
+
+/* =========================================================
+   MEMBER NODE
+========================================================= */
+
+function MemberNode({ layout }) {
+  const { node, x, y, level, radius } = layout;
+
+  const isRoot = level === 0;
+
+  const name = isRoot
+    ? "You"
+    : node?.nickname ||
+      node?.name ||
+      node?.fullName ||
+      node?.full_name ||
+      "Participant";
+
+  const referralCode = node?.referralCode || node?.referral_code || null;
+
+  const children = getChildren(node);
+
+  const childCount = children.length;
+
+  return (
+    <div
+      className={[styles.member, isRoot ? styles.rootMember : ""]
+        .filter(Boolean)
+        .join(" ")}
+      style={{
+        left: `${x}px`,
+
+        /*
+         * y represents the centre
+         * of the circle.
+         */
+        top: `${y - radius}px`,
+      }}
+    >
       <div
-        style={{
-          minHeight: "60vh",
-
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
+        className={[styles.circle, isRoot ? styles.rootCircle : ""]
+          .filter(Boolean)
+          .join(" ")}
       >
-        <Loader2
-          size={30}
-          color="var(--color-accent-muted-gold)"
-          className="chakan-tree-loading"
-        />
+        <LogoMark tone="dark" size={isRoot ? "md" : "sm"} clickable={false} />
 
-        <style jsx>{`
-          .chakan-tree-loading {
-            animation: spin 1s linear infinite;
-          }
-
-          @keyframes spin {
-            to {
-              transform: rotate(360deg);
-            }
-          }
-        `}</style>
+        {childCount > 0 && (
+          <span className={styles.childBadge}>{childCount}</span>
+        )}
       </div>
+
+      <div className={styles.label}>
+        <span className={styles.name} title={name}>
+          {name}
+        </span>
+
+        <span className={styles.level}>
+          {isRoot ? "Root" : `Level ${level}`}
+        </span>
+
+        {referralCode && <span className={styles.code}>{referralCode}</span>}
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   REFERRAL TREE
+========================================================= */
+
+function ReferralTree({ root }) {
+  const layout = createTreeLayout(root);
+
+  if (!root || !layout) {
+    return (
+      <div className={styles.empty}>Your Chakan Tree will appear here.</div>
     );
   }
 
   return (
-    <main
-      style={{
-        maxWidth: "var(--max-width-content)",
-
-        margin: "0 auto",
-
-        padding:
-          "calc(72px + var(--spacing-2xl)) var(--spacing-lg) var(--spacing-3xl)",
-      }}
-    >
-      <header
+    <div className={styles.viewport}>
+      <div
+        className={styles.canvas}
         style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--spacing-md)",
+          width: `${layout.width}px`,
 
-          marginBottom: "var(--spacing-2xl)",
+          height: `${layout.height}px`,
         }}
       >
-        <div
-          style={{
-            width: 52,
-            height: 52,
+        {/* ===============================================
+            CONTINUOUS SVG BRANCH LAYER
+        =============================================== */}
 
-            borderRadius: "50%",
-
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-
-            border: "2px solid var(--color-accent-muted-gold)",
-
-            background: "var(--color-background-main)",
-          }}
+        <svg
+          className={styles.branchLayer}
+          width={layout.width}
+          height={layout.height}
+          viewBox={`0 0 ${layout.width} ${layout.height}`}
+          aria-hidden="true"
         >
-          <LogoMark tone="dark" size="sm" clickable={false} />
-        </div>
+          <defs>
+            <filter
+              id="branchBlur"
+              x="-20%"
+              y="-20%"
+              width="140%"
+              height="140%"
+            >
+              <feGaussianBlur stdDeviation="2" />
+            </filter>
+          </defs>
 
-        <div>
-          <p
-            style={{
-              margin: "0 0 3px",
+          {layout.edges.map((edge, index) => (
+            <Branch key={`branch-${index}`} from={edge.from} to={edge.to} />
+          ))}
+        </svg>
 
-              fontFamily: "var(--font-family-primary)",
+        {/* ===============================================
+            MEMBER NODES
+        =============================================== */}
 
-              fontSize: 10,
-              fontWeight: 700,
-
-              letterSpacing: "0.1em",
-
-              textTransform: "uppercase",
-
-              color: "var(--color-text-muted)",
-            }}
-          >
-            My Network
-          </p>
-
-          <h1
-            style={{
-              margin: 0,
-
-              fontFamily: "var(--font-family-display)",
-
-              fontSize: "var(--font-size-h2)",
-
-              fontWeight: 600,
-
-              color: "var(--color-text-primary)",
-            }}
-          >
-            My Chakan Tree
-          </h1>
-        </div>
-      </header>
-
-      <ParticipantDashboard />
-    </main>
+        {layout.nodes.map((layoutNode) => (
+          <MemberNode key={layoutNode.path} layout={layoutNode} />
+        ))}
+      </div>
+    </div>
   );
 }
+
+export default ReferralTree;

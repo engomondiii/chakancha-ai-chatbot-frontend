@@ -1,342 +1,48 @@
-**## Recent Frontend Updates**
-
-The Chakancha frontend has been refined to better match the official brand identity, improve the hero and product experiences, resolve production errors, and create a more consistent chatbot interface.
-
-**### Brand Assets and Visual Identity**
-
-\- Added additional hero background images featuring Nandi Hills and Chakancha tea fields. - Added and updated icons, logo marks, wordmarks, and lockup logo assets. - Improved the visual quality of the Nandi Hills hero scenery. - Updated hero controls and buttons to match the Chakancha brand system. - Updated the Send/Enter button to use the official Chakancha logo mark. - Added an image to the Review section. - Replaced generic tea-leaf icons in the chatbot with the official Chakancha mark. - Applied the approved Chakancha digital tokens to chatbot surfaces, text, borders, focus states, spacing, and interactive controls.
-
-**### Hero Section Improvements**
-
-\- Improved hero image transitions to reduce noticeable pauses between slides. - Removed the **\*\*“Ask anything”\*\*** text. - Replaced the hero headline with:
-
-  > From Nandi Hills to your cup.
-
-\- Removed the **\*\*AI Chat\*\*** and **\*\*Search\*\*** mode options. - Reduced the size of the hero prompt input for a cleaner and more balanced layout. - Removed the **\*\*“Single Origin Nandi Hills”\*\*** text. - Refined the hero layout and scenery to make the Nandi Hills presentation more visually engaging.
-
-**### Header Navigation Updates**
-
-Changed the header navigation label from:
-
-\`\`\`text Shop Teas \`\`\`
-
-to:
-
-\`\`\`text Order Teas \`\`\`
-
-**### Chatbot Brand Mark Updates**
-
-The chatbot previously used generic leaf illustrations and Lucide \`Leaf\` icons in several locations. These were replaced with the official Chakancha mark to create a more consistent branded experience.
-
-The following changes were made:
-
-\- Replaced the leaf icon in the chatbot top header with the official Chakancha mark. - Replaced the leaf icon in the chatbot empty state with the official Chakancha mark. - Replaced the custom inline tea-leaf SVG in \`AIAvatar.jsx\` with the official Chakancha mark. - Used the standard dark Chakancha mark on light chatbot surfaces. - Used the white Chakancha mark inside the dark AI response avatar. - Preserved the streaming pulse animation around the AI avatar. - Changed the streaming ring to use \`--color-accent-muted-gold\`. - Changed the AI avatar background to use \`--color-background-dark\`. - Removed dependence on the legacy tea-green avatar colors. - Kept the marks decorative where appropriate by using empty alternative text and \`aria-hidden\`.
-
-The chatbot now uses the following mark treatment:
-
-\| Location              | Chakancha asset treatment                         | | --------------------- | ------------------------------------------------- | | Chat top header       | Standard Chakancha mark on a light surface        | | Chat empty state      | Standard Chakancha mark                           | | AI response avatar    | White Chakancha mark on \`--color-background-dark\` | | Streaming avatar ring | \`--color-accent-muted-gold\`                       |
-
-**### Chat Input Refinement**
-
-Resolved a color clash affecting the active prompt input on the conversation page.
-
-The shared \`PromptInput\` component was originally designed for the dark Nandi Hills hero image. Its dark glass background and inverse text treatment were also being applied inside the light chatbot conversation page.
-
-The following improvements were made:
-
-\- Added chat-specific styling through the existing \`chatMode\` class. - Added dark text styling through the existing \`textareaChat\` class. - Added a dedicated loading state for the conversation prompt. - Preserved the original dark glass-morphism design on the hero page. - Changed the conversation input to use \`--color-background-soft\`. - Changed the focused state to \`--color-surface-card\`. - Changed the focused border to \`--color-accent-muted-gold\`. - Changed the loading state to use \`--color-background-muted\`. - Changed the chat submit button to use \`--color-background-dark\`. - Used \`--color-text-inverse\` for the white Chakancha mark and inverse button content. - Used \`--color-text-primary\`, \`--color-text-muted\`, and \`--color-border-soft\` for readable text and borders. - Improved disabled text and placeholder readability. - Kept the white Chakancha mark visible on the submit button. - Corrected the invalid \`@@media\` responsive rule. - Removed the unused \`Icon\` import from \`PromptInput.jsx\`. - Removed reliance on legacy green, cream, olive, and gray tokens in the updated chatbot input styles.
-
-The prompt input now behaves differently according to its context:
-
-\| Context              | Visual treatment                                      | | -------------------- | ----------------------------------------------------- | | Hero page            | Dark translucent glass input with inverse text        | | Chat page            | \`--color-background-soft\` with \`--color-text-primary\` | | Focused chat input   | \`--color-surface-card\` with muted-gold border         | | Loading state        | \`--color-background-muted\` with muted-gold emphasis   | | Active submit button | \`--color-background-dark\` with inverse content        |
-
-**### Global CSS and Design Token Consolidation**
-
-The active global stylesheet was confirmed as:
-
-\`\`\`text src/app/globals.css \`\`\`
-
-This file is now the primary source of truth for frontend design tokens. Component CSS Modules read the variables declared under \`:root\`, regardless of whether the component is located inside \`src/app\`, \`src/components\`, or another frontend folder.
-
-The following updates were made:
-
-\- Replaced the previous green-and-brown color system with the approved Chakancha Brand Manual palette. - Added canonical background tokens:   - \`--color-background-main\`   - \`--color-background-soft\`   - \`--color-background-muted\`   - \`--color-background-dark\`   - \`--color-background-charcoal\` - Added canonical text tokens:   - \`--color-text-primary\`   - \`--color-text-secondary\`   - \`--color-text-muted\`   - \`--color-text-inverse\` - Added approved accent tokens:   - \`--color-accent-muted-gold\`   - \`--color-accent-sand\`   - \`--color-accent-dark-olive\` - Added surface, border, divider, and semantic color tokens. - Added reusable black and white opacity tokens. - Added canonical display, primary, and monospaced font-family tokens. - Added a responsive typography scale. - Added a canonical 8px spacing system. - Added standardized card, panel, and pill/button radii. - Updated shadows to use neutral black-based values. - Added standardized transitions, easing values, content widths, and z-index levels. - Updated body, headings, paragraphs, links, form controls, selection, focus, scrollbar, and shared utility styles. - Retained temporary compatibility aliases so older components continue to work while they are migrated. - Confirmed that component CSS Modules should not import \`globals.css\` directly. - Confirmed that the second global stylesheet should not be loaded simultaneously with \`src/app/globals.css\`.
-
-The canonical color palette now includes:
-
-\| Token                         | Value     | | ----------------------------- | --------- | | \`--color-background-main\`     | \`#FBFAF7\` | | \`--color-background-soft\`     | \`#F7F4EE\` | | \`--color-background-muted\`    | \`#ECE8E1\` | | \`--color-background-dark\`     | \`#111111\` | | \`--color-background-charcoal\` | \`#2B2B2B\` | | \`--color-text-primary\`        | \`#111111\` | | \`--color-text-secondary\`      | \`#2B2B2B\` | | \`--color-text-muted\`          | \`#4A4A4A\` | | \`--color-text-inverse\`        | \`#F7F4EE\` | | \`--color-accent-muted-gold\`   | \`#B9A777\` | | \`--color-accent-sand\`         | \`#D2C59A\` | | \`--color-accent-dark-olive\`   | \`#3C4031\` | | \`--color-border-soft\`         | \`#D6D0C5\` | | \`--color-surface-card\`        | \`#FFFFFF\` |
-
-**### Footer Brand Alignment**
-
-The footer was updated to read its colors, typography, borders, transitions, and interactive states from \`src/app/globals.css\`.
-
-The following changes were made:
-
-\- Replaced the previous dark tea-green background with \`--color-background-charcoal\`. - Updated inverse footer text to use \`--color-text-inverse\`. - Replaced the previous sunrise-gold treatment with \`--color-accent-muted-gold\`. - Added \`--color-accent-sand\` for softer hover states. - Updated social icon colors, borders, and hover treatments. - Updated footer column headings to use muted gold. - Updated footer navigation links to use controlled inverse-text opacity values. - Updated newsletter input colors, borders, placeholders, focus states, and shadows. - Updated the newsletter submit button to use the approved accent palette. - Updated the subscription confirmation treatment. - Updated copyright text, legal links, separators, and the footer divider. - Added keyboard focus states using muted gold. - Added fallback values to critical CSS variables to prevent transparent or broken styling. - Preserved the desktop footer margin:
-
-\`\`\`css margin-top: 80px; \`\`\`
-
-\- Preserved the mobile footer margin:
-
-\`\`\`css margin-top: 48px; \`\`\`
-
-\- Confirmed that \`Footer.jsx\` does not need to change for the footer background to use the global tokens. - Confirmed that \`Footer.module.css\` should not import \`globals.css\` directly.
-
-**### Logo Asset Export and Usage Workflow**
-
-A consistent Figma-to-code logo workflow was established.
-
-The following approach is now used:
-
-\- Logo SVG files should have transparent backgrounds. - Page and component backgrounds are controlled by CSS, not embedded in the SVG. - White background rectangles should be removed before exporting. - Separate SVG files are not required for white, off-white, black, and charcoal backgrounds. - Two primary color treatments are sufficient:   - Dark logo for white and off-white surfaces.   - Light logo for black and charcoal surfaces. - Both the full lockup and standalone mark should be exported.
-
-Recommended asset structure:
-
-\`\`\`text public/ └── brand/     ├── chakancha-lockup-dark.svg     ├── chakancha-lockup-light.svg     ├── chakancha-symbol-dark.svg     └── chakancha-symbol-light.svg \`\`\`
-
-The intended usage is:
-
-\| Background | Logo treatment | | ---------- | -------------- | | White      | Dark logo      | | Off-white  | Dark logo      | | Black      | Light logo     | | Charcoal   | Light logo     |
-
-**### Header Logo Clear Space**
-
-The header logo spacing was refined to follow the Brand Manual’s clear-space guidance.
-
-The following updates were made:
-
-\- Added transparent breathing room around the main header lockup. - Increased the header’s minimum height so the logo does not appear crowded. - Added controlled vertical and horizontal padding around the logo link. - Preserved the transparent header treatment over the hero image. - Added separate mobile clear-space values. - Confirmed that clear space does not require a white rectangle behind the logo. - Corrected the CSS Module class-name mismatch between:
-
-\`\`\`jsx styles.LogoMark; \`\`\`
-
-and the previous selector:
-
-\`\`\`css .logoLockup \`\`\`
-
-\- Updated the selector to match the case-sensitive JSX class:
-
-\`\`\`css .LogoMark \`\`\`
-
-\- Removed the invalid declaration:
-
-\`\`\`css padding-top: 1; \`\`\`
-
-\- Improved vertical alignment between the logo, navigation links, cart, and account actions.
-
-**### Conversation View Design-System Alignment**
-
-\`ConversationView\.module.css\` was aligned with the canonical variables from \`src/app/globals.css\`.
-
-The following improvements were made:
-
-\- Replaced legacy color aliases with canonical Brand Manual tokens. - Updated the main conversation background to use \`--color-background-main\`. - Updated the sticky top bar to use a translucent version of the main background. - Updated top-bar borders to use \`--color-border-soft\`. - Updated the conversation title to use canonical typography and text tokens. - Updated the intent badge to use the limited dark-olive accent. - Updated top-bar buttons to use neutral borders and muted-gold interaction states. - Updated destructive buttons to use the semantic error token. - Updated the custom scrollbar styling. - Updated message-list spacing to use the canonical spacing scale. - Updated the empty-state mark, title, subtitle, and suggestion chips. - Updated suggestion chips to use card surfaces, neutral borders, pill radii, and muted-gold hover states. - Updated error bars and retry buttons to use semantic error styling. - Updated the scroll-to-bottom button to use charcoal and muted-gold treatments. - Updated the input bar to use canonical backgrounds, borders, and transparency values. - Added \`100dvh\` support for improved mobile viewport behavior. - Added \`min-height: 0\` to the scrollable message area to prevent flex overflow. - Added \`overscroll-behavior-y: contain\`. - Replaced independently hardcoded header offsets with spacing-token calculations. - Corrected the invalid PromptInput wildcard selector by using a valid class attribute selector. - Added mobile-specific spacing, action, and layout refinements.
-
-The conversation page now follows this visual structure:
-
-\| Element                      | Token treatment                       | | ---------------------------- | ------------------------------------- | | Main conversation background | \`--color-background-main\`             | | Sticky top bar               | Translucent \`--color-background-main\` | | Borders                      | \`--color-border-soft\`                 | | Main text                    | \`--color-text-primary\`                | | Supporting text              | \`--color-text-muted\`                  | | Interactive emphasis         | \`--color-accent-muted-gold\`           | | Limited contextual accent    | \`--color-accent-dark-olive\`           | | Scroll button                | \`--color-background-charcoal\`         |
-
-**### Message Bubble Design-System Alignment**
-
-\`MessageBubble.module.css\` was aligned with the canonical global design system.
-
-The following improvements were made:
-
-\- Replaced the previous tea-green user bubble with a charcoal user bubble. - Updated user-message text to use \`--color-text-inverse\`. - Updated AI-message bubbles to use \`--color-surface-card\`. - Updated AI-message text to use \`--color-text-secondary\`. - Updated bubble borders to use \`--color-border-soft\`. - Updated bubble spacing, radii, shadows, and transitions. - Updated system-message pills to use the soft background and pill radius. - Added explicit text inheritance inside dark user bubbles. - Prevented global paragraph styling from turning user-message text dark. - Updated links inside user bubbles to use the sand accent. - Updated links inside AI messages to use dark olive with muted-gold underlines. - Added styling for paragraphs, lists, links, inline code, code blocks, and blockquotes inside AI responses. - Updated action buttons to use neutral surfaces and muted-gold focus states. - Added \`focus-within\` support so message controls remain visible during keyboard interaction. - Updated timestamps to use muted text. - Added mobile behavior that keeps message actions visible on touch devices. - Improved wrapping for long links, code, and unbroken message content. - Added accessible focus states across message actions.
-
-The message treatment is now:
-
-\| Message type      | Visual treatment                      | | ----------------- | ------------------------------------- | | User message      | Charcoal background with inverse text | | AI message        | White card surface with dark text     | | System message    | Soft off-white pill                   | | User-message link | Sand accent                           | | AI-message link   | Dark olive with muted-gold underline  | | Code block        | Charcoal background with inverse text | | Blockquote        | Muted text with muted-gold border     |
-
-**### CSS Module and Global Variable Architecture**
-
-The frontend styling architecture was clarified and standardized.
-
-The project now follows this relationship:
-
-\`\`\`text src/app/globals.css         ↓ Defines global \:root design tokens         ↓ Component CSS Modules read the variables         ↓ Header.module.css Footer.module.css ConversationView\.module.css MessageBubble.module.css PromptInput.module.css \`\`\`
-
-Implementation rules:
-
-\- Global CSS is loaded once by the Next.js application. - Component CSS Modules do not import the global stylesheet. - Component folder location does not affect access to \`:root\` variables. - CSS custom properties are inherited through the rendered document. - Updated components should use canonical variables instead of hardcoded colors. - Compatibility aliases remain temporary and should be removed gradually. - New components should use canonical tokens directly.
-
-**### Logo Mark Replacement Across Frontend Pages**
-
-The official Chakancha logo mark was expanded beyond the chatbot and applied across additional frontend pages.
-
-The following updates were made:
-
-\- Updated the centralized \`LogoMark\` width so the official mark displays at the correct visual scale. - Replaced the previous generic \`Leaf\` icon on the login page. - Replaced the previous generic \`Leaf\` icon on the signup page. - Replaced the leaf icon used in the product page headline. - Replaced the previous generic \`Leaf\` icon on the forgot-password page. - Replaced the leaf icon shown in the empty-cart state. - Reused the centralized \`LogoMark\` component instead of repeating direct SVG paths across pages. - Used the dark mark on light surfaces and the white mark on dark surfaces. - Continued using the SVG assets stored under:
-
-\`\`\`text public/images/icons/ \`\`\`
-
-\- Preserved \`clickable={false}\` where the logo mark is decorative and should not create a nested link. - Improved consistency between authentication pages, product pages, and cart states.
-
-The updated logo mark coverage now includes:
-
-\| Location              | Logo mark treatment          | | --------------------- | ---------------------------- | | Login page            | Official Chakancha logo mark | | Signup page           | Official Chakancha logo mark | | Product page headline | Official Chakancha logo mark | | Forgot-password page  | Official Chakancha logo mark | | Empty-cart state      | Official Chakancha logo mark | | Chatbot interface     | Official Chakancha logo mark | | AI response avatar    | White mark on a dark surface |
-
-**### Product Page Brand-Manual Alignment**
-
-The \`/products\` experience was updated to present Chakancha's current tea range more clearly and consistently with the Brand Manual. The page is now focused on **\*\*Nandi Gold\*\*** and **\*\*Nandi Black\*\***, while recipe and preparation imagery supports the broader product story.
-
-The following page-level changes were made:
-
-\- Updated \`src/app/products/page.jsx\` with a more focused product introduction and brand-aligned layout. - Replaced legacy green-and-brown visual treatments with the canonical tokens from \`src/app/globals.css\`. - Used the official Chakancha \`LogoMark\` instead of generic tea-leaf decoration where a brand symbol is appropriate. - Removed the previous broad catalog language that referred to black, green, purple, and white tea ranges. - Simplified the product area so the frontend no longer depends on product-category filter pills or marketplace-style sorting controls. - Kept product data connected to the existing Django product API through \`useProducts()\` and \`useProduct()\`. - Structured the page around the two active Chakancha products rather than the previous four-product demonstration catalog.
-
-**#### Product Grid Updates**
-
-\`ProductGrid.jsx\` and \`ProductGrid.module.css\` were updated to support the focused two-product range.
-
-The following improvements were made:
-
-\- Removed frontend category filtering and name/price sorting from the product grid. - Added a fixed editorial ordering that places Nandi Gold before Nandi Black when matching names or slugs are available. - Reduced the loading state from four skeleton products to two. - Added dedicated empty and error states. - Updated the desktop layout to show two products side by side. - Updated tablet and mobile layouts to show one product per row. - Replaced inline grid styling with \`ProductGrid.module.css\` classes. - Applied canonical spacing, borders, surfaces, radii, shadows, typography, and reduced-motion handling.
-
-The product layout now behaves as follows:
-
-\| Viewport | Product layout | | -------- | -------------- | | Desktop  | Nandi Gold and Nandi Black side by side | | Tablet   | One product per row | | Mobile   | One compact product card per row |
-
-**#### Product Card Updates**
-
-\`ProductCard.jsx\` and \`ProductCard.module.css\` were redesigned from marketplace-style tiles into focused editorial product cards.
-
-The following changes were made:
-
-\- Added product numbering for the two-product presentation. - Displayed the product name, short description, price, detail link, package image, and cart action. - Removed category labels, caffeine color coding, quick-view overlays, featured badges, and compact tasting-note chips from the catalog card. - Replaced the generic leaf-emoji fallback with the official Chakancha logo mark. - Added support for image values returned as strings or image objects. - Added support for \`image\`, \`primaryImage\`, \`primary_image\`, and \`images\` fields. - Replaced the fully clickable article pattern with proper product links and a separate add-to-cart button. - Preserved the existing cart-store integration and success notification behavior. - Updated product images to use \`object-fit: contain\` so package artwork is not cropped. - Updated purchase buttons to use the approved dark background and muted-gold interaction treatment.
-
-**#### Product Detail Updates**
-
-\`ProductDetail.jsx\` and \`ProductDetail.module.css\` were aligned with the product-card treatment and the global design system.
-
-The following improvements were made:
-
-\- Improved normalization of backend product images returned as URL strings or objects. - Added primary-image fallback support through \`image\`, \`primaryImage\`, and \`primary_image\`. - Removed the unused \`sendMessage\` store selector. - Preserved support for camelCase and snake_case product fields. - Changed certification display so the interface shows the actual certification value instead of automatically labeling every certification as living-wage verification. - Added optional support for an explicit \`livingWageVerified\` or \`living_wage_verified\` field. - Removed the hardcoded shipping-note claim and now displays a note only when product data provides one. - Improved quantity controls, disabled states, cart wording, wishlist interaction, and keyboard focus treatment. - Updated the product-specific AI prompt to ask about the tea, brewing guidance, and relevant recipes. - Updated page layout, pricing, buttons, borders, surfaces, and responsive behavior using canonical design tokens.
-
-**#### Brewing Guide Updates**
-
-\`BrewingGuide.jsx\` was refined while preserving its backend compatibility.
-
-The following changes were made:
-
-\- Continued supporting both camelCase and snake_case brewing fields. - Replaced the decorative leaf heading icon with the official Chakancha logo mark. - Replaced the tea-amount leaf icon with the functional \`Scale\` icon. - Added accessible expanded/collapsed attributes. - Updated brewing cards to use neutral surfaces, soft borders, dark text, and limited muted-gold or dark-olive emphasis. - Preserved dynamic temperature, steeping time, tea amount, and resteep values from each product record.
-
-**#### Product and Origin Image Assets**
-
-The following product assets were added:
-
-\`\`\`text public/images/products/ColdMilkTea.png public/images/products/HotMilkTea.png public/images/products/HotStaightBlackTea.png public/images/products/IcedStraightBlackTea.png public/images/products/NandiBlackLeaves.png public/images/products/NandiBlackPackage.svg public/images/products/NandiGoldLeaves.png public/images/products/NandiGoldPackage.svg public/images/products/landImg.svg public/images/products/originHero2.svg public/images/products/peopleImg.svg \`\`\`
-
-The following origin assets were added:
-
-\`\`\`text public/images/origin/landImg.svg public/images/origin/originHero2.svg public/images/origin/peopleImg.svg \`\`\`
-
-The following previous demonstration-product images were removed:
-
-\`\`\`text public/images/products/green-tea-1.png public/images/products/purple-tea-1.png public/images/products/white-tea-1.png \`\`\`
-
-Product-image relationships remain controlled by the Django product data. Image URLs can be entered through the Django Admin product-image inline and returned through the product serializers to \`ProductCard\`, \`ProductDetail\`, and the product gallery.
-
-**### Product Image Pipeline and Gallery Fix**
-
-The frontend product image pipeline was updated so product cards keep a single primary package image while product-detail pages retain the complete backend gallery.
-
-The following updates were made:
-
-- `normalizeProduct()` preserves the full `raw.images` array returned by Django.
-- Image objects keep `url`, `alt_text`, `is_primary`, and `sort_order`.
-- The primary product image is derived from `images[]` when the backend does not provide `primary_image`, `image`, or `thumbnail`.
-- Same-origin Chakancha asset URLs such as `https://chakancha.com/images/...` are converted back to local `/images/...` paths.
-- Accidental `/public` prefixes are removed.
-- Relative Django/Railway media paths continue to resolve against `NEXT_PUBLIC_API_URL`.
-- Truly external absolute URLs remain external.
-- `ProductCard` continues to show the primary package image.
-- `ProductDetail` and `ProductGallery` receive the complete image array.
-- The production PNG gallery issue was resolved by treating frontend `public/` assets as local Next.js images instead of unnecessary remote image sources.
-
-The intended flow is:
-
-```text
-Django / Railway product API
-        ↓
-raw.images[]
-        ↓
-normalizeProduct()
-        ↓
-same-site https://chakancha.com/images/... → /images/...
-        ↓
-primary image → ProductCard
-full images[] → ProductDetail → ProductGallery
-```
-
-**### Product Page Brand Mark Cleanup**
-
-Additional product-page brand cleanup was completed to remove generic leafy decoration and use the real Chakancha identity instead.
-
-The following changes were made:
-
-- Removed decorative leafy imagery from the product-page presentation where it was being used as a generic brand cue.
-- Replaced the generic leaf treatment with the centralized `LogoMark` component.
-- Kept the official Chakancha mark decorative where appropriate by using `clickable={false}`.
-- Continued using the dark Chakancha mark on light product surfaces.
-- Standardized product-page logo usage around:
-
-```
-import { LogoMark } from "@/components/common/Logo";
-
-```
-
-This keeps the product experience consistent with the chatbot, authentication, cart, checkout, and other brand-aligned frontend surfaces.
-
-**### Files Updated in This Pass**
-
-The current frontend pass includes updates to:
-
-```
-src/app/chat/page.jsx
-src/app/checkout/success/page.jsx
-src/app/products/[slug]/page.jsx
-src/app/products/page.jsx
-src/lib/api/products.js
-
-```
-
-The product-related changes in this pass focus on brand-mark consistency, production-safe logo usage, and preserving the complete product image gallery returned by the Railway backend.
-
 **### Chakan Tree MGM Referral Network**
 
-The Chakan Tree member dashboard was expanded with a realistic MGM referral-network visualisation while preserving the existing detailed referral information.
+The Chakan Tree participant experience was expanded from a flat referral
+dashboard into a visual MGM referral network while preserving the existing
+referral details, rewards, impact information, and public join experience.
 
-The route responsibilities remain separate:
+The route responsibilities remain intentionally separate:
 
 ```text
 /chakan-tree
-→ public/default Chakan Tree page for non-members
+→ public/default Chakan Tree experience for non-members
 
 /chakan-tree/join
 → activation and join flow
 
 /chakan-tree/dashboard
-→ authenticated active-member dashboard
+→ authenticated active-member route wrapper
 → ParticipantDashboard
 ```
 
-The public `/chakan-tree` page was not replaced. Active members continue to be redirected to the dashboard after membership status is refreshed.
+The public `/chakan-tree` page was not replaced.
+
+Active Chakan Tree participants continue to enter the member experience through
+`/chakan-tree/dashboard`.
+
+---
 
 **#### Participant Dashboard Expansion**
 
-`ParticipantDashboard.jsx` remains the main Chakan Tree member dashboard.
+`src/components/chakan-tree/ParticipantDashboard.jsx` remains the main Chakan
+Tree member dashboard.
 
-The dashboard keeps:
+The dashboard retains:
 
 - referral code and share link
 - overall rewards summary
 - impact metrics
-- the existing **People You've Invited** referral table
+- existing **People You've Invited** referral table
 
-The following views were added alongside those existing sections:
+The following MGM views were added:
 
-- MGM level earnings
-- a visual referral tree
-- participant count derived from the rendered tree
-- safe empty states when level-earnings or referral data is not yet available
+- level earnings
+- visual referral tree
+- referral-tree participant count
+- empty states for unavailable referral or earnings data
 
 The three referral views intentionally serve different purposes:
 
@@ -344,35 +50,374 @@ The three referral views intentionally serve different purposes:
 | -------------- | --------------------------------------------------- |
 | Referral tree  | Shows who is connected to whom                      |
 | Level earnings | Shows earnings by MGM generation                    |
-| Referral table | Shows direct-referral purchases and value generated |
+| Referral table | Shows direct-referral purchases and generated value |
+
+The detailed referral table remains available and was not replaced by the tree.
+
+---
 
 **#### Realistic Chakan Tree Visualisation**
 
-Added:
+Added the visual tree implementation:
 
 ```text
 src/components/chakan-tree/chakanTree.jsx
 src/components/chakan-tree/chakanTree.module.css
 ```
 
-The visual tree uses:
+The visual network uses:
 
-- the current participant as a larger root node labelled **You**
+- the current participant as the root
+- the root label **You**
 - hollow circular participant nodes
 - the official Chakancha `LogoMark` inside every node
-- muted-gold emphasis for the root node
-- recursive rendering for multiple referral generations
-- subtree leaf counting so larger branches receive more horizontal space
-- horizontal scrolling when the network becomes wider than the viewport
-- responsive sizing and reduced-motion handling
+- muted-gold root emphasis
+- recursive child rendering
+- child-count badges
+- generation / level labels
+- referral-code labels where available
+- descendant leaf counting for horizontal layout
+- horizontal scrolling for wide networks
+- responsive label treatment
+- reduced-motion handling
 
-All parent-child connectors are drawn inside one SVG layer. Each path begins at the parent-circle edge and ends at the child-circle edge so the branch lines remain visually continuous. Curved branch paths replace detached CSS line segments and keep the tree organic while still following Chakancha's calm connection-line treatment.
+All connectors are rendered inside one SVG layer.
 
-`chakanTree.module.css` is imported directly by `chakanTree.jsx`; the dashboard route does not import the tree stylesheet.
+Each parent-child path starts at the edge of the parent circle and terminates at
+the edge of the child circle.
+
+Curved SVG branches replace detached CSS line elements, giving the network a
+continuous and more organic tree-like structure.
+
+---
+
+**#### Chakan Tree Component Architecture**
+
+The final component relationship is:
+
+```text
+src/app/chakan-tree/dashboard/page.jsx
+        ↓
+ParticipantDashboard.jsx
+        ↓
+chakanTree.jsx
+        ↓
+chakanTree.module.css
+```
+
+The dashboard route is responsible for authentication and membership access.
+
+`ParticipantDashboard.jsx` is responsible for the participant-facing dashboard.
+
+`chakanTree.jsx` is responsible only for rendering the visual MGM network.
+
+`chakanTree.module.css` is responsible only for visual-tree styling.
+
+The tree stylesheet is imported directly by:
+
+```jsx
+import styles from "./chakanTree.module.css";
+```
+
+inside `chakanTree.jsx`.
+
+The dashboard route does not import the tree CSS Module.
+
+---
+
+**#### Recursive Dashboard Rendering Fix**
+
+Resolved an issue where the Chakan Tree page repeated vertically without ending.
+
+The problem occurred because dashboard-route code had been placed inside the
+component being imported as the visual tree.
+
+This created the dependency:
+
+```text
+ParticipantDashboard
+        ↓
+chakanTree
+        ↓
+ParticipantDashboard
+        ↓
+chakanTree
+        ↓
+...
+```
+
+and caused the dashboard to render itself recursively.
+
+The implementation was corrected so:
+
+```text
+chakanTree.jsx
+```
+
+contains only the visual `ReferralTree` implementation.
+
+It no longer imports or renders:
+
+```jsx
+<ParticipantDashboard />
+```
+
+The dashboard wrapper remains exclusively at:
+
+```text
+src/app/chakan-tree/dashboard/page.jsx
+```
+
+---
+
+**#### Referral Tree Import / Export Resolution**
+
+Resolved multiple production build warnings caused by the visual tree import
+path and export style not matching the physical component file.
+
+The actual component file is:
+
+```text
+src/components/chakan-tree/chakanTree.jsx
+```
+
+The final import used by `ParticipantDashboard.jsx` is:
+
+```jsx
+import ReferralTree from "./chakanTree";
+```
+
+and `chakanTree.jsx` provides:
+
+```jsx
+export default ReferralTree;
+```
+
+This replaces incorrect variants such as:
+
+```jsx
+import { ReferralTree } from "./ReferralTree";
+```
+
+and:
+
+```jsx
+import { ReferralTree } from "./chakanTree";
+```
+
+when no matching named export exists.
+
+The filename casing and export type must match exactly for production builds.
+
+---
+
+**#### React Hook Order Fix**
+
+Resolved React error `#310` in `ParticipantDashboard.jsx`.
+
+The earlier implementation called `useMemo()` after the loading-state early
+return.
+
+That caused different Hook counts between renders:
+
+```text
+first render
+loading = true
+→ return before useMemo
+
+next render
+loading = false
+→ useMemo executes
+```
+
+The unnecessary `useMemo()` was removed.
+
+The referral tree is now calculated with:
+
+```jsx
+const referralTree = buildReferralTree(dashboard, membership);
+```
+
+This keeps Hook order stable across every render.
+
+---
+
+**#### Hydration-Safe Dashboard Route**
+
+The Chakan Tree dashboard route was updated to handle persisted frontend
+authentication and membership state more safely.
+
+The route now uses:
+
+```jsx
+const [mounted, setMounted] = useState(false);
+const [checked, setChecked] = useState(false);
+```
+
+Client mounting is established with:
+
+```jsx
+useEffect(() => {
+  setMounted(true);
+}, []);
+```
+
+Membership checks begin only after client mount.
+
+The route then:
+
+```text
+mounts on client
+        ↓
+checks authentication
+        ↓
+refreshes membership
+        ↓
+sets membership check complete
+        ↓
+checks membership.isActive
+        ↓
+renders ParticipantDashboard
+```
+
+Redirects were moved out of the render phase and into `useEffect()`.
+
+The old pattern:
+
+```jsx
+if (membership && !membership.isActive) {
+  router.replace("/chakan-tree/join");
+  return null;
+}
+```
+
+was removed.
+
+This avoids navigation side effects during rendering and gives the route a
+stable loading / redirect state while membership is being resolved.
+
+---
+
+**#### Chakan Tree Dashboard Header Alignment**
+
+The dashboard route was updated to match the current Chakancha identity.
+
+Changes include:
+
+- removed the generic `TreePine` heading icon
+- added the official Chakancha `LogoMark`
+- used `clickable={false}` for the decorative logo
+- replaced legacy green / brown styling with canonical design tokens
+- replaced the previous 700px layout restriction with:
+
+```css
+max-width: var(--max-width-content);
+```
+
+This gives wide referral trees enough horizontal room.
+
+The dashboard header now uses:
+
+```text
+My Network
+My Chakan Tree
+```
+
+with the official brand mark.
+
+---
+
+**#### Tree Geometry and CSS Synchronisation**
+
+The JavaScript and CSS geometry were aligned so SVG connectors touch the visual
+node boundaries correctly.
+
+`chakanTree.jsx` currently defines:
+
+```jsx
+const ROOT_RADIUS = 43;
+const NODE_RADIUS = 34;
+```
+
+The corresponding CSS dimensions remain:
+
+```css
+.circle {
+  width: 68px;
+  height: 68px;
+}
+
+.rootCircle {
+  width: 86px;
+  height: 86px;
+}
+```
+
+The tree component positions nodes with:
+
+```jsx
+top: `${y - radius}px`;
+```
+
+Therefore `.member` now centres only horizontally:
+
+```css
+.member {
+  transform: translateX(-50%);
+}
+```
+
+The earlier:
+
+```css
+transform: translate(-50%, -50%);
+```
+
+was removed because it shifted nodes upward a second time and caused SVG
+branches to miss their intended circle boundaries.
+
+Mobile CSS no longer changes the physical circle diameter independently from
+the JavaScript radii.
+
+Horizontal scrolling is used instead for narrow screens.
+
+---
+
+**#### Continuous Branch Geometry**
+
+The visual tree uses a shared SVG branch layer.
+
+Each connector begins at:
+
+```text
+parent.y + parent.radius
+```
+
+and terminates at:
+
+```text
+child.y - child.radius
+```
+
+Branches first travel vertically away from the parent and then curve toward the
+child using SVG paths.
+
+This gives related child branches a common trunk-like origin and avoids visible
+gaps between the parent circle and connection line.
+
+Branch styling uses:
+
+- dark olive for the main structure
+- sand for a subtle branch highlight
+- a low-opacity shadow beneath the line
+- rounded stroke caps and joins
+
+---
 
 **#### Tree Data Compatibility**
 
-The frontend is prepared to use a true hierarchical MGM tree when the backend provides:
+The frontend is prepared to consume a real hierarchical MGM response from any
+of:
 
 ```text
 dashboard.referralTree
@@ -380,13 +425,44 @@ dashboard.referral_tree
 dashboard.tree
 ```
 
-Until nested descendants are available, the dashboard safely builds a Level 1 tree from the existing `dashboard.referrals` array.
+Until the backend supplies nested descendants, the frontend safely converts:
 
-An active member with zero referrals still sees the dashboard and the root node. Referral count is not used to determine membership or dashboard access.
+```text
+dashboard.referrals
+```
+
+into Level 1 children of the active participant.
+
+This means current direct-referral data can already appear in the visual tree.
+
+---
+
+**#### Zero-Referral Participant Behaviour**
+
+Active Chakan Tree participants are identified through:
+
+```text
+membership.isActive
+```
+
+not through referral count.
+
+A participant with zero referrals still receives a tree root:
+
+```text
+      You
+       ◯
+```
+
+and remains inside the participant dashboard.
+
+Zero referrals do not redirect an active participant back to the join flow.
+
+---
 
 **#### Level Earnings Compatibility**
 
-The participant dashboard is prepared to normalise generation-level earnings from fields such as:
+The participant dashboard supports generation-level earnings fields including:
 
 ```text
 dashboard.levelEarnings
@@ -395,77 +471,141 @@ dashboard.earningsByLevel
 dashboard.earnings_by_level
 ```
 
-When level-earnings data is not yet available, the interface shows an informational empty state rather than inventing values.
+The frontend supports array- and object-based level representations.
+
+When no level-earnings information is returned, the dashboard displays an
+informational empty state.
+
+The frontend does not infer or manufacture MGM earnings.
+
+---
 
 **#### Chakan Tree Brand Alignment**
 
-The tree uses the canonical Chakancha tokens from `src/app/globals.css`: off-white and white surfaces, charcoal text, muted gold, sand, dark olive, and soft borders. Participant nodes use the official Chakancha mark rather than generic tree or leaf icons.
+The tree uses the canonical Chakancha design tokens from:
 
-**### Error Fixes**
+```text
+src/app/globals.css
+```
 
-**#### Missing Dark Logo Error**
+The network uses:
 
-Resolved the \`404\` error for:
+- off-white and white surfaces
+- charcoal text
+- muted gold
+- sand
+- dark olive
+- soft neutral borders
 
-\`\`\`text /images/icons/chakancha-lockup-dark.svg \`\`\`
+Generic tree and leaf symbols are avoided where the official Chakancha mark is
+more appropriate.
 
-The logo filename was corrected so that the browser path matches the asset inside the public images directory.
+Participant circles use the real `LogoMark`.
 
-**#### React Hydration Errors**
+---
 
-Resolved React hydration errors \`#418\` and \`#423\`.
+**### Chakan Tree Error Fixes**
 
-The issue was caused by a clickable logo component being rendered inside an existing navigation link, which created nested anchor elements.
+**#### Endless Page / Recursive Component Fix**
 
-The mobile logo was updated to disable its internal clickable behavior when it is already wrapped by the navigation link.
+Resolved the endlessly repeating `/chakan-tree/dashboard` page caused by
+`chakanTree.jsx` rendering `ParticipantDashboard`, which itself imported
+`chakanTree.jsx`.
 
-**#### Global Stylesheet Conflict**
+The visual tree is now isolated from the route and dashboard components.
 
-Identified two separate global CSS files in the frontend.
+---
 
-The active stylesheet was confirmed as:
+**#### Chakan Tree Hook Order Error**
 
-\`\`\`text src/app/globals.css \`\`\`
+Resolved React error `#310` by removing `useMemo()` from below the loading-state
+early return in `ParticipantDashboard.jsx`.
 
-The styling architecture was updated so this file controls the global design tokens used by the footer, header, chatbot, conversation view, and message bubbles.
+Hooks now run in the same order on every render.
 
-This prevents the legacy green-and-brown token system from overriding the Brand Manual palette.
+---
 
-**#### Production Build Import Resolution**
+**#### Chakan Tree Hydration Stability**
 
-Resolved a production build failure caused by an invalid import path for the centralized Chakancha logo component.
+Updated `/chakan-tree/dashboard` so client-dependent authentication and
+membership checks wait until client mount.
 
-The affected files were importing the logo with an incorrect alias and filename casing:
+Redirects now occur in effects rather than during rendering.
 
-\`\`\`jsx import { LogoMark } from "@components/common/logo"; \`\`\`
+This reduces hydration instability caused by differences between initial
+rendering and persisted browser state.
 
-The import was corrected to the project alias and the exact case-sensitive component filename:
+---
 
-\`\`\`jsx import { LogoMark } from "@/components/common/Logo"; \`\`\`
+**#### Chakan Tree Module Resolution**
 
-The following improvements were made:
+Resolved:
 
-\- Added the missing \`/\` after the \`@\` path alias. - Updated \`logo\` to \`Logo\` so the import matches \`src/components/common/Logo.jsx\`. - Corrected the import in the affected authentication routes, including the verify-email and forgot-password pages. - Removed the \`Module not found: Can't resolve '@components/common/logo'\` error that was blocking the optimized Next.js production build. - Standardized logo imports so development and production environments resolve the same component path consistently.
+```text
+Module not found: Can't resolve './ReferralTree'
+```
 
-Build validation command:
+by matching the import path to the actual file:
 
-\`\`\`bash npm run build \`\`\`
+```jsx
+import ReferralTree from "./chakanTree";
+```
+
+Also resolved:
+
+```text
+Attempted import error:
+'ReferralTree' is not exported from './chakanTree'
+```
+
+by using the component's default export consistently.
+
+---
+
+**#### Chakan Tree CSS Geometry Fix**
+
+Updated `.member` positioning from:
+
+```css
+transform: translate(-50%, -50%);
+```
+
+to:
+
+```css
+transform: translateX(-50%);
+```
+
+so JavaScript and CSS node positioning use the same vertical geometry.
+
+The fixed node diameters remain synchronised with the JavaScript radii.
+
+---
 
 **### Result**
 
-- Added a realistic recursive Chakan Tree for active MGM members with hollow Chakancha-logo nodes and continuous SVG branches.
-- Added level-earnings presentation while preserving the existing direct-referral table.
-- Kept `/chakan-tree` as the public/non-member page and `/chakan-tree/dashboard` as the active-member experience.
-- Added safe Level 1 fallback rendering until the backend exposes a full nested MGM hierarchy.
+The Chakan Tree frontend now provides:
 
-- Product cards continue to use the primary package image while product-detail pages retain the full backend image gallery.
-- Product image normalization now derives a primary image from `images[]` when the backend does not expose a separate `primary_image` field.
-- Generic leafy product-page decoration has been replaced with the official Chakancha logo mark.
-
-The frontend now provides:
-
-\- A product page aligned with the Chakancha Brand Manual. - A focused two-product presentation for Nandi Gold and Nandi Black. - Brand-aligned product cards, product details, brewing guidance, and responsive product-grid states. - Updated product, preparation, and origin image assets. - Removal of obsolete green, purple, and white demonstration-product imagery.
-
-\- Correctly scaled Chakancha logo marks across authentication, product, and cart interfaces. - Replaced remaining generic leaf icons on login, signup, product headline, forgot-password, and empty-cart views.
-
-\- Smoother hero transitions. - More consistent Chakancha branding. - Official Chakancha marks throughout the chatbot interface. - Improved logo and icon reliability. - A standardized transparent SVG logo workflow. - Dark and light logo treatments for different surfaces. - Brand-manual-aligned clear space around the header logo. - Cleaner header navigation. - A dark, structured, brand-aligned footer. - Footer colors controlled through the global design system. - Preserved desktop and mobile footer margins. - Better chatbot input readability. - Separate visual treatments for hero and conversation inputs. - A consolidated global design-token system. - Canonical colors, typography, spacing, radii, shadows, transitions, and z-index values. - Temporary compatibility aliases for older components. - A conversation interface aligned with the Brand Manual. - Charcoal user-message bubbles with readable inverse text. - Neutral AI-message cards with improved rich-text formatting. - Improved keyboard, focus, hover, and mobile interaction states. - Clearer CSS Module and global-variable architecture. - Fewer hydration, styling, and asset-loading errors.
+- a public non-member Chakan Tree experience
+- a separate authenticated participant dashboard
+- backend-refreshed membership validation
+- effect-based participant redirects
+- hydration-safe client mounting
+- the official Chakancha mark in the dashboard header
+- a realistic recursive MGM referral visualisation
+- hollow Chakancha-logo participant nodes
+- a clearly identifiable root participant
+- continuous SVG parent-child branches
+- generation labels
+- direct-child count badges
+- referral-code labels
+- level earnings
+- existing reward information
+- existing impact information
+- the existing direct-referral detail table
+- Level 1 fallback rendering until the backend exposes nested MGM descendants
+- stable zero-referral participant behavior
+- synchronised CSS and SVG node geometry
+- production-safe component import/export paths
+- removal of the recursive infinite-page bug
+- removal of the conditional Hook-order error
