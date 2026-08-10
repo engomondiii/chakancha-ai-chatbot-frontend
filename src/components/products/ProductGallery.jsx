@@ -24,7 +24,7 @@ function PlaceholderImage({ name }) {
         gap:             12,
       }}
     >
-      <span style={{ fontSize: '3.5rem' }}>🍃</span>
+      {/* <span style={{ fontSize: '3.5rem' }}>🍃</span> */}
       <span
         style={{
           fontFamily:  'var(--font-display)',
@@ -52,7 +52,7 @@ export function ProductGallery({ images = [], productName = '' }) {
   const goNext = () => setActiveIdx((i) => Math.min(validImages.length - 1, i + 1));
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)', maxWidth:400,margin:'0 auto',  }}>
       {/* Main image */}
       <div
         style={{
@@ -71,7 +71,7 @@ export function ProductGallery({ images = [], productName = '' }) {
             alt={`${productName} — image ${activeIdx + 1}`}
             fill
             sizes="(max-width: 768px) 100vw, 50vw"
-            style={{ objectFit: 'cover' }}
+            style={{ objectFit: 'contain' }}
             priority={activeIdx === 0}
           />
         ) : (
