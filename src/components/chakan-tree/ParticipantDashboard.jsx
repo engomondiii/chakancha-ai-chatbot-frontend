@@ -18,8 +18,7 @@
  */
 
 "use client";
-
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import { Users, TrendingUp, Network, Layers3 } from "lucide-react";
 
@@ -528,11 +527,7 @@ export function ParticipantDashboard() {
      Tree data
   ------------------------------------------------------- */
 
-  const referralTree = useMemo(
-    () => buildReferralTree(dashboard, membership),
-    [dashboard, membership],
-  );
-
+  const referralTree = buildReferralTree(dashboard, membership);
   const peopleInTree = Math.max(countTreeMembers(referralTree) - 1, 0);
 
   /* -------------------------------------------------------
