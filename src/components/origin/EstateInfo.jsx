@@ -1,28 +1,47 @@
-'use client';
-import React from 'react';
-import { Mountain, Thermometer, Droplets, Award } from 'lucide-react';
+"use client";
 
-const ESTATE_FACTS = [
-  { icon: Mountain,    label: 'Elevation',     value: '1,900–2,300m', desc: 'High altitude — slower growth, deeper flavour.' },
-  { icon: Thermometer, label: 'Climate',        value: '16–24°C',      desc: 'Cool equatorial climate with two rainy seasons.' },
-  { icon: Droplets,    label: 'Annual rainfall',value: '1,800mm',      desc: 'Rich, consistent rainfall feeds the roots.' },
-  { icon: Award,       label: 'Certification', value: 'Food-safe',     desc: 'All processing meets international food hygiene standards.' },
-];
+import React from "react";
+import { Mountain } from "lucide-react";
+
+import styles from "./EstateInfo.module.css";
 
 export function EstateInfo() {
+  const estateImage = "/images/backgrounds/landImg.svg";
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 'var(--spacing-md)' }}>
-      {ESTATE_FACTS.map((f) => (
-        <div key={f.label} style={{ backgroundColor: 'var(--color-warm-cream)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <f.icon size={20} color="var(--color-tea-green)" />
-          <div>
-            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-muted-olive)', margin: '0 0 4px' }}>{f.label}</p>
-            <p style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 600, color: 'var(--color-earth-brown)', margin: '0 0 4px' }}>{f.value}</p>
-            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--color-text-secondary)', margin: 0, lineHeight: 1.5 }}>{f.desc}</p>
-          </div>
+    <section className={styles.section}>
+      <div className={styles.content}>
+        {/* Eyebrow */}
+        <div className={styles.eyebrow}>
+          <Mountain size={16} strokeWidth={1.8} />
+          <span>THE LAND</span>
         </div>
-      ))}
-    </div>
+
+        {/* Heading */}
+        <h2 className={styles.title}>Where Heaven Meets Earth</h2>
+
+        {/* Description */}
+        <p className={styles.description}>
+          Nandi Hills sits in Kenya's Rift Valley at elevations between 1,900
+          and 2,300 metres. The cool highland climate, volcanic soil, and
+          consistent rainfall create ideal conditions for slow-growing,
+          flavour-rich tea. It is one of the finest tea-growing regions on the
+          planet — and one of the least well-known outside the specialty market.
+          Volcanic red soils deliver mineral complexity. Afternoon mists wrap
+          the hillsides, nurturing plants that have grown here for generations.
+        </p>
+      </div>
+
+      {/* Image */}
+      <div className={styles.imageWrapper}>
+        <img
+          src={estateImage}
+          alt="Nandi Hills landscape in western Kenya"
+          className={styles.image}
+        />
+      </div>
+    </section>
   );
 }
+
 export default EstateInfo;

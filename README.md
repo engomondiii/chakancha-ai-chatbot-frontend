@@ -8,13 +8,13 @@ participation, and a conversational assistant, backed by a Django API.
 
 ## Stack
 
-| Layer         | Technology                                     |
+| Layer         | Technology                                     |
 | ------------- | ---------------------------------------------- |
-| Framework     | Next.js 14 App Router                          |
-| UI            | React, CSS Modules                             |
-| Images        | `next/image`                                   |
-| Icons         | `lucide-react`                                 |
-| API           | Django REST backend hosted on Railway          |
+| Framework     | Next.js 14 App Router                          |
+| UI            | React, CSS Modules                             |
+| Images        | `next/image`                                   |
+| Icons         | `lucide-react`                                 |
+| API           | Django REST backend hosted on Railway          |
 | Design tokens | CSS custom properties in `src/app/globals.css` |
 
 ---
@@ -23,12 +23,12 @@ participation, and a conversational assistant, backed by a Django API.
 
 ```bash
 npm install
-npm run dev          # http://localhost:3000
+npm run dev          # http://localhost:3000
 ```
 
 ```bash
-npm run build        # production build — run before every deploy
-npm run start        # serve the production build locally
+npm run build        # production build — run before every deploy
+npm run start        # serve the production build locally
 npm run lint
 ```
 
@@ -58,6 +58,8 @@ src/
 │   ├── globals.css              # single source of truth for design tokens
 │   ├── layout.jsx
 │   ├── page.jsx                 # home / hero
+│   ├── origin/
+│   │   └── page.jsx             # Nandi Hills origin story
 │   ├── chat/
 │   ├── products/
 │   │   ├── page.jsx
@@ -78,6 +80,7 @@ src/
 │   │                            # PromptInput, AIAvatar
 │   ├── products/                # ProductGrid, ProductCard, ProductDetail,
 │   │                            # ProductGallery, BrewingGuide
+│   ├── origin/                  # OriginHero, EstateInfo, PeopleSection, MapView
 │   └── chakan-tree/
 │       ├── ParticipantDashboard.jsx
 │       ├── chakanTree.jsx       # actual recursive MGM tree visualisation
@@ -101,7 +104,6 @@ public/
     ├── products/
     └── origin/
 ```
-
 ---
 
 ## Design system
@@ -112,31 +114,31 @@ loaded once by the application.
 ### Rules
 
 1. **Component CSS Modules must not import `globals.css`.** Custom properties
-   inherit through the rendered document, so a Module in any folder can use
-   them without importing the global stylesheet.
+   inherit through the rendered document, so a Module in any folder can use
+   them without importing the global stylesheet.
 2. **Use canonical tokens in new and refactored code.**
 3. **Only one global stylesheet should control the design system.**
 4. **Compatibility aliases are temporary.** Older components may still use
-   legacy aliases while migration continues.
+   legacy aliases while migration continues.
 
 ### Colour
 
-| Token                         | Value     | Use                                |
+| Token                         | Value     | Use                                |
 | ----------------------------- | --------- | ---------------------------------- |
-| `--color-background-main`     | `#FBFAF7` | Page background                    |
-| `--color-background-soft`     | `#F7F4EE` | Recessed surfaces, chat input      |
-| `--color-background-muted`    | `#ECE8E1` | Loading and disabled states        |
-| `--color-background-dark`     | `#111111` | Primary buttons, AI avatar         |
-| `--color-background-charcoal` | `#2B2B2B` | Footer, user message bubbles       |
-| `--color-surface-card`        | `#FFFFFF` | Cards, focused inputs              |
-| `--color-text-primary`        | `#111111` | Body copy, headings                |
-| `--color-text-secondary`      | `#2B2B2B` | Secondary dark text                |
-| `--color-text-muted`          | `#4A4A4A` | Supporting text, timestamps        |
-| `--color-text-inverse`        | `#F7F4EE` | Text on dark surfaces              |
-| `--color-accent-muted-gold`   | `#B9A777` | Interactive emphasis, focus rings  |
-| `--color-accent-sand`         | `#D2C59A` | Softer hover states, links on dark |
-| `--color-accent-dark-olive`   | `#3C4031` | Limited contextual accent          |
-| `--color-border-soft`         | `#D6D0C5` | Borders and dividers               |
+| `--color-background-main`     | `#FBFAF7` | Page background                    |
+| `--color-background-soft`     | `#F7F4EE` | Recessed surfaces, chat input      |
+| `--color-background-muted`    | `#ECE8E1` | Loading and disabled states        |
+| `--color-background-dark`     | `#111111` | Primary buttons, AI avatar         |
+| `--color-background-charcoal` | `#2B2B2B` | Footer, user message bubbles       |
+| `--color-surface-card`        | `#FFFFFF` | Cards, focused inputs              |
+| `--color-text-primary`        | `#111111` | Body copy, headings                |
+| `--color-text-secondary`      | `#2B2B2B` | Secondary dark text                |
+| `--color-text-muted`          | `#4A4A4A` | Supporting text, timestamps        |
+| `--color-text-inverse`        | `#F7F4EE` | Text on dark surfaces              |
+| `--color-accent-muted-gold`   | `#B9A777` | Interactive emphasis, focus rings  |
+| `--color-accent-sand`         | `#D2C59A` | Softer hover states, links on dark |
+| `--color-accent-dark-olive`   | `#3C4031` | Limited contextual accent          |
+| `--color-border-soft`         | `#D6D0C5` | Borders and dividers               |
 
 Additional tokens cover typography, an 8px spacing system, radii, shadows,
 transitions, content widths, z-index levels, and semantic states.
@@ -153,10 +155,10 @@ Import the centralised component rather than duplicating SVG markup:
 import { LogoMark } from "@/components/common/Logo";
 ```
 
-| Surface           | Asset treatment |
+| Surface           | Asset treatment |
 | ----------------- | --------------- |
-| White / off-white | Dark mark       |
-| Black / charcoal  | Light mark      |
+| White / off-white | Dark mark       |
+| Black / charcoal  | Light mark      |
 
 Use:
 
@@ -171,7 +173,7 @@ Important:
 - Logo SVGs use transparent backgrounds.
 - Background colours belong to CSS, not the SVG asset.
 - Avoid nested links by setting `clickable={false}` when a logo already sits
-  inside another link.
+  inside another link.
 - The import path is case-sensitive:
 
 ```jsx
@@ -201,15 +203,15 @@ Product images are managed through Django Admin and normalised by the frontend.
 
 ```text
 Django API
-    ↓
+    ↓
 raw.images[]
-    ↓
+    ↓
 normalizeProduct()
 src/lib/api/products.js
-    ↓
-same-site /images/...       → local Next.js public asset
-primary image               → ProductCard
-full images[]               → ProductDetail → ProductGallery
+    ↓
+same-site /images/...       → local Next.js public asset
+primary image               → ProductCard
+full images[]               → ProductDetail → ProductGallery
 ```
 
 `normalizeProduct()`:
@@ -255,6 +257,143 @@ Product data is loaded through the Django API using `useProducts()` and
 
 ---
 
+## Origin page
+
+`/origin` is the editorial brand-origin route for Chakancha. It tells the story
+of Nandi Hills through landscape imagery, the tea-growing environment, the
+people behind the tea, and an embedded map of the region.
+
+### Component structure
+
+```text
+src/app/origin/page.jsx
+        ↓
+src/components/origin/
+├── OriginHero.jsx
+├── EstateInfo.jsx
+├── PeopleSection.jsx
+└── MapView.jsx
+```
+
+The page is composed in this order:
+
+```text
+OriginHero
+    ↓
+THE LAND — EstateInfo
+    ↓
+THE PEOPLE — PeopleSection
+    ↓
+Where we are — MapView
+```
+
+### Origin hero
+
+`OriginHero` now uses a real Nandi Hills tea-field photograph instead of a flat
+background treatment.
+
+The hero includes:
+
+- a photographic tea-field background
+- a left-weighted dark overlay for readable white text
+- the Nandi Hills location/elevation eyebrow
+- the headline **From the Hills of Heaven**
+- supporting origin-story copy
+- rounded landscape framing
+- navbar clearance through top spacing
+- responsive text positioning for tablet and mobile
+
+On mobile, the copy is moved higher within the image so the title, location and
+supporting text remain balanced inside the shorter viewport.
+
+### The Land
+
+`EstateInfo` was changed from a small fact-card grid into a large editorial
+section built around the heading:
+
+```text
+THE LAND
+Where Heaven Meets Earth
+```
+
+The section uses text on the left and landscape photography on the right. It
+explains the Nandi Hills growing environment, including elevation, highland
+climate, volcanic soil, rainfall and the conditions that support slow-growing,
+flavour-rich tea.
+
+The section is intentionally near full width, leaving only a small, even amount
+of whitespace at the viewport edges.
+
+### The People
+
+`PeopleSection` adds the human side of the origin story and reverses the previous
+layout so the image sits on the left and the copy sits on the right.
+
+It presents:
+
+```text
+THE PEOPLE
+Skilled Hands, Quiet Pride
+```
+
+The section tells the story of Amina, an experienced selective tea plucker, and
+frames plucking as skilled craft rather than anonymous labour. The pull quote is
+kept as a quieter editorial element beneath the main copy.
+
+Alternating the Land and People layouts creates a clearer visual rhythm down the
+page:
+
+```text
+THE LAND     text  → image
+THE PEOPLE   image → text
+```
+
+### Where we are / map
+
+`MapView` now embeds an interactive Google Maps view of Nandi Hills instead of
+showing only a static location placeholder.
+
+The map includes:
+
+- an embedded Google Maps iframe
+- Nandi Hills as the displayed location
+- interactive map navigation and zoom
+- a branded location card
+- a direct external Google Maps link
+- responsive sizing for desktop and mobile
+
+The location card identifies Nandi Hills in western Kenya and is positioned so
+it does not unnecessarily compete with Google's own map controls.
+
+### Width and responsive layout
+
+The major Origin content blocks are designed to use almost the full viewport
+width with consistent edge whitespace. Desktop sections stay wide and
+photographic; tablet layouts reduce gaps and image heights; mobile layouts stack
+content vertically.
+
+Do not reintroduce narrow `max-width` wrappers around the major Origin story
+sections unless the visual design is intentionally changed.
+
+### Origin imports
+
+Origin components use the project's configured `@/` alias:
+
+```jsx
+import { PeopleSection } from "@/components/origin/PeopleSection";
+```
+
+Do not use:
+
+```jsx
+import { PeopleSection } from "@components/origin/PeopleSection";
+```
+
+unless an `@components` alias is explicitly configured. Filename casing must
+also match exactly in production builds.
+
+---
+
 # Chakan Tree / MGM referral network
 
 Chakan Tree separates the public participation experience from the active-member
@@ -262,16 +401,16 @@ dashboard.
 
 ```text
 /chakan-tree
-        ↓
+        ↓
 public explanation
 stats
 how it works
 join CTA
-        ↓
+        ↓
 active participant
-        ↓
+        ↓
 /chakan-tree/dashboard
-        ↓
+        ↓
 ParticipantDashboard
 ```
 
@@ -299,13 +438,13 @@ It is responsible for:
 
 ```text
 client mount
-    ↓
+    ↓
 authentication check
-    ↓
+    ↓
 refresh membership from backend
-    ↓
+    ↓
 check membership.isActive
-    ↓
+    ↓
 render ParticipantDashboard
 ```
 
@@ -332,7 +471,7 @@ and:
 
 ```jsx
 useEffect(() => {
-  setMounted(true);
+  setMounted(true);
 }, []);
 ```
 
@@ -344,7 +483,7 @@ Do not use:
 
 ```jsx
 if (membership && !membership.isActive) {
-  router.replace("/chakan-tree/join");
+  router.replace("/chakan-tree/join");
 }
 ```
 
@@ -438,13 +577,13 @@ Otherwise the dependency becomes:
 
 ```text
 ParticipantDashboard
-        ↓
+        ↓
 chakanTree
-        ↓
+        ↓
 ParticipantDashboard
-        ↓
+        ↓
 chakanTree
-        ↓
+        ↓
 ...
 ```
 
@@ -454,11 +593,11 @@ The correct relationship is:
 
 ```text
 src/app/chakan-tree/dashboard/page.jsx
-        ↓
+        ↓
 ParticipantDashboard.jsx
-        ↓
+        ↓
 chakanTree.jsx
-        ↓
+        ↓
 chakanTree.module.css
 ```
 
@@ -506,13 +645,13 @@ Therefore the CSS must use:
 
 ```css
 .circle {
-  width: 68px;
-  height: 68px;
+  width: 68px;
+  height: 68px;
 }
 
 .rootCircle {
-  width: 86px;
-  height: 86px;
+  width: 86px;
+  height: 86px;
 }
 ```
 
@@ -539,7 +678,7 @@ the CSS should centre only horizontally:
 
 ```css
 .member {
-  transform: translateX(-50%);
+  transform: translateX(-50%);
 }
 ```
 
@@ -600,8 +739,8 @@ This allows current referral data to appear immediately.
 An active member with no referrals still receives a valid root:
 
 ```text
-      You
-       ◯
+      You
+       ◯
 ```
 
 Referral count is not used to determine whether a participant belongs to Chakan
@@ -639,10 +778,10 @@ state is displayed.
 
 ## Referral views
 
-| View           | Purpose                                             |
+| View           | Purpose                                             |
 | -------------- | --------------------------------------------------- |
-| Referral tree  | Shows who is connected to whom                      |
-| Level earnings | Shows earnings by MGM generation                    |
+| Referral tree  | Shows who is connected to whom                      |
+| Level earnings | Shows earnings by MGM generation                    |
 | Referral table | Shows direct-referral purchases and generated value |
 
 ---
@@ -655,7 +794,7 @@ Do not place a Hook after:
 
 ```jsx
 if (loading) {
-  return ...
+  return ...
 }
 ```
 
@@ -663,7 +802,7 @@ For example, avoid:
 
 ```jsx
 if (loading) {
-  return <Loading />;
+  return <Loading />;
 }
 
 const referralTree = useMemo(...);
@@ -703,29 +842,33 @@ Before opening a pull request:
 - [ ] The route waits for client mount before membership checks
 - [ ] The existing direct-referral table remains available
 - [ ] Active participants with zero referrals still see their root node
+- [ ] Origin sections keep consistent viewport-edge whitespace
+- [ ] Origin component imports use `@/components/origin/...`
+- [ ] Hero text remains readable against the photographic overlay on mobile
+- [ ] Embedded map retains an accessible `title` and external Google Maps link
 
 ---
 
 ## Troubleshooting
 
-| Symptom                                              | Cause and fix                                                                                                                                                                                 |
+| Symptom                                              | Cause and fix                                                                                                                                                                                 |
 | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| React hydration error `#418` / `#423`                | Check for unstable server/client initial rendering, persisted client state, nested anchors, or render-time redirects. Chakan Tree dashboard membership checks should wait until client mount. |
-| React error `#310`                                   | A Hook was called only on some renders. Keep Hooks before early returns or remove unnecessary `useMemo` usage.                                                                                |
-| Chakan Tree page repeats forever                     | `chakanTree.jsx` is rendering `ParticipantDashboard`, causing recursive component rendering. Tree component must contain only the visual tree.                                                |
-| `Can't resolve './ReferralTree'`                     | The actual file is `chakanTree.jsx`. Import from `./chakanTree`.                                                                                                                              |
-| `'ReferralTree' is not exported from './chakanTree'` | Match the import to the export. Current implementation uses `export default ReferralTree` and `import ReferralTree from "./chakanTree"`.                                                      |
-| Tree branch misses a node vertically                 | `.member` is using `translate(-50%, -50%)`. Use `translateX(-50%)` with the current `top: y - radius` positioning.                                                                            |
-| Tree branch misses nodes on mobile                   | CSS node size differs from `NODE_RADIUS` / `ROOT_RADIUS`. Keep 68px and 86px sizes or update both JS and CSS together.                                                                        |
-| Chakan Tree only shows the root or direct referrals  | Backend has not yet returned nested `referralTree`; frontend is using `dashboard.referrals` as Level 1 fallback.                                                                              |
-| Active participant is sent back to join              | Refresh membership and check `membership.isActive`; do not use referral count for access.                                                                                                     |
-| Chakan Tree styles do not load                       | Confirm `chakanTree.jsx` imports `./chakanTree.module.css` with exact filename case.                                                                                                          |
-| React hydration error from logo navigation           | Avoid clickable logo inside another link; use `clickable={false}`.                                                                                                                            |
-| `Module not found: '@components/common/logo'`        | Use `@/components/common/Logo`.                                                                                                                                                               |
-| Colours revert to green and brown                    | Ensure only `src/app/globals.css` controls global design tokens.                                                                                                                              |
-| Gallery thumbnails fail in production                | Check same-origin `/images/...` normalisation in `normalizeProduct()`.                                                                                                                        |
-| Product artwork is cropped                           | Use `object-fit: contain`.                                                                                                                                                                    |
-| Backend images do not load                           | Check `NEXT_PUBLIC_API_URL`.                                                                                                                                                                  |
+| React hydration error `#418` / `#423`                | Check for unstable server/client initial rendering, persisted client state, nested anchors, or render-time redirects. Chakan Tree dashboard membership checks should wait until client mount. |
+| React error `#310`                                   | A Hook was called only on some renders. Keep Hooks before early returns or remove unnecessary `useMemo` usage.                                                                                |
+| Chakan Tree page repeats forever                     | `chakanTree.jsx` is rendering `ParticipantDashboard`, causing recursive component rendering. Tree component must contain only the visual tree.                                                |
+| `Can't resolve './ReferralTree'`                     | The actual file is `chakanTree.jsx`. Import from `./chakanTree`.                                                                                                                              |
+| `'ReferralTree' is not exported from './chakanTree'` | Match the import to the export. Current implementation uses `export default ReferralTree` and `import ReferralTree from "./chakanTree"`.                                                      |
+| Tree branch misses a node vertically                 | `.member` is using `translate(-50%, -50%)`. Use `translateX(-50%)` with the current `top: y - radius` positioning.                                                                            |
+| Tree branch misses nodes on mobile                   | CSS node size differs from `NODE_RADIUS` / `ROOT_RADIUS`. Keep 68px and 86px sizes or update both JS and CSS together.                                                                        |
+| Chakan Tree only shows the root or direct referrals  | Backend has not yet returned nested `referralTree`; frontend is using `dashboard.referrals` as Level 1 fallback.                                                                              |
+| Active participant is sent back to join              | Refresh membership and check `membership.isActive`; do not use referral count for access.                                                                                                     |
+| Chakan Tree styles do not load                       | Confirm `chakanTree.jsx` imports `./chakanTree.module.css` with exact filename case.                                                                                                          |
+| React hydration error from logo navigation           | Avoid clickable logo inside another link; use `clickable={false}`.                                                                                                                            |
+| `Module not found: '@components/common/logo'`        | Use `@/components/common/Logo`.                                                                                                                                                               |
+| Colours revert to green and brown                    | Ensure only `src/app/globals.css` controls global design tokens.                                                                                                                              |
+| Gallery thumbnails fail in production                | Check same-origin `/images/...` normalisation in `normalizeProduct()`.                                                                                                                        |
+| Product artwork is cropped                           | Use `object-fit: contain`.                                                                                                                                                                    |
+| Backend images do not load                           | Check `NEXT_PUBLIC_API_URL`.                                                                                                                                                                  |
 
 ---
 

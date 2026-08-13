@@ -1,17 +1,48 @@
-'use client';
-import React from 'react';
-import { MapPin } from 'lucide-react';
+"use client";
+
+import React from "react";
+import { MapPin, ExternalLink } from "lucide-react";
+import styles from "./MapView.module.css";
 
 export function MapView() {
   return (
-    <div style={{ backgroundColor: 'var(--color-warm-cream)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', overflow: 'hidden', position: 'relative', aspectRatio: '16/7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-        <MapPin size={32} color="var(--color-tea-green)" />
-        <p style={{ fontFamily: 'var(--font-display)', fontSize: 18, color: 'var(--color-earth-brown)', margin: 0 }}>Nandi Hills, Kenya</p>
-        <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--color-text-secondary)', margin: 0 }}>0°21′N, 35°11′E · Rift Valley Province</p>
-        <a href="https://maps.google.com/?q=Nandi+Hills+Kenya" target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--color-tea-green)', textDecoration: 'underline' }}>View on Google Maps →</a>
+    <div className={styles.mapWrapper}>
+      <div className={styles.mapContainer}>
+        {/* GOOGLE MAP */}
+        <iframe
+          src="https://www.google.com/maps?q=Nandi+Hills,+Kenya&z=12&output=embed"
+          className={styles.mapIframe}
+          loading="lazy"
+          allowFullScreen
+          referrerPolicy="no-referrer-when-downgrade"
+          title="Nandi Hills, Kenya"
+        />
+
+        {/* LOCATION CARD */}
+        <div className={styles.locationCard}>
+          <MapPin size={22} strokeWidth={1.7} color="var(--color-tea-green)" />
+
+          <div>
+            <p className={styles.locationTitle}>Nandi Hills, Kenya</p>
+
+            <p className={styles.locationSubtitle}>
+              Rift Valley · Western Kenya
+            </p>
+
+            <a
+              href="https://maps.google.com/?q=Nandi+Hills+Kenya"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.mapLink}
+            >
+              View on Google Maps
+              <ExternalLink size={12} />
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
+
 export default MapView;

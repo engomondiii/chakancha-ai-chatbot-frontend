@@ -1,4 +1,6 @@
-**### Chakan Tree MGM Referral Network**
+# Changelog
+
+### Chakan Tree MGM Referral Network
 
 The Chakan Tree participant experience was expanded from a flat referral
 dashboard into a visual MGM referral network while preserving the existing
@@ -25,7 +27,7 @@ Active Chakan Tree participants continue to enter the member experience through
 
 ---
 
-**#### Participant Dashboard Expansion**
+#### Participant Dashboard Expansion
 
 `src/components/chakan-tree/ParticipantDashboard.jsx` remains the main Chakan
 Tree member dashboard.
@@ -46,17 +48,17 @@ The following MGM views were added:
 
 The three referral views intentionally serve different purposes:
 
-| View           | Purpose                                             |
+| View           | Purpose                                             |
 | -------------- | --------------------------------------------------- |
-| Referral tree  | Shows who is connected to whom                      |
-| Level earnings | Shows earnings by MGM generation                    |
+| Referral tree  | Shows who is connected to whom                      |
+| Level earnings | Shows earnings by MGM generation                    |
 | Referral table | Shows direct-referral purchases and generated value |
 
 The detailed referral table remains available and was not replaced by the tree.
 
 ---
 
-**#### Chakan Tree Node Label Simplification**
+#### Chakan Tree Node Label Simplification
 
 The visual MGM nodes were simplified to reduce unnecessary information inside
 the tree.
@@ -75,28 +77,30 @@ position in the tree rather than repeated text labels.
 
 The resulting node treatment is:
 
-````text
-       ◯
-      You
-       │
-       ◯
-     issac
+```text
+       ◯
+      You
+       │
+       ◯
+     issac
+```
+
 ---
 
-**#### Chakan Tree Component Architecture**
+#### Chakan Tree Component Architecture
 
 The final component relationship is:
 
 ```text
 src/app/chakan-tree/dashboard/page.jsx
-        ↓
+        ↓
 ParticipantDashboard.jsx
-        ↓
+        ↓
 chakanTree.jsx
-        ↓
+        ↓
 chakanTree.module.css
 
-````
+```
 
 The dashboard route is responsible for authentication and membership access.
 
@@ -118,7 +122,7 @@ The dashboard route does not import the tree CSS Module.
 
 ---
 
-**#### Recursive Dashboard Rendering Fix**
+#### Recursive Dashboard Rendering Fix
 
 Resolved an issue where the Chakan Tree page repeated vertically without ending.
 
@@ -129,13 +133,13 @@ This created the dependency:
 
 ```text
 ParticipantDashboard
-        ↓
+        ↓
 chakanTree
-        ↓
+        ↓
 ParticipantDashboard
-        ↓
+        ↓
 chakanTree
-        ↓
+        ↓
 ...
 ```
 
@@ -163,7 +167,7 @@ src/app/chakan-tree/dashboard/page.jsx
 
 ---
 
-**#### Referral Tree Import / Export Resolution**
+#### Referral Tree Import / Export Resolution
 
 Resolved multiple production build warnings caused by the visual tree import
 path and export style not matching the physical component file.
@@ -204,7 +208,7 @@ The filename casing and export type must match exactly for production builds.
 
 ---
 
-**#### React Hook Order Fix**
+#### React Hook Order Fix
 
 Resolved React error `#310` in `ParticipantDashboard.jsx`.
 
@@ -235,7 +239,7 @@ This keeps Hook order stable across every render.
 
 ---
 
-**#### Hydration-Safe Dashboard Route**
+#### Hydration-Safe Dashboard Route
 
 The Chakan Tree dashboard route was updated to handle persisted frontend
 authentication and membership state more safely.
@@ -251,7 +255,7 @@ Client mounting is established with:
 
 ```jsx
 useEffect(() => {
-  setMounted(true);
+  setMounted(true);
 }, []);
 ```
 
@@ -261,15 +265,15 @@ The route then:
 
 ```text
 mounts on client
-        ↓
+        ↓
 checks authentication
-        ↓
+        ↓
 refreshes membership
-        ↓
+        ↓
 sets membership check complete
-        ↓
+        ↓
 checks membership.isActive
-        ↓
+        ↓
 renders ParticipantDashboard
 ```
 
@@ -279,8 +283,8 @@ The old pattern:
 
 ```jsx
 if (membership && !membership.isActive) {
-  router.replace("/chakan-tree/join");
-  return null;
+  router.replace("/chakan-tree/join");
+  return null;
 }
 ```
 
@@ -291,7 +295,7 @@ stable loading / redirect state while membership is being resolved.
 
 ---
 
-**#### Chakan Tree Dashboard Header Alignment**
+#### Chakan Tree Dashboard Header Alignment
 
 The dashboard route was updated to match the current Chakancha identity.
 
@@ -320,7 +324,7 @@ with the official brand mark.
 
 ---
 
-**#### Tree Geometry and CSS Synchronisation**
+#### Tree Geometry and CSS Synchronisation
 
 The JavaScript and CSS geometry were aligned so SVG connectors touch the visual
 node boundaries correctly.
@@ -336,13 +340,13 @@ The corresponding CSS dimensions remain:
 
 ```css
 .circle {
-  width: 68px;
-  height: 68px;
+  width: 68px;
+  height: 68px;
 }
 
 .rootCircle {
-  width: 86px;
-  height: 86px;
+  width: 86px;
+  height: 86px;
 }
 ```
 
@@ -356,7 +360,7 @@ Therefore `.member` now centres only horizontally:
 
 ```css
 .member {
-  transform: translateX(-50%);
+  transform: translateX(-50%);
 }
 ```
 
@@ -376,7 +380,7 @@ Horizontal scrolling is used instead for narrow screens.
 
 ---
 
-**#### Continuous Branch Geometry**
+#### Continuous Branch Geometry
 
 The visual tree uses a shared SVG branch layer.
 
@@ -407,7 +411,7 @@ Branch styling uses:
 
 ---
 
-**#### Tree Data Compatibility**
+#### Tree Data Compatibility
 
 The frontend is prepared to consume a real hierarchical MGM response from any
 of:
@@ -430,7 +434,7 @@ This means current direct-referral data can already appear in the visual tree.
 
 ---
 
-**#### Zero-Referral Participant Behaviour**
+#### Zero-Referral Participant Behaviour
 
 Active Chakan Tree participants are identified through:
 
@@ -443,8 +447,8 @@ not through referral count.
 A participant with zero referrals still receives a tree root:
 
 ```text
-      You
-       ◯
+      You
+       ◯
 ```
 
 and remains inside the participant dashboard.
@@ -453,7 +457,7 @@ Zero referrals do not redirect an active participant back to the join flow.
 
 ---
 
-**#### Level Earnings Compatibility**
+#### Level Earnings Compatibility
 
 The participant dashboard supports generation-level earnings fields including:
 
@@ -473,7 +477,7 @@ The frontend does not infer or manufacture MGM earnings.
 
 ---
 
-**#### Chakan Tree Brand Alignment**
+#### Chakan Tree Brand Alignment
 
 The tree uses the canonical Chakancha design tokens from:
 
@@ -497,9 +501,9 @@ Participant circles use the real `LogoMark`.
 
 ---
 
-**### Chakan Tree Error Fixes**
+### Chakan Tree Error Fixes
 
-**#### Endless Page / Recursive Component Fix**
+#### Endless Page / Recursive Component Fix
 
 Resolved the endlessly repeating `/chakan-tree/dashboard` page caused by
 `chakanTree.jsx` rendering `ParticipantDashboard`, which itself imported
@@ -509,7 +513,7 @@ The visual tree is now isolated from the route and dashboard components.
 
 ---
 
-**#### Chakan Tree Hook Order Error**
+#### Chakan Tree Hook Order Error
 
 Resolved React error `#310` by removing `useMemo()` from below the loading-state
 early return in `ParticipantDashboard.jsx`.
@@ -518,7 +522,7 @@ Hooks now run in the same order on every render.
 
 ---
 
-**#### Chakan Tree Hydration Stability**
+#### Chakan Tree Hydration Stability
 
 Updated `/chakan-tree/dashboard` so client-dependent authentication and
 membership checks wait until client mount.
@@ -530,7 +534,7 @@ rendering and persisted browser state.
 
 ---
 
-**#### Chakan Tree Module Resolution**
+#### Chakan Tree Module Resolution
 
 Resolved:
 
@@ -555,7 +559,7 @@ by using the component's default export consistently.
 
 ---
 
-**#### Chakan Tree CSS Geometry Fix**
+#### Chakan Tree CSS Geometry Fix
 
 Updated `.member` positioning from:
 
@@ -575,7 +579,7 @@ The fixed node diameters remain synchronised with the JavaScript radii.
 
 ---
 
-**### Result**
+### Result
 
 The Chakan Tree frontend now provides:
 
@@ -602,3 +606,140 @@ The Chakan Tree frontend now provides:
 - production-safe component import/export paths
 - removal of the recursive infinite-page bug
 - removal of the conditional Hook-order error
+
+---
+
+### Origin Page Redesign
+
+The `/origin` page was rebuilt from a sparse information page into a complete
+visual origin-story experience centred on Nandi Hills, Kenya.
+
+The updated page now moves through:
+
+```text
+OriginHero
+    ↓
+THE LAND
+    ↓
+THE PEOPLE
+    ↓
+Where we are / MapView
+```
+
+#### Origin Hero Redesign
+
+`OriginHero` was updated to use a real tea-field landscape image with a
+left-weighted overlay and editorial text placement.
+
+Changes include:
+
+- replaced the previous flat/placeholder background treatment with Nandi Hills photography
+- added a dark directional overlay for text readability
+- moved the title and supporting copy to a left-aligned editorial composition
+- added the Nandi Hills location/elevation eyebrow
+- updated the headline to **From the Hills of Heaven**
+- added more top clearance below the navbar
+- refined mobile text placement so the content sits higher within the hero
+- retained rounded hero framing and responsive image cropping
+
+#### The Land Editorial Section
+
+`EstateInfo` was redesigned from a compact estate-facts grid into a larger
+storytelling block.
+
+The section now presents:
+
+```text
+THE LAND
+Where Heaven Meets Earth
+```
+
+with descriptive Nandi Hills copy and landscape photography.
+
+The layout uses text on the left and imagery on the right on larger screens, and
+stacks vertically on mobile.
+
+#### The People Section
+
+Added `PeopleSection` to bring the human side of tea production into the Origin
+story.
+
+The section presents:
+
+```text
+THE PEOPLE
+Skilled Hands, Quiet Pride
+```
+
+with an image on the left and the story of Amina on the right. The layout
+intentionally reverses the Land section to create alternating page rhythm.
+
+The section also includes the editorial pull quote:
+
+> “I can tell the quality before it leaves my hand.”
+
+#### Full-Width Origin Layout
+
+The major Origin story sections were expanded beyond the previous narrow
+content wrapper.
+
+The final layout keeps only a small, even amount of whitespace at the left and
+right viewport edges while allowing the images and text blocks to use almost the
+full available width.
+
+Desktop sections remain wide and horizontal; tablet spacing is reduced; mobile
+sections stack vertically.
+
+#### Interactive Nandi Hills Map
+
+`MapView` was upgraded from a static placeholder to an embedded Google Maps
+preview.
+
+The previous version displayed only a location icon, location text, coordinates
+and an external link inside an otherwise empty map surface.
+
+The updated version includes:
+
+- an embedded Google Maps iframe
+- interactive zoom and navigation
+- Nandi Hills as the displayed location
+- a branded location information card
+- a direct external Google Maps link
+- responsive map dimensions
+- rounded map framing consistent with the Origin page
+
+#### Origin Component Import Fix
+
+Resolved the production build error:
+
+```text
+Module not found: Can't resolve '@components/origin/PeopleSection'
+```
+
+The component import now uses the project's configured `@/` alias:
+
+```jsx
+import { PeopleSection } from "@/components/origin/PeopleSection";
+```
+
+This matches the existing Origin component imports and keeps filename/path
+resolution production-safe.
+
+#### Origin Page Result
+
+The Origin route now provides:
+
+- a photographic Nandi Hills hero
+- a dedicated land/environment story
+- a dedicated people/craft story
+- real imagery throughout the page
+- alternating editorial layouts
+- near-full-width visual sections
+- responsive desktop, tablet and mobile presentation
+- an interactive Nandi Hills map
+- direct Google Maps access
+- consistent Origin component imports
+
+The page now functions as a complete brand-origin experience rather than a
+supporting information page.
+
