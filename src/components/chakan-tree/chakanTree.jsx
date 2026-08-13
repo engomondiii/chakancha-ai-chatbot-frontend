@@ -202,16 +202,14 @@ function MemberNode({ layout }) {
 
   const isRoot = level === 0;
 
-  const name = isRoot
-    ? "You"
-    : node?.nickname ||
-      node?.name ||
-      node?.fullName ||
-      node?.full_name ||
-      "Participant";
+  const name =
+    node?.nickname ||
+    node?.name ||
+    node?.fullName ||
+    node?.full_name ||
+    (isRoot ? "You" : "Participant");
 
   const children = getChildren(node);
-
   const childCount = children.length;
 
   return (
