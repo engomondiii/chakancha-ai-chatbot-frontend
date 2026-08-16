@@ -15,6 +15,7 @@
  *  - Uses dashboard.referralTree / dashboard.referral_tree when available
  *  - Falls back to dashboard.referrals as Level 1 children
  *  - Root user is always shown even with zero referrals
+ *  - Root node displays the member's real name, same as every other node
  */
 
 "use client";
@@ -66,6 +67,42 @@ function normalizeTreeNode(node) {
 }
 
 /* =========================================================
+   ROOT DISPLAY NAME
+
+   The root node is the signed-in member, so its name is
+   resolved from the auth/membership state rather than being
+   labelled "You". Falls back to "Participant" only when no
+   name is available anywhere.
+========================================================= */
+
+function resolveRootName(user, membership, backendRootName) {
+  /*
+   * If the backend already supplied a real name for the
+   * root node, trust it first — it is the same source the
+   * child nodes are rendered from, so formatting matches.
+   */
+  if (backendRootName && backendRootName !== "Participant") {
+    return backendRootName;
+  }
+
+  return (
+    user?.nickname ||
+    user?.name ||
+    user?.fullName ||
+    user?.full_name ||
+    membership?.nickname ||
+    membership?.name ||
+    membership?.fullName ||
+    membership?.full_name ||
+    membership?.user?.nickname ||
+    membership?.user?.name ||
+    membership?.user?.fullName ||
+    membership?.user?.full_name ||
+    "Participant"
+  );
+}
+
+/* =========================================================
    BUILD TREE
 
    Priority:
@@ -73,7 +110,7 @@ function normalizeTreeNode(node) {
    2. Current flat referrals as Level 1 fallback
 ========================================================= */
 
-function buildReferralTree(dashboard, membership) {
+function buildReferralTree(dashboard, membership, user) {
   const backendTree =
     dashboard?.referralTree ||
     dashboard?.referral_tree ||
@@ -91,7 +128,7 @@ function buildReferralTree(dashboard, membership) {
 
       id: normalized?.id || membership?.id || "root-user",
 
-      name: "You",
+      name: resolveRootName(user, membership, normalized?.name),
 
       referralCode:
         membership?.referralCode || normalized?.referralCode || null,
@@ -111,7 +148,7 @@ function buildReferralTree(dashboard, membership) {
   return {
     id: membership?.id || "root-user",
 
-    name: "You",
+    name: resolveRootName(user, membership, null),
 
     referralCode: membership?.referralCode || null,
 
@@ -430,6 +467,12 @@ function TableHeading({ children, align = "left" }) {
 export function ParticipantDashboard() {
   const membership = useStore((state) => state.membership);
 
+  /*
+   * Signed-in user — used to label the root node
+   * of the referral tree with a real name.
+   */
+  const user = useStore((state) => state.user);
+
   const [dashboard, setDashboard] = useState(null);
 
   const [impact, setImpact] = useState(null);
@@ -527,7 +570,7 @@ export function ParticipantDashboard() {
      Tree data
   ------------------------------------------------------- */
 
-  const referralTree = buildReferralTree(dashboard, membership);
+  const referralTree = buildReferralTree(dashboard, membership, user);
   const peopleInTree = Math.max(countTreeMembers(referralTree) - 1, 0);
 
   /* -------------------------------------------------------
