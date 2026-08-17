@@ -692,7 +692,7 @@ The current implementation uses:
 - recursive child rendering
 - descendant leaf counting for horizontal layout
 - horizontal scrolling for wide trees
-- plain participant names beneath each node
+- shortened participant display names beneath each node (see below)
 - no generation labels inside the tree; generation is communicated by position
 - no referral codes inside tree nodes; referral codes remain available elsewhere in the dashboard
 - direct-child count badges
@@ -701,6 +701,47 @@ All branch connectors are drawn in one SVG layer.
 
 This avoids disconnected CSS line fragments and allows branch paths to remain
 continuous.
+
+---
+
+## Tree name display
+
+Node labels have very little horizontal room (`max-width: 130px`), so
+`chakanTree.jsx` formats every participant name through
+`formatDisplayName()` before rendering:
+
+```text
+1 word           → shown as-is (character cap applies)
+2 words          → shown as-is if under 16 characters,
+                   otherwise "First L."
+3 or more words  → always "First L."
+any result       → hard 16-character cap with ellipsis
+```
+
+Examples:
+
+```text
+Issac                         → Issac
+Josphine Kamau                → Josphine Kamau
+Christopher Wamalwa           → Christopher W.
+Josphine Wanjiru Kamau        → Josphine K.
+Wickliffe Ondiek Omondi Ouma  → Wickliffe O.
+```
+
+Rules:
+
+1. Shortening is **display-only**. Referral data is never modified.
+2. The complete name stays in the label's `title` attribute, so hovering a
+   node reveals it. Complete names also remain in the **People You've
+   Invited** table.
+3. The last-initial rule assumes "FirstName … Surname" word order. If the
+   data source ever supplies surname-first names, update the initial index in
+   `formatDisplayName()` rather than the CSS.
+4. `NAME_MAX_CHARS` (16) is tuned to the CSS `max-width: 130px` at the 12px
+   label font. If `.name` is widened, raise the cap with it — the two limits
+   must not disagree.
+5. The CSS `text-overflow: ellipsis` rule stays as a last-resort visual guard
+   and must not be removed.
 
 ---
 
@@ -913,6 +954,8 @@ Before opening a pull request:
 - [ ] `chakanTree.jsx` exports `ReferralTree` as default
 - [ ] `chakanTree.jsx` does not import or render `ParticipantDashboard`
 - [ ] `chakanTree.jsx` imports `./chakanTree.module.css`
+- [ ] Tree names go through `formatDisplayName()` with the full name in `title`
+- [ ] `NAME_MAX_CHARS` stays in sync with the `.name` CSS width
 - [ ] `.member` uses `translateX(-50%)`
 - [ ] CSS node dimensions match `NODE_RADIUS` and `ROOT_RADIUS`
 - [ ] Tree nodes are not resized independently on mobile
@@ -937,6 +980,8 @@ Before opening a pull request:
 | Hero loop restart is visible                         | The standby copy failed to start (native hard loop was used) or `LOOP_FADE_MS` is too short. Confirm both video copies preload and lengthen the crossfade window.                             |
 | Hero shows only the poster image                     | Autoplay was blocked or the video path is wrong; the poster is the intended fallback. Verify `VIDEO_SRC` first.                                                                               |
 | Hero camera drift resets or stutters at the loop     | The drift animation was moved from the wrapper onto the video elements. Keep the drift on the wrapper around both copies.                                                                     |
+| Tree name looks cut off mid-word                     | The name bypassed `formatDisplayName()` or `NAME_MAX_CHARS` no longer matches the `.name` CSS width. Route the label through the formatter and keep the two limits in sync.                   |
+| Tree shows the wrong surname initial                 | The data source supplies surname-first names. Adjust the initial index inside `formatDisplayName()`.                                                                                          |
 | Chakan Tree page repeats forever                     | `chakanTree.jsx` is rendering `ParticipantDashboard`, causing recursive component rendering. Tree component must contain only the visual tree.                                                |
 | `Can't resolve './ReferralTree'`                     | The actual file is `chakanTree.jsx`. Import from `./chakanTree`.                                                                                                                              |
 | `'ReferralTree' is not exported from './chakanTree'` | Match the import to the export. Current implementation uses `export default ReferralTree` and `import ReferralTree from "./chakanTree"`.                                                      |

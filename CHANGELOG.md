@@ -1,5 +1,145 @@
 # Changelog
 
+### Chakan Tree Node Name Shortening
+
+Long participant names in the visual Chakan Tree are now shortened for display
+so node labels remain readable and never overflow their fixed width.
+
+The tree label area is narrow (`max-width: 130px`), so long multi-part names
+were previously cut off by the CSS ellipsis at an arbitrary character, which
+read as broken rather than intentional.
+
+`chakanTree.jsx` now formats every node name through `formatDisplayName()`:
+
+```text
+1 word           → shown as-is (character cap applies)
+2 words          → shown as-is if under 16 characters,
+                   otherwise "First L."
+3 or more words  → always "First L."
+any result       → hard 16-character cap with ellipsis
+```
+
+Examples:
+
+```text
+Issac                         → Issac
+Josphine Kamau                → Josphine Kamau
+Christopher Wamalwa           → Christopher W.
+Josphine Wanjiru Kamau        → Josphine K.
+Wickliffe Ondiek Omondi Ouma  → Wickliffe O.
+```
+
+The shortening is display-only:
+
+- the complete name remains in the label's `title` attribute and appears on
+  hover
+- the complete name remains unchanged in the **People You've Invited** table
+- no referral data is modified
+
+The CSS `text-overflow: ellipsis` rule is kept as a last-resort visual guard.
+
+---
+
+### Home Hero Video Background
+
+The home hero background was changed from a rotating photo slideshow to a
+single looping fog video with an invisible loop point.
+
+#### Slideshow Replacement
+
+The previous `BackgroundAnimation` implementation rotated four Nandi Hills
+photographs with timed crossfades, per-slide camera movements, and clickable
+slide indicators.
+
+The hero now plays one video:
+
+```text
+public/images/backgrounds/herovid.mp4
+```
+
+The following slideshow machinery was removed because a single continuous video
+no longer needs it:
+
+- the image array and preloading loop
+- `currentIndex` / `previousIndex` crossfade state
+- slide-advance and fade timers
+- per-slide `CAMERA_MOVEMENTS` variants
+- the slide indicator buttons
+
+A still photograph is kept as the video `poster` so the hero never flashes
+empty while the video loads.
+
+---
+
+#### Seamless Loop Fix
+
+Resolved a visible hitch each time the hero video ended and restarted.
+
+The problem had two causes:
+
+1. The native `loop` attribute produces a hard cut back to frame 0, which is
+   visible as a jump.
+2. The camera drift used `linear` timing with `alternate`, so the drift
+   reversed direction abruptly at each end of the animation.
+
+The loop is now hidden using a double-buffered crossfade:
+
+```text
+video copy A (visible)
+        ↓ ~2s before A ends
+video copy B starts from 0
+        ↓
+2s opacity crossfade A → B
+        ↓
+A pauses, becomes standby
+        ↓
+repeat, alternating A ↔ B
+```
+
+Two `<video>` elements play the same file. A `timeupdate` listener on the
+visible copy schedules the swap when roughly one crossfade-length of playback
+remains. The restart always happens inside the dissolve, so no cut is visible.
+
+Implementation details:
+
+- The active/standby swap is driven through refs and direct DOM style writes,
+  not React state, so no re-render occurs mid-fade.
+- Both copies keep the native `loop` attribute as a fallback: if the standby
+  copy fails to start, the active copy hard-loops instead of freezing on the
+  last frame.
+- The crossfade window is controlled by `LOOP_FADE_MS`.
+
+---
+
+#### Continuous Camera Drift
+
+The pan-and-zoom camera drift was moved from the individual video elements to a
+wrapper element containing both copies.
+
+This means the drift does not reset or stutter when the videos swap during the
+loop crossfade.
+
+The drift timing was also changed from `linear` to `ease-in-out`, so each
+direction change is gradual rather than a visible bounce.
+
+The scroll parallax on the outer container and the `-5%` overscan inset are
+unchanged from the slideshow implementation.
+
+---
+
+#### Motion and Loading Behaviour
+
+- The video is `muted`, `playsInline`, and `autoPlay` so mobile browsers allow
+  it to start automatically.
+- `prefers-reduced-motion` now pauses the video through a `matchMedia` listener
+  and disables the camera drift. The previous CSS-only approach could stop the
+  drift but could not pause video playback.
+- The existing colour grading filter (`saturate(0.88) contrast(1.04)
+brightness(0.94)`) was kept so the hero tone matches the previous slideshow
+  treatment.
+
+---
+
 ### Chakan Tree MGM Referral Network
 
 The Chakan Tree participant experience was expanded from a flat referral
@@ -48,11 +188,11 @@ The following MGM views were added:
 
 The three referral views intentionally serve different purposes:
 
-| View            | Purpose                                              |
-| --------------- | ---------------------------------------------------- |
-| Referral tree   | Shows who is connected to whom                       |
-| Level earnings  | Shows earnings by MGM generation                     |
-| Referral table  | Shows direct-referral purchases and generated value  |
+| View           | Purpose                                             |
+| -------------- | --------------------------------------------------- |
+| Referral tree  | Shows who is connected to whom                      |
+| Level earnings | Shows earnings by MGM generation                    |
+| Referral table | Shows direct-referral purchases and generated value |
 
 The detailed referral table remains available and was not replaced by the tree.
 
@@ -78,11 +218,11 @@ position in the tree rather than repeated text labels.
 The resulting node treatment is:
 
 ```text
-       ◯
-      You
-       │
-       ◯
-     issac
+       ◯
+      You
+       │
+       ◯
+     issac
 ```
 
 ---
@@ -93,11 +233,11 @@ The final component relationship is:
 
 ```text
 src/app/chakan-tree/dashboard/page.jsx
-        ↓
+        ↓
 ParticipantDashboard.jsx
-        ↓
+        ↓
 chakanTree.jsx
-        ↓
+        ↓
 chakanTree.module.css
 
 ```
@@ -133,13 +273,13 @@ This created the dependency:
 
 ```text
 ParticipantDashboard
-        ↓
+        ↓
 chakanTree
-        ↓
+        ↓
 ParticipantDashboard
-        ↓
+        ↓
 chakanTree
-        ↓
+        ↓
 ...
 ```
 
@@ -265,15 +405,15 @@ The route then:
 
 ```text
 mounts on client
-        ↓
+        ↓
 checks authentication
-        ↓
+        ↓
 refreshes membership
-        ↓
+        ↓
 sets membership check complete
-        ↓
+        ↓
 checks membership.isActive
-        ↓
+        ↓
 renders ParticipantDashboard
 ```
 
@@ -340,13 +480,13 @@ The corresponding CSS dimensions remain:
 
 ```css
 .circle {
-  width: 68px;
-  height: 68px;
+  width: 68px;
+  height: 68px;
 }
 
 .rootCircle {
-  width: 86px;
-  height: 86px;
+  width: 86px;
+  height: 86px;
 }
 ```
 
@@ -360,7 +500,7 @@ Therefore `.member` now centres only horizontally:
 
 ```css
 .member {
-  transform: translateX(-50%);
+  transform: translateX(-50%);
 }
 ```
 
@@ -447,8 +587,8 @@ not through referral count.
 A participant with zero referrals still receives a tree root:
 
 ```text
-      You
-       ◯
+      You
+       ◯
 ```
 
 and remains inside the participant dashboard.
@@ -676,7 +816,7 @@ intentionally reverses the Land section to create alternating page rhythm.
 
 The section also includes the editorial pull quote:
 
-> “I can tell the quality before it leaves my hand.”
+> "I can tell the quality before it leaves my hand."
 
 #### Full-Width Origin Layout
 

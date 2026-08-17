@@ -20,6 +20,78 @@ const ROOT_RADIUS = 43;
 const NODE_RADIUS = 34;
 
 /* =========================================================
+   NAME DISPLAY
+
+   Node labels have very little horizontal room, so long
+   names are shortened for display while the complete name
+   remains available through the label's title attribute.
+
+   Rules:
+
+   1 word            → shown as-is (character cap applies)
+   2 words           → shown as-is if short enough,
+                       otherwise "First L."
+   3 or more words   → always "First L."
+   any result        → hard character cap with ellipsis
+
+   Examples:
+
+   "Issac"                        → "Issac"
+   "Josphine Kamau"               → "Josphine Kamau"
+   "Josphine Wanjiru Kamau"       → "Josphine K."
+   "Wickliffe Ondiek Omondi Ouma" → "Wickliffe O."
+========================================================= */
+
+const NAME_MAX_CHARS = 16;
+
+function formatDisplayName(rawName) {
+  const cleaned = String(rawName || "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!cleaned) {
+    return "Participant";
+  }
+
+  const words = cleaned.split(" ");
+
+  let display;
+
+  if (words.length >= 3) {
+    /*
+     * Long multi-part names collapse to
+     * first name + last-name initial.
+     */
+    const first = words[0];
+    const lastInitial = words[words.length - 1].charAt(0).toUpperCase();
+
+    display = `${first} ${lastInitial}.`;
+  } else if (words.length === 2 && cleaned.length > NAME_MAX_CHARS) {
+    /*
+     * Two-word names only shorten when the
+     * combination itself is too long.
+     */
+    const first = words[0];
+    const lastInitial = words[1].charAt(0).toUpperCase();
+
+    display = `${first} ${lastInitial}.`;
+  } else {
+    display = cleaned;
+  }
+
+  /*
+   * Final guard: a single very long word
+   * (or a very long first name) still gets
+   * capped so the label never overflows.
+   */
+  if (display.length > NAME_MAX_CHARS) {
+    display = `${display.slice(0, NAME_MAX_CHARS - 1)}…`;
+  }
+
+  return display;
+}
+
+/* =========================================================
    TREE HELPERS
 ========================================================= */
 
@@ -197,17 +269,20 @@ function Branch({ from, to }) {
 /* =========================================================
    MEMBER NODE
 ========================================================= */
+
 function MemberNode({ layout }) {
   const { node, x, y, level, radius } = layout;
 
   const isRoot = level === 0;
 
-const name =
-  node?.nickname ||
-  node?.name ||
-  node?.fullName ||
-  node?.full_name ||
-  "Participant";
+  const fullName =
+    node?.nickname ||
+    node?.name ||
+    node?.fullName ||
+    node?.full_name ||
+    "Participant";
+
+  const displayName = formatDisplayName(fullName);
 
   const children = getChildren(node);
   const childCount = children.length;
@@ -235,13 +310,19 @@ const name =
       </div>
 
       <div className={styles.label}>
-        <span className={styles.name} title={name}>
-          {name}
+        {/*
+         * The title attribute keeps the complete
+         * name available on hover when the display
+         * name has been shortened.
+         */}
+        <span className={styles.name} title={fullName}>
+          {displayName}
         </span>
       </div>
     </div>
   );
 }
+
 /* =========================================================
    REFERRAL TREE
 ========================================================= */
