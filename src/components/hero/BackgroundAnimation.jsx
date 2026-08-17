@@ -1,98 +1,40 @@
-'use client';
+"use client";
 
-import React, {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import React, { useEffect, useRef } from "react";
 
-const IMAGES = [
-  '/images/backgrounds/beautiful-tea-fields.jpg',
-  '/images/backgrounds/nandi-hills-golden.png',
-  '/images/backgrounds/nandi-hills-morning.png',
-  '/images/backgrounds/nandi-hills-dawn.png',
-];
-
-const SLIDE_DURATION = 6500;
-const FADE_DURATION = 2200;
+const VIDEO_SRC = "/images/backgrounds/herovid.mp4";
 
 /*
- * Camera movement lasts slightly longer than the full time
- * an image remains visible, including its fade-out.
+ * Poster shown while the video loads.
  */
-const CAMERA_DURATION =
-  SLIDE_DURATION + FADE_DURATION + 400;
+const POSTER_SRC = "/images/backgrounds/beautiful-tea-fields.jpg";
 
-const CAMERA_MOVEMENTS = [
-  {
-    start: 'translate3d(-0.7%, 0.3%, 0) scale(1.04)',
-    end: 'translate3d(0.7%, -0.3%, 0) scale(1.075)',
-    origin: '50% 45%',
-  },
-  {
-    start: 'translate3d(0.7%, 0.2%, 0) scale(1.04)',
-    end: 'translate3d(-0.7%, -0.3%, 0) scale(1.072)',
-    origin: '55% 45%',
-  },
-  {
-    start: 'translate3d(0, 0.6%, 0) scale(1.038)',
-    end: 'translate3d(0, -0.5%, 0) scale(1.075)',
-    origin: '50% 50%',
-  },
-  {
-    start: 'translate3d(-0.5%, -0.2%, 0) scale(1.04)',
-    end: 'translate3d(0.6%, 0.3%, 0) scale(1.072)',
-    origin: '45% 45%',
-  },
-];
+/*
+ * Crossfade between the two video copies.
+ * The loop point is hidden inside this dissolve.
+ */
+const LOOP_FADE_MS = 2000;
+
+/*
+ * Continuous camera drift applied to the wrapper
+ * around both video copies, so it never resets
+ * when the videos swap.
+ */
+const CAMERA_DURATION = 26000;
 
 export function BackgroundAnimation() {
   const containerRef = useRef(null);
-  const fadeTimerRef = useRef(null);
 
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [previousIndex, setPreviousIndex] = useState(null);
+  const videoARef = useRef(null);
+  const videoBRef = useRef(null);
 
-  /* Preload all images */
-  useEffect(() => {
-    IMAGES.forEach((src) => {
-      const image = new Image();
-      image.decoding = 'async';
-      image.src = src;
-
-      image.decode?.().catch(() => {
-        // The browser can still display the image if decode fails.
-      });
-    });
-  }, []);
-
-  const changeSlide = useCallback(
-    (nextIndex) => {
-      if (nextIndex === currentIndex) return;
-
-      if (fadeTimerRef.current) {
-        window.clearTimeout(fadeTimerRef.current);
-      }
-
-      setPreviousIndex(currentIndex);
-      setCurrentIndex(nextIndex);
-
-      fadeTimerRef.current = window.setTimeout(() => {
-        setPreviousIndex(null);
-      }, FADE_DURATION + 100);
-    },
-    [currentIndex]
-  );
-
-  /* Automatic slideshow */
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      changeSlide((currentIndex + 1) % IMAGES.length);
-    }, SLIDE_DURATION);
-
-    return () => window.clearTimeout(timer);
-  }, [currentIndex, changeSlide]);
+  /*
+   * Which copy is currently on top.
+   * Held in a ref: the swap is driven directly through
+   * the DOM to avoid re-rendering mid-fade.
+   */
+  const activeRef = useRef("A");
+  const fadingRef = useRef(false);
 
   /* Gentle scroll parallax */
   useEffect(() => {
@@ -105,188 +47,257 @@ export function BackgroundAnimation() {
         if (containerRef.current) {
           const offset = window.scrollY * 0.1;
 
-          containerRef.current.style.transform =
-            `translate3d(0, ${offset}px, 0)`;
+          containerRef.current.style.transform = `translate3d(0, ${offset}px, 0)`;
         }
 
         animationFrame = null;
       });
     };
 
-    window.addEventListener('scroll', handleScroll, {
+    window.addEventListener("scroll", handleScroll, {
       passive: true,
     });
 
     return () => {
-      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener("scroll", handleScroll);
 
       if (animationFrame) {
         window.cancelAnimationFrame(animationFrame);
       }
-
-      if (fadeTimerRef.current) {
-        window.clearTimeout(fadeTimerRef.current);
-      }
     };
   }, []);
+
+  /* =====================================================
+     SEAMLESS LOOP
+
+     Two copies of the same video. Shortly before the
+     active copy reaches its end, the standby copy starts
+     from 0 and crossfades in. The restart is never
+     visible because it happens mid-dissolve.
+  ===================================================== */
+
+  useEffect(() => {
+    const videoA = videoARef.current;
+    const videoB = videoBRef.current;
+
+    if (!videoA || !videoB) return;
+
+    const getVideos = () =>
+      activeRef.current === "A"
+        ? { active: videoA, standby: videoB }
+        : { active: videoB, standby: videoA };
+
+    const crossfadeToStandby = () => {
+      if (fadingRef.current) return;
+
+      fadingRef.current = true;
+
+      const { active, standby } = getVideos();
+
+      standby.currentTime = 0;
+
+      const beginFade = () => {
+        /*
+         * Opacity transitions are declared inline on
+         * both videos, so setting opacity is enough.
+         */
+        standby.style.opacity = "1";
+        active.style.opacity = "0";
+
+        window.setTimeout(() => {
+          active.pause();
+
+          activeRef.current = activeRef.current === "A" ? "B" : "A";
+
+          fadingRef.current = false;
+        }, LOOP_FADE_MS + 100);
+      };
+
+      const playPromise = standby.play();
+
+      if (playPromise?.then) {
+        playPromise.then(beginFade).catch(() => {
+          /*
+           * If the standby copy cannot start, fall back
+           * to the native hard loop on the active copy.
+           */
+          fadingRef.current = false;
+        });
+      } else {
+        beginFade();
+      }
+    };
+
+    const handleTimeUpdate = (event) => {
+      const video = event.currentTarget;
+
+      /*
+       * Only the visible copy schedules the swap.
+       */
+      const { active } = getVideos();
+
+      if (video !== active) return;
+
+      if (!Number.isFinite(video.duration)) return;
+
+      const remaining = video.duration - video.currentTime;
+
+      if (remaining <= LOOP_FADE_MS / 1000 + 0.2) {
+        crossfadeToStandby();
+      }
+    };
+
+    videoA.addEventListener("timeupdate", handleTimeUpdate);
+    videoB.addEventListener("timeupdate", handleTimeUpdate);
+
+    return () => {
+      videoA.removeEventListener("timeupdate", handleTimeUpdate);
+      videoB.removeEventListener("timeupdate", handleTimeUpdate);
+    };
+  }, []);
+
+  /* =====================================================
+     REDUCED MOTION
+
+     Pause whichever copies are playing.
+  ===================================================== */
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+    const applyPreference = () => {
+      const videos = [videoARef.current, videoBRef.current];
+
+      videos.forEach((video) => {
+        if (!video) return;
+
+        if (media.matches) {
+          video.pause();
+        } else if (video.style.opacity !== "0") {
+          video.play().catch(() => {
+            // Autoplay may be blocked; the poster remains visible.
+          });
+        }
+      });
+    };
+
+    applyPreference();
+
+    media.addEventListener("change", applyPreference);
+
+    return () => {
+      media.removeEventListener("change", applyPreference);
+    };
+  }, []);
+
+  const videoStyle = (isInitiallyActive) => ({
+    position: "absolute",
+    inset: 0,
+
+    width: "100%",
+    height: "100%",
+
+    objectFit: "cover",
+    objectPosition: "center 30%",
+
+    filter: "saturate(0.88) contrast(1.04) brightness(0.94)",
+
+    opacity: isInitiallyActive ? 1 : 0,
+
+    /*
+     * A linear dissolve reads most photographic;
+     * both copies fade over the same window so the
+     * combined brightness stays constant.
+     */
+    transition: `opacity ${LOOP_FADE_MS}ms linear`,
+
+    pointerEvents: "none",
+
+    backfaceVisibility: "hidden",
+  });
 
   return (
     <div
       ref={containerRef}
       style={{
-        position: 'absolute',
+        position: "absolute",
 
         /*
-         * Extra image area prevents empty edges during
-         * the pan-and-zoom movement.
+         * Extra area prevents empty edges during
+         * the pan-and-zoom movement and parallax.
          */
-        inset: '-5%',
+        inset: "-5%",
 
         zIndex: 0,
-        overflow: 'hidden',
-        willChange: 'transform',
-        backfaceVisibility: 'hidden',
+        overflow: "hidden",
+        willChange: "transform",
+        backfaceVisibility: "hidden",
       }}
     >
-      {/* Shared continuous camera animation */}
+      {/* Continuous camera drift */}
       <style>
         {`
-          @keyframes chakanchaCameraMove {
+          @keyframes chakanchaCameraDrift {
             from {
-              transform: var(--camera-start);
+              transform: translate3d(-0.6%, 0.3%, 0) scale(1.055);
             }
 
             to {
-              transform: var(--camera-end);
+              transform: translate3d(0.6%, -0.3%, 0) scale(1.08);
             }
           }
 
+          .chakancha-camera {
+            position: absolute;
+            inset: 0;
+
+            transform-origin: 50% 45%;
+
+            will-change: transform;
+
+            animation:
+              chakanchaCameraDrift ${CAMERA_DURATION}ms
+              ease-in-out infinite alternate;
+          }
+
           @media (prefers-reduced-motion: reduce) {
-            .chakancha-background-slide {
+            .chakancha-camera {
               animation: none !important;
-              transform: scale(1.04) !important;
-              transition: opacity 800ms linear !important;
+              transform: scale(1.055) !important;
             }
           }
         `}
       </style>
 
-      {IMAGES.map((src, index) => {
-        const isActive = index === currentIndex;
-        const isPrevious = index === previousIndex;
-        const isVisible = isActive || isPrevious;
+      {/*
+       * The drift lives on this wrapper, not on the
+       * videos, so camera motion is continuous across
+       * the loop crossfade.
+       */}
+      <div className="chakancha-camera">
+        <video
+          ref={videoARef}
+          src={VIDEO_SRC}
+          poster={POSTER_SRC}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          aria-hidden="true"
+          style={videoStyle(true)}
+        />
 
-        const movement =
-          CAMERA_MOVEMENTS[
-            index % CAMERA_MOVEMENTS.length
-          ];
-
-        return (
-          <div
-            key={src}
-            className="chakancha-background-slide"
-            aria-hidden={!isActive}
-            style={{
-              position: 'absolute',
-              inset: 0,
-
-              backgroundImage: `url("${src}")`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center 30%',
-              backgroundRepeat: 'no-repeat',
-
-              filter:
-                'saturate(0.88) contrast(1.04) brightness(0.94)',
-
-              /*
-               * Keep all layers mounted and painted.
-               * This avoids a small rendering delay when
-               * the next image becomes visible.
-               */
-              opacity: isActive ? 1 : 0,
-              zIndex: isActive
-                ? 2
-                : isPrevious
-                  ? 1
-                  : 0,
-
-              pointerEvents: 'none',
-
-              '--camera-start': movement.start,
-              '--camera-end': movement.end,
-
-              transformOrigin: movement.origin,
-
-              /*
-               * The outgoing slide keeps the same animation,
-               * so camera movement continues throughout
-               * the entire crossfade.
-               */
-              animation: isVisible
-                ? `chakanchaCameraMove ${CAMERA_DURATION}ms linear forwards`
-                : 'none',
-
-              /*
-               * A linear opacity transition produces the most
-               * seamless photographic crossfade.
-               */
-              transition:
-                `opacity ${FADE_DURATION}ms linear`,
-
-              willChange: 'opacity, transform',
-              backfaceVisibility: 'hidden',
-              transformStyle: 'preserve-3d',
-            }}
-          />
-        );
-      })}
-
-      {/* Slide indicators */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: '80px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-
-          display: 'flex',
-          alignItems: 'center',
-          gap: '7px',
-
-          zIndex: 4,
-        }}
-      >
-        {IMAGES.map((_, index) => {
-          const isActive = index === currentIndex;
-
-          return (
-            <button
-              key={index}
-              type="button"
-              onClick={() => changeSlide(index)}
-              aria-label={`Show background ${index + 1}`}
-              aria-current={
-                isActive ? 'true' : undefined
-              }
-              style={{
-                width: isActive ? '26px' : '7px',
-                height: '7px',
-                padding: 0,
-
-                border: 0,
-                borderRadius: '999px',
-                cursor: 'pointer',
-
-                background: isActive
-                  ? 'rgba(255, 255, 255, 0.88)'
-                  : 'rgba(255, 255, 255, 0.32)',
-
-                transition:
-                  'width 700ms ease, background-color 700ms ease',
-              }}
-            />
-          );
-        })}
+        <video
+          ref={videoBRef}
+          src={VIDEO_SRC}
+          muted
+          loop
+          playsInline
+          preload="auto"
+          aria-hidden="true"
+          style={videoStyle(false)}
+        />
       </div>
     </div>
   );

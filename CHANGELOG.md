@@ -48,11 +48,11 @@ The following MGM views were added:
 
 The three referral views intentionally serve different purposes:
 
-| View           | Purpose                                             |
-| -------------- | --------------------------------------------------- |
-| Referral tree  | Shows who is connected to whom                      |
-| Level earnings | Shows earnings by MGM generation                    |
-| Referral table | Shows direct-referral purchases and generated value |
+| View            | Purpose                                              |
+| --------------- | ---------------------------------------------------- |
+| Referral tree   | Shows who is connected to whom                       |
+| Level earnings  | Shows earnings by MGM generation                     |
+| Referral table  | Shows direct-referral purchases and generated value  |
 
 The detailed referral table remains available and was not replaced by the tree.
 
@@ -255,7 +255,7 @@ Client mounting is established with:
 
 ```jsx
 useEffect(() => {
-  setMounted(true);
+  setMounted(true);
 }, []);
 ```
 
@@ -283,8 +283,8 @@ The old pattern:
 
 ```jsx
 if (membership && !membership.isActive) {
-  router.replace("/chakan-tree/join");
-  return null;
+  router.replace("/chakan-tree/join");
+  return null;
 }
 ```
 
@@ -742,4 +742,3 @@ The Origin route now provides:
 
 The page now functions as a complete brand-origin experience rather than a
 supporting information page.
-

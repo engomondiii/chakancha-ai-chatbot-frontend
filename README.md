@@ -8,13 +8,13 @@ participation, and a conversational assistant, backed by a Django API.
 
 ## Stack
 
-| Layer         | Technology                                     |
+| Layer         | Technology                                     |
 | ------------- | ---------------------------------------------- |
-| Framework     | Next.js 14 App Router                          |
-| UI            | React, CSS Modules                             |
-| Images        | `next/image`                                   |
-| Icons         | `lucide-react`                                 |
-| API           | Django REST backend hosted on Railway          |
+| Framework     | Next.js 14 App Router                          |
+| UI            | React, CSS Modules                             |
+| Images        | `next/image`                                   |
+| Icons         | `lucide-react`                                 |
+| API           | Django REST backend hosted on Railway          |
 | Design tokens | CSS custom properties in `src/app/globals.css` |
 
 ---
@@ -23,12 +23,12 @@ participation, and a conversational assistant, backed by a Django API.
 
 ```bash
 npm install
-npm run dev          # http://localhost:3000
+npm run dev          # http://localhost:3000
 ```
 
 ```bash
-npm run build        # production build — run before every deploy
-npm run start        # serve the production build locally
+npm run build        # production build — run before every deploy
+npm run start        # serve the production build locally
 npm run lint
 ```
 
@@ -100,10 +100,12 @@ src/
 public/
 ├── brand/                       # lockups and marks
 └── images/
+    ├── backgrounds/             # hero video + still backgrounds
     ├── icons/
     ├── products/
     └── origin/
 ```
+
 ---
 
 ## Design system
@@ -114,34 +116,106 @@ loaded once by the application.
 ### Rules
 
 1. **Component CSS Modules must not import `globals.css`.** Custom properties
-   inherit through the rendered document, so a Module in any folder can use
-   them without importing the global stylesheet.
+   inherit through the rendered document, so a Module in any folder can use
+   them without importing the global stylesheet.
 2. **Use canonical tokens in new and refactored code.**
 3. **Only one global stylesheet should control the design system.**
 4. **Compatibility aliases are temporary.** Older components may still use
-   legacy aliases while migration continues.
+   legacy aliases while migration continues.
 
 ### Colour
 
-| Token                         | Value     | Use                                |
+| Token                         | Value     | Use                                |
 | ----------------------------- | --------- | ---------------------------------- |
-| `--color-background-main`     | `#FBFAF7` | Page background                    |
-| `--color-background-soft`     | `#F7F4EE` | Recessed surfaces, chat input      |
-| `--color-background-muted`    | `#ECE8E1` | Loading and disabled states        |
-| `--color-background-dark`     | `#111111` | Primary buttons, AI avatar         |
-| `--color-background-charcoal` | `#2B2B2B` | Footer, user message bubbles       |
-| `--color-surface-card`        | `#FFFFFF` | Cards, focused inputs              |
-| `--color-text-primary`        | `#111111` | Body copy, headings                |
-| `--color-text-secondary`      | `#2B2B2B` | Secondary dark text                |
-| `--color-text-muted`          | `#4A4A4A` | Supporting text, timestamps        |
-| `--color-text-inverse`        | `#F7F4EE` | Text on dark surfaces              |
-| `--color-accent-muted-gold`   | `#B9A777` | Interactive emphasis, focus rings  |
-| `--color-accent-sand`         | `#D2C59A` | Softer hover states, links on dark |
-| `--color-accent-dark-olive`   | `#3C4031` | Limited contextual accent          |
-| `--color-border-soft`         | `#D6D0C5` | Borders and dividers               |
+| `--color-background-main`     | `#FBFAF7` | Page background                    |
+| `--color-background-soft`     | `#F7F4EE` | Recessed surfaces, chat input      |
+| `--color-background-muted`    | `#ECE8E1` | Loading and disabled states        |
+| `--color-background-dark`     | `#111111` | Primary buttons, AI avatar         |
+| `--color-background-charcoal` | `#2B2B2B` | Footer, user message bubbles       |
+| `--color-surface-card`        | `#FFFFFF` | Cards, focused inputs              |
+| `--color-text-primary`        | `#111111` | Body copy, headings                |
+| `--color-text-secondary`      | `#2B2B2B` | Secondary dark text                |
+| `--color-text-muted`          | `#4A4A4A` | Supporting text, timestamps        |
+| `--color-text-inverse`        | `#F7F4EE` | Text on dark surfaces              |
+| `--color-accent-muted-gold`   | `#B9A777` | Interactive emphasis, focus rings  |
+| `--color-accent-sand`         | `#D2C59A` | Softer hover states, links on dark |
+| `--color-accent-dark-olive`   | `#3C4031` | Limited contextual accent          |
+| `--color-border-soft`         | `#D6D0C5` | Borders and dividers               |
 
 Additional tokens cover typography, an 8px spacing system, radii, shadows,
 transitions, content widths, z-index levels, and semantic states.
+
+---
+
+## Home hero video background
+
+The home hero background is rendered by the `BackgroundAnimation` component.
+
+It previously rotated four still photographs as a crossfading slideshow. It now
+plays a single looping fog video:
+
+```text
+public/images/backgrounds/herovid.mp4
+```
+
+### Behaviour
+
+```text
+video copy A (visible)
+        ↓ ~2s before A ends
+video copy B starts from 0
+        ↓
+2s opacity crossfade A → B
+        ↓
+A pauses, becomes standby
+        ↓
+repeat, alternating A ↔ B
+```
+
+The component keeps **two `<video>` elements** playing the same file. Shortly
+before the visible copy reaches its end, the standby copy restarts from frame 0
+and the two crossfade. The restart therefore always happens inside a dissolve
+and is not visible as a cut.
+
+Key constants inside the component:
+
+| Constant          | Purpose                                    |
+| ----------------- | ------------------------------------------ |
+| `VIDEO_SRC`       | Path to the hero video under `public/`     |
+| `POSTER_SRC`      | Still shown while the video loads          |
+| `LOOP_FADE_MS`    | Crossfade window that hides the loop point |
+| `CAMERA_DURATION` | Duration of one camera-drift pass          |
+
+### Camera drift and parallax
+
+- The slow pan-and-zoom drift is applied to a **wrapper around both video
+  copies**, not to the videos themselves, so camera motion continues smoothly
+  through the loop crossfade.
+- The drift uses `ease-in-out` with `alternate` so the direction change is
+  gentle rather than a visible bounce.
+- The scroll parallax on the outer container is unchanged from the slideshow
+  implementation.
+- The outer container keeps `inset: -5%` overscan so drift and parallax never
+  reveal empty edges.
+
+### Rules
+
+1. The loop swap is driven through refs and direct DOM style writes — do not
+   convert the active/standby swap to React state, as re-rendering mid-fade
+   causes a visible frame hitch.
+2. Both `<video>` elements keep the native `loop` attribute as a fallback: if
+   the standby copy fails to start, the active copy hard-loops instead of
+   freezing.
+3. The videos must remain `muted` and `playsInline`, otherwise mobile browsers
+   refuse to autoplay.
+4. `prefers-reduced-motion` pauses the video via JavaScript (`matchMedia`) and
+   disables the camera drift. CSS alone cannot pause a video.
+5. Keep the hero video small. Strip audio and compress before committing, for
+   example:
+
+```bash
+ffmpeg -i input.mp4 -an -vf scale=-2:1080 -crf 28 herovid.mp4
+```
 
 ---
 
@@ -155,10 +229,10 @@ Import the centralised component rather than duplicating SVG markup:
 import { LogoMark } from "@/components/common/Logo";
 ```
 
-| Surface           | Asset treatment |
+| Surface           | Asset treatment |
 | ----------------- | --------------- |
-| White / off-white | Dark mark       |
-| Black / charcoal  | Light mark      |
+| White / off-white | Dark mark       |
+| Black / charcoal  | Light mark      |
 
 Use:
 
@@ -173,7 +247,7 @@ Important:
 - Logo SVGs use transparent backgrounds.
 - Background colours belong to CSS, not the SVG asset.
 - Avoid nested links by setting `clickable={false}` when a logo already sits
-  inside another link.
+  inside another link.
 - The import path is case-sensitive:
 
 ```jsx
@@ -203,15 +277,15 @@ Product images are managed through Django Admin and normalised by the frontend.
 
 ```text
 Django API
-    ↓
+    ↓
 raw.images[]
-    ↓
+    ↓
 normalizeProduct()
 src/lib/api/products.js
-    ↓
-same-site /images/...       → local Next.js public asset
-primary image               → ProductCard
-full images[]               → ProductDetail → ProductGallery
+    ↓
+same-site /images/...       → local Next.js public asset
+primary image               → ProductCard
+full images[]               → ProductDetail → ProductGallery
 ```
 
 `normalizeProduct()`:
@@ -401,16 +475,16 @@ dashboard.
 
 ```text
 /chakan-tree
-        ↓
+        ↓
 public explanation
 stats
 how it works
 join CTA
-        ↓
+        ↓
 active participant
-        ↓
+        ↓
 /chakan-tree/dashboard
-        ↓
+        ↓
 ParticipantDashboard
 ```
 
@@ -438,13 +512,13 @@ It is responsible for:
 
 ```text
 client mount
-    ↓
+    ↓
 authentication check
-    ↓
+    ↓
 refresh membership from backend
-    ↓
+    ↓
 check membership.isActive
-    ↓
+    ↓
 render ParticipantDashboard
 ```
 
@@ -471,7 +545,7 @@ and:
 
 ```jsx
 useEffect(() => {
-  setMounted(true);
+  setMounted(true);
 }, []);
 ```
 
@@ -483,7 +557,7 @@ Do not use:
 
 ```jsx
 if (membership && !membership.isActive) {
-  router.replace("/chakan-tree/join");
+  router.replace("/chakan-tree/join");
 }
 ```
 
@@ -577,13 +651,13 @@ Otherwise the dependency becomes:
 
 ```text
 ParticipantDashboard
-        ↓
+        ↓
 chakanTree
-        ↓
+        ↓
 ParticipantDashboard
-        ↓
+        ↓
 chakanTree
-        ↓
+        ↓
 ...
 ```
 
@@ -593,11 +667,11 @@ The correct relationship is:
 
 ```text
 src/app/chakan-tree/dashboard/page.jsx
-        ↓
+        ↓
 ParticipantDashboard.jsx
-        ↓
+        ↓
 chakanTree.jsx
-        ↓
+        ↓
 chakanTree.module.css
 ```
 
@@ -645,13 +719,13 @@ Therefore the CSS must use:
 
 ```css
 .circle {
-  width: 68px;
-  height: 68px;
+  width: 68px;
+  height: 68px;
 }
 
 .rootCircle {
-  width: 86px;
-  height: 86px;
+  width: 86px;
+  height: 86px;
 }
 ```
 
@@ -678,7 +752,7 @@ the CSS should centre only horizontally:
 
 ```css
 .member {
-  transform: translateX(-50%);
+  transform: translateX(-50%);
 }
 ```
 
@@ -739,8 +813,8 @@ This allows current referral data to appear immediately.
 An active member with no referrals still receives a valid root:
 
 ```text
-      You
-       ◯
+      You
+       ◯
 ```
 
 Referral count is not used to determine whether a participant belongs to Chakan
@@ -778,10 +852,10 @@ state is displayed.
 
 ## Referral views
 
-| View           | Purpose                                             |
+| View           | Purpose                                             |
 | -------------- | --------------------------------------------------- |
-| Referral tree  | Shows who is connected to whom                      |
-| Level earnings | Shows earnings by MGM generation                    |
+| Referral tree  | Shows who is connected to whom                      |
+| Level earnings | Shows earnings by MGM generation                    |
 | Referral table | Shows direct-referral purchases and generated value |
 
 ---
@@ -794,7 +868,7 @@ Do not place a Hook after:
 
 ```jsx
 if (loading) {
-  return ...
+  return ...
 }
 ```
 
@@ -802,7 +876,7 @@ For example, avoid:
 
 ```jsx
 if (loading) {
-  return <Loading />;
+  return <Loading />;
 }
 
 const referralTree = useMemo(...);
@@ -831,6 +905,10 @@ Before opening a pull request:
 - [ ] Product images use `object-fit: contain`
 - [ ] `next/image` `sizes` matches rendered dimensions
 - [ ] Interactive controls have visible focus states
+- [ ] Hero video stays `muted` and `playsInline`
+- [ ] Hero loop swap remains ref-driven, not state-driven
+- [ ] `prefers-reduced-motion` pauses the hero video
+- [ ] Hero video is compressed and audio-stripped before commit
 - [ ] `ParticipantDashboard.jsx` imports `ReferralTree` from `./chakanTree`
 - [ ] `chakanTree.jsx` exports `ReferralTree` as default
 - [ ] `chakanTree.jsx` does not import or render `ParticipantDashboard`
@@ -851,24 +929,28 @@ Before opening a pull request:
 
 ## Troubleshooting
 
-| Symptom                                              | Cause and fix                                                                                                                                                                                 |
+| Symptom                                              | Cause and fix                                                                                                                                                                                 |
 | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| React hydration error `#418` / `#423`                | Check for unstable server/client initial rendering, persisted client state, nested anchors, or render-time redirects. Chakan Tree dashboard membership checks should wait until client mount. |
-| React error `#310`                                   | A Hook was called only on some renders. Keep Hooks before early returns or remove unnecessary `useMemo` usage.                                                                                |
-| Chakan Tree page repeats forever                     | `chakanTree.jsx` is rendering `ParticipantDashboard`, causing recursive component rendering. Tree component must contain only the visual tree.                                                |
-| `Can't resolve './ReferralTree'`                     | The actual file is `chakanTree.jsx`. Import from `./chakanTree`.                                                                                                                              |
-| `'ReferralTree' is not exported from './chakanTree'` | Match the import to the export. Current implementation uses `export default ReferralTree` and `import ReferralTree from "./chakanTree"`.                                                      |
-| Tree branch misses a node vertically                 | `.member` is using `translate(-50%, -50%)`. Use `translateX(-50%)` with the current `top: y - radius` positioning.                                                                            |
-| Tree branch misses nodes on mobile                   | CSS node size differs from `NODE_RADIUS` / `ROOT_RADIUS`. Keep 68px and 86px sizes or update both JS and CSS together.                                                                        |
-| Chakan Tree only shows the root or direct referrals  | Backend has not yet returned nested `referralTree`; frontend is using `dashboard.referrals` as Level 1 fallback.                                                                              |
-| Active participant is sent back to join              | Refresh membership and check `membership.isActive`; do not use referral count for access.                                                                                                     |
-| Chakan Tree styles do not load                       | Confirm `chakanTree.jsx` imports `./chakanTree.module.css` with exact filename case.                                                                                                          |
-| React hydration error from logo navigation           | Avoid clickable logo inside another link; use `clickable={false}`.                                                                                                                            |
-| `Module not found: '@components/common/logo'`        | Use `@/components/common/Logo`.                                                                                                                                                               |
-| Colours revert to green and brown                    | Ensure only `src/app/globals.css` controls global design tokens.                                                                                                                              |
-| Gallery thumbnails fail in production                | Check same-origin `/images/...` normalisation in `normalizeProduct()`.                                                                                                                        |
-| Product artwork is cropped                           | Use `object-fit: contain`.                                                                                                                                                                    |
-| Backend images do not load                           | Check `NEXT_PUBLIC_API_URL`.                                                                                                                                                                  |
+| React hydration error `#418` / `#423`                | Check for unstable server/client initial rendering, persisted client state, nested anchors, or render-time redirects. Chakan Tree dashboard membership checks should wait until client mount. |
+| React error `#310`                                   | A Hook was called only on some renders. Keep Hooks before early returns or remove unnecessary `useMemo` usage.                                                                                |
+| Hero video does not play                             | Check `VIDEO_SRC` path and filename case, and confirm the `<video>` keeps `muted` and `playsInline` for mobile autoplay.                                                                      |
+| Hero loop restart is visible                         | The standby copy failed to start (native hard loop was used) or `LOOP_FADE_MS` is too short. Confirm both video copies preload and lengthen the crossfade window.                             |
+| Hero shows only the poster image                     | Autoplay was blocked or the video path is wrong; the poster is the intended fallback. Verify `VIDEO_SRC` first.                                                                               |
+| Hero camera drift resets or stutters at the loop     | The drift animation was moved from the wrapper onto the video elements. Keep the drift on the wrapper around both copies.                                                                     |
+| Chakan Tree page repeats forever                     | `chakanTree.jsx` is rendering `ParticipantDashboard`, causing recursive component rendering. Tree component must contain only the visual tree.                                                |
+| `Can't resolve './ReferralTree'`                     | The actual file is `chakanTree.jsx`. Import from `./chakanTree`.                                                                                                                              |
+| `'ReferralTree' is not exported from './chakanTree'` | Match the import to the export. Current implementation uses `export default ReferralTree` and `import ReferralTree from "./chakanTree"`.                                                      |
+| Tree branch misses a node vertically                 | `.member` is using `translate(-50%, -50%)`. Use `translateX(-50%)` with the current `top: y - radius` positioning.                                                                            |
+| Tree branch misses nodes on mobile                   | CSS node size differs from `NODE_RADIUS` / `ROOT_RADIUS`. Keep 68px and 86px sizes or update both JS and CSS together.                                                                        |
+| Chakan Tree only shows the root or direct referrals  | Backend has not yet returned nested `referralTree`; frontend is using `dashboard.referrals` as Level 1 fallback.                                                                              |
+| Active participant is sent back to join              | Refresh membership and check `membership.isActive`; do not use referral count for access.                                                                                                     |
+| Chakan Tree styles do not load                       | Confirm `chakanTree.jsx` imports `./chakanTree.module.css` with exact filename case.                                                                                                          |
+| React hydration error from logo navigation           | Avoid clickable logo inside another link; use `clickable={false}`.                                                                                                                            |
+| `Module not found: '@components/common/logo'`        | Use `@/components/common/Logo`.                                                                                                                                                               |
+| Colours revert to green and brown                    | Ensure only `src/app/globals.css` controls global design tokens.                                                                                                                              |
+| Gallery thumbnails fail in production                | Check same-origin `/images/...` normalisation in `normalizeProduct()`.                                                                                                                        |
+| Product artwork is cropped                           | Use `object-fit: contain`.                                                                                                                                                                    |
+| Backend images do not load                           | Check `NEXT_PUBLIC_API_URL`.                                                                                                                                                                  |
 
 ---
 
