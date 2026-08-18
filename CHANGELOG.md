@@ -1,5 +1,106 @@
 # Changelog
 
+### Chakan Tree Multi-Generation Referral Network
+
+The Chakan Tree now renders and pays out across five generations. Previously
+only direct referrals appeared in the tree, and only the immediate referrer
+earned on a purchase.
+
+#### Reward cascade
+
+Rewards flow upward from a purchase, halving at each generation:
+
+```text
+Level 1 (direct referrer)   5%
+Level 2                     2.5%
+Level 3                     1.25%
+Level 4                     0.625%
+Level 5                     0.3125%
+Level 6+                    nothing
+```
+
+The cascade is relative, not absolute. Every member is level 1 to their direct
+referrer, level 2 to the member above them, and so on. A single purchase
+credits up to five distinct uplines at five distinct rates. A member six hops
+below someone earns that person nothing.
+
+#### Backend
+
+`chakan_tree/services.py` gains two traversals, both capped at five hops:
+
+- `build_referral_tree()` walks **down** the `Membership.referred_by` self-FK,
+  returning nested dicts for the dashboard. One query per generation plus one
+  bulk query for purchase activity, rather than one query per node.
+- `get_upline_chain()` walks **up** from a purchaser, returning
+  `(level, membership)` pairs for reward attribution. Inactive memberships are
+  skipped but still consume a level, so a dormant member cannot compress the
+  chain and inflate the rewards of those above them.
+
+`process_referral_purchase()` now credits the full upline. Tier recalculation
+stays limited to the direct referrer, since `active_referral_count` counts only
+direct referrals — recalculating deeper uplines would query the database
+without ever changing anything.
+
+A `LevelEarning` model holds the per-generation breakdown, one row per
+`(membership, level)`. `Reward` continues to hold the aggregate.
+
+`Membership.display_name` centralises name resolution so the tree, the
+serializer, and the dashboard all draw from one place.
+
+`DashboardSerializer` exposes `referral_tree` and `level_earnings`. Without
+these declared fields DRF silently dropped both keys from the response.
+
+Indexes added on `Membership(referred_by, is_active)` and
+`Referral(referred_user)` to support the traversal queries.
+
+#### Corrected behaviour
+
+`build_referral_tree()` ordered by `created_at`, which does not exist on
+`Membership` — the field is `joined_at`. This raised `FieldError`, returning
+500 from the dashboard endpoint.
+
+Tree node names probed `get_full_name()`, `first_name`, and `username`, none of
+which exist on `CustomUser`. Resolution silently fell through to the email
+prefix. Node names now read the actual `name` field.
+
+Tree nodes reported hardcoded zero purchases and generated value. Both are now
+read from the `Referral` records in a single bulk query.
+
+#### API client
+
+`src/lib/api/chakanTree.js` constructed its dashboard return value from three
+keys, discarding `referral_tree`, `level_earnings`, and `impact` before any
+component could read them. No fallback chain in the component could recover a
+key that never arrived.
+
+`getDashboard()` now passes all three through. Tree nodes are normalised
+recursively, since a flat map would drop every generation below the first.
+
+#### Removed mock fallbacks
+
+Every function in the API client wrapped its request in a silent `catch` that
+returned fixed placeholder data — three invented referrals, invented earnings,
+invented impact metrics. A failing endpoint was indistinguishable from a
+working one, which is how the `FieldError` above went unnoticed.
+
+Requests now propagate errors to the caller, and callers render an error state.
+
+Invented defaults were removed alongside the mocks. Expressions such as
+`raw.tier || 'seed'` and `raw.reward_rate || 0.05` asserted business rules the
+frontend has no authority over. Absent values are now `null`, keeping "no data"
+distinguishable from a real zero.
+
+`normalizeImpact()` returns numeric values rather than pre-formatted currency
+strings, so currency and locale are decided at render time.
+
+#### Root node label
+
+The tree root displayed the literal string **You**, hardcoded in
+`buildReferralTree()` on both the backend-tree and flat-referral paths. The
+root now resolves its name the same way every other node does.
+
+---
+
 ### Chakan Tree Node Name Shortening
 
 Long participant names in the visual Chakan Tree are now shortened for display

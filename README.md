@@ -490,6 +490,49 @@ ParticipantDashboard
 
 ---
 
+## Reward cascade
+
+Rewards flow upward from a purchase, halving at each generation:
+
+| Level | Relationship to purchaser | Rate    |
+| ----- | ------------------------- | ------- |
+| 1     | Direct referrer           | 5%      |
+| 2     | Referrer's referrer       | 2.5%    |
+| 3     | Three hops up             | 1.25%   |
+| 4     | Four hops up              | 0.625%  |
+| 5     | Five hops up              | 0.3125% |
+| 6+    | —                         | Nothing |
+
+The cascade is relative, not absolute. Every member is simultaneously level 1
+to their direct referrer, level 2 to the member above them, and so on. A single
+purchase credits up to five distinct uplines at five distinct rates. A member
+six hops below someone earns that person nothing — the chain terminates at
+level 5.
+
+```text
+A ── earns 0.3125% of F's purchase
+│
+B ── earns 0.625%
+│
+C ── earns 1.25%
+│
+D ── earns 2.5%
+│
+E ── earns 5%
+│
+F ── makes a purchase
+```
+
+If B rather than A is the top of a chain, the cascade resets at B: B earns the
+full 5% on its direct referral's purchase and halves downward from there.
+Position in the global tree is irrelevant; only the distance between purchaser
+and upline matters.
+
+The rates and the maximum depth are defined by the backend. The frontend
+displays whatever the API returns and never computes commission itself.
+
+---
+
 ## Chakan Tree route responsibilities
 
 ### `/chakan-tree`
@@ -679,12 +722,12 @@ chakanTree.module.css
 
 ## Referral-tree visualisation
 
-`chakanTree.jsx` renders the MGM network recursively.
+`chakanTree.jsx` renders the MGM network recursively to whatever depth the
+backend supplies, up to five generations.
 
 The current implementation uses:
 
-- the active participant as the root
-- the label **You** for the root
+- the active participant as the root, labelled with their own name
 - hollow circular nodes
 - the official Chakancha `LogoMark` inside each node
 - a larger muted-gold root node
@@ -832,36 +875,38 @@ The dashboard route does not import this stylesheet.
 
 ---
 
-## Tree data compatibility
+## Tree data source
 
-`ParticipantDashboard.jsx` can consume a hierarchical referral structure from:
+`ParticipantDashboard.jsx` consumes the hierarchical referral structure from:
 
 ```text
 dashboard.referralTree
-dashboard.referral_tree
-dashboard.tree
 ```
 
-Until the backend exposes nested MGM descendants, the dashboard builds a safe
-Level 1 tree from:
+The API client normalises this from the backend's `referral_tree`, recursing
+through `children` so every generation survives. The backend nests to five
+levels; level six and beyond are outside the reward structure and are not
+traversed.
+
+Each node carries:
 
 ```text
-dashboard.referrals
+id, name, referralCode, level, tier, purchases, valueGenerated, children
 ```
 
-This allows current referral data to appear immediately.
+`level` is the generation distance from the root, where the root is 0.
 
-An active member with no referrals still receives a valid root:
+If the tree is unavailable, the dashboard falls back to building a single
+Level 1 tree from `dashboard.referrals`. This is a degraded state, not the
+normal path — a flat tree where nesting is expected usually means a member's
+`referred_by` was never set, so check that the `?ref=` code reaches
+`join_chakan_tree()` during signup.
 
-```text
-      You
-       ◯
-```
+An active member with no referrals still receives a valid root: a single
+circle bearing their own name.
 
-Referral count is not used to determine whether a participant belongs to Chakan
-Tree.
-
-The access criterion remains:
+Referral count is not used to determine whether a participant belongs to
+Chakan Tree. The access criterion remains:
 
 ```text
 membership.isActive
@@ -871,23 +916,55 @@ membership.isActive
 
 ## Level earnings
 
-The participant dashboard includes an MGM level-earnings area.
-
-Supported frontend field shapes include:
+The participant dashboard shows earnings broken down by MGM generation, read
+from:
 
 ```text
 dashboard.levelEarnings
-dashboard.level_earnings
-dashboard.earningsByLevel
-dashboard.earnings_by_level
 ```
 
-Level earnings are displayed only from backend-provided data.
+Each row carries:
 
-The frontend does not invent commission values.
+```text
+level, participants, earnings, rate
+```
 
-When the backend has not yet returned level earnings, an informational empty
-state is displayed.
+`participants` is derived server-side from the referral tree itself, so the
+table and the tree visualisation cannot disagree about how many members sit at
+each generation. `rate` is the percentage that generation pays — 5% at level 1,
+halving to 0.3125% at level 5.
+
+The backend returns every level, including those with no members or earnings,
+so the reward structure is legible before the first purchase. Rows with no
+participants are dimmed rather than hidden.
+
+Level earnings are displayed only from backend-provided data. The frontend does
+not invent commission values, rates, or level counts.
+
+---
+
+## Chakan Tree API client
+
+`src/lib/api/chakanTree.js` is the only place snake_case backend fields are
+mapped to camelCase frontend fields. Components read normalised objects and
+never touch raw response shapes.
+
+Two rules govern this file:
+
+1. **Normalisers shape what arrived; they never invent values.** Absent fields
+   become `null` rather than a plausible default, so "no data" stays
+   distinguishable from a real zero. Business rules such as default tier or
+   reward rate belong to the backend.
+
+2. **Errors propagate.** No function substitutes placeholder data on failure.
+   A failing endpoint must be visible as a failing endpoint — a silent
+   fallback to fixed sample data disguises a broken API as a working one and
+   makes backend faults effectively invisible during development.
+
+Callers are therefore responsible for rendering an error state.
+
+Monetary values are returned numeric. Formatting is applied at render time,
+where currency and locale are known.
 
 ---
 

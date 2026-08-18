@@ -1,183 +1,235 @@
 /**
- * src/lib/api/chakanTree.js — Integration Phase 4
+ * src/lib/api/chakanTree.js
  *
- * What changed from the original:
- *  - All 6 endpoints wired through the shared Axios api client (client.js)
- *    using ENDPOINTS.CHAKAN_TREE keys — no raw fetch() calls
- *  - getChakanTreeInfo() → GET /api/v1/chakan-tree/
- *    Response includes { name, description, stats, membership }
- *  - joinChakanTree() → POST /api/v1/chakan-tree/join/
- *    Sends { referral_code } matching JoinSerializer
- *    Returns { membership: {referral_code, tier, is_active, joined_at, ...}, message }
- *  - getDashboard() → GET /api/v1/chakan-tree/dashboard/
- *    Returns { membership, referrals, reward, impact }
- *  - getReferrals() → GET /api/v1/chakan-tree/referrals/ (new, was missing)
- *  - getRewards() → GET /api/v1/chakan-tree/rewards/    (new, was missing)
- *  - getImpact() → GET /api/v1/chakan-tree/impact/
- *  - normalizeMembe rship() maps snake_case backend → camelCase frontend
- *  - Mock fallbacks retained for dev/network-error scenarios
+ * All 6 Chakan Tree endpoints wired through the shared Axios api client
+ * (client.js) using ENDPOINTS.CHAKAN_TREE keys.
+ *
+ * Normalizers map snake_case backend fields → camelCase frontend fields.
+ * They shape whatever the backend sent; they never invent values.
+ *
+ * Errors propagate to the caller. Callers render an error state so a
+ * failing endpoint is visible rather than being disguised as empty or
+ * placeholder data.
  */
 
-import api from './client';
-import { ENDPOINTS } from './endpoints';
+import api from "./client";
+import { ENDPOINTS } from "./endpoints";
 
-// ─── Field normalizer ─────────────────────────────────────────────────────────
+// ─── Field normalizers ────────────────────────────────────────────────────────
+
 /**
  * Backend MembershipSerializer returns:
- *   referral_code, tier, is_active, joined_at,
+ *   id, name, referral_code, tier, is_active, joined_at,
  *   referral_link, active_referral_count, total_referral_count, reward_rate
  *
- * Frontend components and chakanTreeSlice expect:
- *   referralCode, tier, isActive, joinedAt,
- *   referralLink, activeReferralCount, totalReferralCount, rewardRate
+ * Frontend components and chakanTreeSlice expect camelCase equivalents.
  */
 export function normalizeMembership(raw) {
   if (!raw) return null;
+
   return {
-    id:                   raw.id,
-    referralCode:         raw.referral_code         || raw.referralCode,
-    tier:                 raw.tier                  || 'seed',
-    isActive:             raw.is_active             ?? raw.isActive ?? true,
-    joinedAt:             raw.joined_at             || raw.joinedAt,
-    referralLink:         raw.referral_link         || raw.referralLink,
-    activeReferralCount:  raw.active_referral_count || raw.activeReferralCount || 0,
-    totalReferralCount:   raw.total_referral_count  || raw.totalReferralCount  || 0,
-    rewardRate:           raw.reward_rate           || raw.rewardRate          || 0.05,
-    // Keep snake_case too for resilience
-    referral_code:        raw.referral_code         || raw.referralCode,
-    is_active:            raw.is_active             ?? raw.isActive ?? true,
-    joined_at:            raw.joined_at             || raw.joinedAt,
+    id: raw.id ?? null,
+    // The member's own display name — labels the root of the referral tree
+    name: raw.name ?? null,
+    referralCode: raw.referral_code ?? null,
+    tier: raw.tier ?? null,
+    isActive: raw.is_active ?? null,
+    joinedAt: raw.joined_at ?? null,
+    referralLink: raw.referral_link ?? null,
+    activeReferralCount: raw.active_referral_count ?? 0,
+    totalReferralCount: raw.total_referral_count ?? 0,
+    rewardRate: raw.reward_rate ?? null,
   };
 }
 
 /**
  * Normalize dashboard referral records.
- * Backend: { referred_user_name, referred_user_email, purchases_count, value_generated }
- * Frontend: { id, name, joinedAt, purchases, valueGenerated }
+ * Backend: { id, referred_user_name, referred_user_email,
+ *            purchases_count, value_generated, created_at }
  */
 function normalizeReferral(raw) {
+  if (!raw) return null;
+
   return {
-    id:             raw.id,
-    name:           raw.referred_user_name  || 'Member',
-    email:          raw.referred_user_email || '',
-    joinedAt:       raw.created_at,
-    purchases:      raw.purchases_count    || 0,
-    valueGenerated: parseFloat(raw.value_generated) || 0,
+    id: raw.id ?? null,
+    name: raw.referred_user_name ?? null,
+    email: raw.referred_user_email ?? null,
+    joinedAt: raw.created_at ?? null,
+    purchases: raw.purchases_count ?? 0,
+    valueGenerated: toNumber(raw.value_generated),
   };
+}
+
+/**
+ * Normalize a referral tree node, recursively.
+ *
+ * Backend: { id, name, referral_code, level, tier, purchases,
+ *            value_generated, children: [...] }
+ *
+ * The tree nests to the backend's maximum depth, so this must recurse —
+ * a flat map would silently drop every generation below the first.
+ */
+function normalizeTreeNode(raw) {
+  if (!raw) return null;
+
+  const children = Array.isArray(raw.children) ? raw.children : [];
+
+  return {
+    id: raw.id ?? null,
+    name: raw.name ?? null,
+    referralCode: raw.referral_code ?? null,
+    level: Number.isFinite(Number(raw.level)) ? Number(raw.level) : null,
+    tier: raw.tier ?? null,
+    purchases: raw.purchases ?? 0,
+    valueGenerated: toNumber(raw.value_generated),
+    children: children.map(normalizeTreeNode).filter(Boolean),
+  };
+}
+
+/**
+ * Normalize the per-generation earnings breakdown.
+ * Backend: [{ level, participants, earnings, rate }]
+ *
+ * The backend decides how many levels exist and what each pays; this
+ * passes that through in level order without assuming a count.
+ */
+function normalizeLevelEarnings(raw) {
+  if (!Array.isArray(raw)) return [];
+
+  return raw
+    .map((row) => ({
+      level: Number(row.level),
+      participants: row.participants ?? 0,
+      earnings: toNumber(row.earnings),
+      rate: row.rate ?? null,
+    }))
+    .filter((row) => Number.isFinite(row.level))
+    .sort((a, b) => a.level - b.level);
 }
 
 /**
  * Normalize reward record.
  * Backend: { total_earned, pending_payout, paid_out, currency }
- * Frontend: { totalEarned, pendingPayout, paidOut, currency }
  */
 function normalizeReward(raw) {
   if (!raw) return null;
+
   return {
-    totalEarned:   parseFloat(raw.total_earned)   || 0,
-    pendingPayout: parseFloat(raw.pending_payout) || 0,
-    paidOut:       parseFloat(raw.paid_out)       || 0,
-    currency:      raw.currency || 'USD',
+    totalEarned: toNumber(raw.total_earned),
+    pendingPayout: toNumber(raw.pending_payout),
+    paidOut: toNumber(raw.paid_out),
+    currency: raw.currency ?? null,
   };
 }
 
 /**
  * Normalize impact record.
- * Backend: { tea_pickers_supported, community_funds, total_value_shared, trees_planted }
- * Frontend: { teaPickersSupported, communityFunds, totalValueShared, treesPlanted }
+ * Backend: { tea_pickers_supported, community_funds,
+ *            total_value_shared, trees_planted }
+ *
+ * Monetary values stay numeric here. Formatting is the component's job,
+ * so currency and locale are decided at render time rather than baked
+ * into a string at the transport layer.
  */
 function normalizeImpact(raw) {
   if (!raw) return null;
+
   return {
-    teaPickersSupported: raw.tea_pickers_supported || 0,
-    communityFunds:      raw.community_funds
-      ? `$${parseFloat(raw.community_funds).toFixed(2)}`
-      : '$0',
-    totalValueShared:    raw.total_value_shared
-      ? `$${parseFloat(raw.total_value_shared).toFixed(2)}`
-      : '$0',
-    treesPlanted:        raw.trees_planted || 0,
+    teaPickersSupported: raw.tea_pickers_supported ?? 0,
+    communityFunds: toNumber(raw.community_funds),
+    totalValueShared: toNumber(raw.total_value_shared),
+    treesPlanted: raw.trees_planted ?? 0,
   };
+}
+
+/**
+ * Parse a backend decimal string to a number.
+ * Returns null for absent values so "no data" stays distinguishable
+ * from a real zero.
+ */
+function toNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
+
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 // ─── API functions ─────────────────────────────────────────────────────────────
 
 /**
  * GET /api/v1/chakan-tree/
- * Public endpoint — program info, stats, tier structure.
- * If authenticated, also returns current user's membership.
+ * Public endpoint — program info, stats, tier structure, MGM level rates.
+ * If authenticated, also returns the current user's membership.
  */
 export async function getChakanTreeInfo() {
-  try {
-    const data = await api.get(ENDPOINTS.CHAKAN_TREE.INFO);
-    return {
-      name:        data.name        || 'Chakan Tree',
-      description: data.description || '',
-      stats:       data.stats       || getMockInfo().stats,
-      tiers:       data.stats?.tiers || getMockInfo().tiers,
-      membership:  data.membership ? normalizeMembership(data.membership) : null,
-    };
-  } catch {
-    return getMockInfo();
-  }
+  const data = await api.get(ENDPOINTS.CHAKAN_TREE.INFO);
+
+  const stats = data.stats ?? {};
+
+  return {
+    name: data.name ?? null,
+    description: data.description ?? null,
+    stats,
+    tiers: stats.tiers ?? [],
+    // MGM reward cascade — the backend defines the rates and the depth
+    levels: stats.levels ?? [],
+    maxDepth: stats.max_depth ?? null,
+    membership: data.membership ? normalizeMembership(data.membership) : null,
+  };
 }
 
 /**
  * POST /api/v1/chakan-tree/join/
- * Requires authentication. Creates Chakan Tree membership.
+ * Requires authentication. Creates a Chakan Tree membership.
  *
- * @param {object} options - { referredBy: string | undefined }
+ * @param {object} options - { referredBy?: string }
  */
 export async function joinChakanTree(options = {}) {
   // Map frontend camelCase → backend snake_case
   const payload = {};
+
   if (options.referredBy) {
     payload.referral_code = options.referredBy.trim().toUpperCase();
   }
 
-  try {
-    const data = await api.post(ENDPOINTS.CHAKAN_TREE.JOIN, payload);
-    return {
-      success:    true,
-      membership: normalizeMembership(data.membership),
-      message:    data.message || 'Welcome to Chakan Tree!',
-    };
-  } catch (err) {
-    // Dev fallback
-    if (process.env.NODE_ENV === 'development') {
-      const code = 'CKC' + Math.random().toString(36).slice(2, 8).toUpperCase();
-      return {
-        success:    true,
-        membership: normalizeMembership({
-          referral_code: code,
-          tier:          'seed',
-          is_active:     true,
-          joined_at:     new Date().toISOString(),
-          active_referral_count: 0,
-          reward_rate:   0.05,
-        }),
-      };
-    }
-    throw err;
-  }
+  const data = await api.post(ENDPOINTS.CHAKAN_TREE.JOIN, payload);
+
+  return {
+    membership: normalizeMembership(data.membership),
+    message: data.message ?? null,
+  };
 }
 
 /**
  * GET /api/v1/chakan-tree/dashboard/
  * Requires authentication + active Chakan Tree membership.
- * Returns: { membership, referrals, rewards }
+ *
+ * Returns: {
+ *   membership,
+ *   referrals,      — direct referrals, flat
+ *   rewards,        — aggregate totals
+ *   impact,
+ *   referralTree,   — nested to the backend's maximum depth
+ *   levelEarnings,  — per-generation breakdown
+ * }
  */
 export async function getDashboard() {
-  try {
-    const data = await api.get(ENDPOINTS.CHAKAN_TREE.DASHBOARD);
-    return {
-      membership: data.membership ? normalizeMembership(data.membership) : null,
-      referrals:  (data.referrals || []).map(normalizeReferral),
-      rewards:    normalizeReward(data.reward || data.rewards),
-    };
-  } catch {
-    return getMockDashboard();
-  }
+  const data = await api.get(ENDPOINTS.CHAKAN_TREE.DASHBOARD);
+
+  return {
+    membership: data.membership ? normalizeMembership(data.membership) : null,
+    referrals: (data.referrals ?? []).map(normalizeReferral).filter(Boolean),
+    rewards: normalizeReward(data.reward),
+    impact: normalizeImpact(data.impact),
+
+    /*
+     * MGM structure. Both were previously dropped by this function,
+     * which is why the tree only ever rendered one generation.
+     */
+    referralTree: normalizeTreeNode(data.referral_tree),
+    levelEarnings: normalizeLevelEarnings(data.level_earnings),
+  };
 }
 
 /**
@@ -185,16 +237,13 @@ export async function getDashboard() {
  * Requires authentication + active membership.
  */
 export async function getReferrals() {
-  try {
-    const data = await api.get(ENDPOINTS.CHAKAN_TREE.REFERRALS);
-    return {
-      referrals:    (data.referrals || []).map(normalizeReferral),
-      count:        data.count        || 0,
-      activeCount:  data.active_count || 0,
-    };
-  } catch {
-    return { referrals: getMockDashboard().referrals, count: 3, activeCount: 3 };
-  }
+  const data = await api.get(ENDPOINTS.CHAKAN_TREE.REFERRALS);
+
+  return {
+    referrals: (data.referrals ?? []).map(normalizeReferral).filter(Boolean),
+    count: data.count ?? 0,
+    activeCount: data.active_count ?? 0,
+  };
 }
 
 /**
@@ -202,16 +251,13 @@ export async function getReferrals() {
  * Requires authentication + active membership.
  */
 export async function getRewards() {
-  try {
-    const data = await api.get(ENDPOINTS.CHAKAN_TREE.REWARDS);
-    return {
-      reward:     normalizeReward(data.reward),
-      tier:       data.tier       || 'seed',
-      rewardRate: data.reward_rate || '5%',
-    };
-  } catch {
-    return { reward: getMockDashboard().rewards, tier: 'seed', rewardRate: '5%' };
-  }
+  const data = await api.get(ENDPOINTS.CHAKAN_TREE.REWARDS);
+
+  return {
+    reward: normalizeReward(data.reward),
+    tier: data.tier ?? null,
+    rewardRate: data.reward_rate ?? null,
+  };
 }
 
 /**
@@ -219,52 +265,16 @@ export async function getRewards() {
  * Requires authentication + active membership.
  */
 export async function getImpact() {
-  try {
-    const data = await api.get(ENDPOINTS.CHAKAN_TREE.IMPACT);
-    return normalizeImpact(data);
-  } catch {
-    return getMockImpact();
-  }
+  const data = await api.get(ENDPOINTS.CHAKAN_TREE.IMPACT);
+
+  return normalizeImpact(data);
 }
 
-// ─── Mock fallbacks ───────────────────────────────────────────────────────────
-
-function getMockInfo() {
-  return {
-    name:        'Chakan Tree',
-    description: 'A participatory value-sharing system where tea lovers help extend a fairer tea value chain.',
-    stats: {
-      totalParticipants: 1247,
-      totalValueShared:  '$38,420',
-      countriesReached:  34,
-    },
-    tiers: [
-      { id: 'seed',   label: 'Seed',   min_referrals: 0,  reward: '5% of referral purchases' },
-      { id: 'sprout', label: 'Sprout', min_referrals: 5,  reward: '7% + early access' },
-      { id: 'tree',   label: 'Tree',   min_referrals: 20, reward: '10% + estate visit ballot' },
-    ],
-    membership: null,
-  };
-}
-
-function getMockDashboard() {
-  return {
-    referrals: [
-      { id: 'r1', name: 'Sarah M.',  joinedAt: new Date(Date.now() - 5  * 86400000).toISOString(), purchases: 2, valueGenerated: 38.00 },
-      { id: 'r2', name: 'James K.',  joinedAt: new Date(Date.now() - 12 * 86400000).toISOString(), purchases: 1, valueGenerated: 16.99 },
-      { id: 'r3', name: 'Priya S.',  joinedAt: new Date(Date.now() - 30 * 86400000).toISOString(), purchases: 4, valueGenerated: 87.50 },
-    ],
-    rewards: { totalEarned: 14.22, pendingPayout: 7.10, paidOut: 7.12, currency: 'USD' },
-  };
-}
-
-function getMockImpact() {
-  return {
-    teaPickersSupported: 12,
-    communityFunds:      '$240.00',
-    totalValueShared:    '$142.49',
-    treesPlanted:        3,
-  };
-}
-
-export default { getChakanTreeInfo, joinChakanTree, getDashboard, getReferrals, getRewards, getImpact };
+export default {
+  getChakanTreeInfo,
+  joinChakanTree,
+  getDashboard,
+  getReferrals,
+  getRewards,
+  getImpact,
+};
