@@ -468,6 +468,86 @@ also match exactly in production builds.
 
 ---
 
+## About page
+
+`/about` presents CKC / Chakancha through a photographic layout:
+
+```text
+Hero (photo + overlay)
+    ↓
+Our Mission
+    ↓
+What We Stand For (five pillars)
+    ↓
+The Team | Our Story
+    ↓
+CTA banner (dark)
+```
+
+### Images
+
+Hero and team photographs live in:
+
+```text
+public/images/about/
+```
+
+and are referenced by the `HERO_IMAGE` and `TEAM_IMAGE` constants at the top
+of `src/app/about/page.jsx`. Paths and filename casing must match exactly, or
+the hero renders only its overlay gradient.
+
+Because these images sit directly under copy about transparency and
+traceability, they must be authentic photography of the actual team and
+estate — not AI-generated stand-ins.
+
+### Hero overlay
+
+The hero uses two layered gradients: a left-weighted wash that holds
+`rgba(17,17,17,0.5)` through the full text column before fading out at 80%,
+plus a faint bottom anchor. The title and paragraph also carry a soft text
+shadow. When adjusting for a new photograph, deepen the first gradient stop
+rather than extending the fade further right — the goal is to shade the text
+column, not dim the picture.
+
+### Width
+
+The page container is near-full-width (`max-width: 1720px`) with a small,
+even gutter, matching the Origin wide-layout convention. Body paragraphs are
+individually capped (e.g. the mission text) — wide containers, capped
+paragraphs. The hero `next/image` `sizes` prop must match the container
+width (`1720px`); an undersized value serves a low-resolution rendition that
+the browser upscales and softens.
+
+### Spacing model
+
+Vertical rhythm has one owner per layer:
+
+```text
+root padding   → page edges (navbar clearance, footer approach)
+root gap       → whitespace between sections
+section padding→ interior breathing room
+```
+
+Do not add per-section vertical margins alongside the root gap — the two
+stack and produce uneven rhythm. To change spacing between all sections,
+change the root `gap` only.
+
+### CTA banner and footer
+
+The closing CTA banner is intentionally dark next to the dark footer, one
+step apart in tone (`--color-background-charcoal` banner, near-black
+footer), with the page's bottom padding kept tight so the two read as one
+continuous dark ending. Keep the two surfaces on different dark tokens — if
+they ever share the same value, the seam reads as accidental.
+
+### Tokens
+
+The page uses only canonical design tokens. Legacy aliases
+(`--color-tea-green`, `--color-earth-brown`, `--font-sans`, etc.) must not
+be reintroduced.
+
+---
+
 # Chakan Tree / MGM referral network
 
 Chakan Tree separates the public participation experience from the active-member

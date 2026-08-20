@@ -1,4 +1,78 @@
 # Changelog
+### About Page Redesign
+
+The `/about` page was rebuilt from a text-led layout into the approved
+photographic structure:
+
+```text
+Hero (photo + overlay)
+    ↓
+Our Mission
+    ↓
+What We Stand For (five pillars)
+    ↓
+The Team | Our Story
+    ↓
+CTA banner (dark)
+```
+
+#### Structure
+
+- The text-only hero was replaced with a full-bleed team photograph, a
+  left-weighted dark overlay, the page title, and supporting copy.
+- The mission blockquote became a mission statement card with a target icon.
+- The three pillar cards were expanded to five borderless inline columns:
+  Single Origin, Living Wage, Food Hygiene, Traceability, Specialty Quality —
+  each with a one-line description.
+- A new two-column split pairs a team photo card (**The Team**) with the
+  **Our Story** narrative, ending in `Est. 2024 · Nandi Hills, Kenya`.
+- The closing CTAs became a dark banner with a serif headline and three
+  arrow links: Explore our teas, Visit Nandi Hills, Talk to our AI.
+
+#### Hero readability
+
+The initial overlay was too light against bright foliage. The final overlay
+layers two gradients: a left wash holding `rgba(17,17,17,0.5)` through the
+full text column before fading out at 80%, plus a faint bottom anchor across
+the width. Both the title and paragraph carry a soft text shadow as insurance
+over bright patches. The right side of the photograph stays essentially
+untouched.
+
+#### Width and image sharpness
+
+- The page container was widened from `var(--max-width-content)` to a
+  near-full-width `max-width: 1720px`, matching the wide-layout convention
+  used on Origin. Body paragraphs remain individually capped for
+  readability.
+- The hero `next/image` `sizes` prop was corrected from `1200px` to
+  `1720px`. The old value served a 1200px rendition that the browser
+  upscaled, softening the photo on large screens.
+- Hero and team images live in `public/images/about/`.
+
+#### Dark CTA against the dark footer
+
+The CTA banner and the site footer are both dark surfaces. They are now
+deliberately one step apart — the banner uses
+`--color-background-charcoal` against the near-black footer — and the page's
+bottom padding was tightened so the banner sits close above the footer. The
+page ends as one continuous dark gesture rather than two identical slabs
+separated by a light gap. The banner headline cap was widened to 900px so it
+fills the wide container instead of leaving two-thirds empty.
+
+#### Spacing model
+
+Section rhythm is owned by a single `gap` on the page root (flex column).
+Individual sections carry no vertical margins; page edges are owned by the
+root padding, and interior breathing room by each section's own padding.
+
+#### Token migration
+
+All legacy tokens were removed from the page (`--color-tea-green`,
+`--color-earth-brown`, `--color-warm-cream`, `--font-sans`,
+`--font-display` aliases). The page now uses only canonical design tokens
+from `src/app/globals.css`.
+
+---
 
 ### Chakan Tree Per-Level Downline Badges
 
