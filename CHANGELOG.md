@@ -1,4 +1,67 @@
 # Changelog
+### Traceability Section Redesign
+
+The From Field to Cup traceability timeline was rebuilt from a plain timeline
+on the page background into the approved full-bleed photographic section.
+
+#### Background
+
+The section background is two photographs side by side under one overlay:
+
+```text
+tea fields (left, 40%)  |  pouring shot (right, 60%)
+            ↓
+uniform white overlay at 84% opacity
+            ↓
+heading + intro + timeline
+```
+
+Both photographs were extracted from the design file and web-optimised into:
+
+```text
+public/images/impact/traceability-fields.jpg
+public/images/impact/traceability-pour.jpg
+```
+
+The overlay is a single flat `rgba(255, 255, 255, 0.84)` layer, matching the
+design exactly — not a gradient. The left side only appears more washed
+because the fields photograph is brighter than the pouring shot.
+
+#### Full-bleed breakout
+
+The section escapes the page's max-width container and spans the viewport
+using:
+
+```jsx
+width: "100vw",
+marginLeft: "calc(50% - 50vw)",
+```
+
+so the photographs run edge to edge regardless of where the component is
+rendered. The content column inside remains centred at 760px, keeping the
+text aligned with the rest of the page.
+
+#### Section ownership
+
+`TraceabilityTimeline` now owns the **From Field to Cup** heading and the
+intro paragraph, so the photographic wash sits behind them as in the design.
+The duplicate heading and intro were removed from the parent page.
+
+#### Visual treatment
+
+- Step icon circles changed from tea-green to the design's near-black
+  `#1A1F1A`, ringed with `--color-background-main` and lifted with a
+  stronger shadow so they read against the photograph.
+- The connecting line changed from the light border token (invisible over a
+  photo) to translucent dark `rgba(17, 17, 17, 0.25)`.
+- Step titles moved from 18px display serif to the design's 14px bold
+  primary face.
+- Legacy tokens (`--color-tea-green`, `--color-earth-brown`, `--font-sans`,
+  `--font-display` aliases) were replaced with canonical design tokens.
+- The design file's "Packging" typo is corrected to "Packaging" in the
+  implementation.
+
+---
 ### About Page Redesign
 
 The `/about` page was rebuilt from a text-led layout into the approved

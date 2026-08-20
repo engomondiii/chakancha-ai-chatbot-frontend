@@ -548,6 +548,62 @@ be reintroduced.
 
 ---
 
+## Traceability section
+
+The **From Field to Cup** timeline is rendered by `TraceabilityTimeline` as a
+full-bleed photographic section.
+
+### Background
+
+Two photographs sit side by side under one flat overlay:
+
+```text
+tea fields (left, 40%)  |  pouring shot (right, 60%)
+            ↓
+rgba(255, 255, 255, 0.84) overlay
+```
+
+The assets live in:
+
+```text
+public/images/impact/traceability-fields.jpg
+public/images/impact/traceability-pour.jpg
+```
+
+The overlay is intentionally flat, per the design — do not replace it with a
+gradient. Keep the 40 / 60 split; flex normalises the two widths, so setting
+one side to 100% silently reshapes the seam and squeezes the other
+photograph.
+
+### Full-bleed breakout
+
+The section spans the viewport from inside the page container using:
+
+```jsx
+width: "100vw",
+marginLeft: "calc(50% - 50vw)",
+```
+
+The inner content column stays centred at 760px. Because `100vw` includes
+the vertical scrollbar, a small horizontal scroll sliver can appear on some
+platforms — if it does, set `overflow-x: hidden` on the page's outermost
+wrapper.
+
+### Section ownership
+
+`TraceabilityTimeline` owns the **From Field to Cup** heading and intro
+paragraph so the photographic wash sits behind them. The parent page must
+not render its own copy of either, or they appear twice.
+
+### Styling rules
+
+- Step circles are near-black (`#1A1F1A`) with a `--color-background-main`
+  ring; the connecting line is translucent dark so it stays visible over the
+  photographs.
+- The section uses only canonical design tokens.
+
+---
+
 # Chakan Tree / MGM referral network
 
 Chakan Tree separates the public participation experience from the active-member
