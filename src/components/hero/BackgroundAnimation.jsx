@@ -2,12 +2,12 @@
 
 import React, { useEffect, useRef } from "react";
 
-const VIDEO_SRC = "/images/backgrounds/herovid.mp4";
+const VIDEO_SRC = "/images/backgrounds/herovideo2.mp4";
 
 /*
  * Poster shown while the video loads.
  */
-const POSTER_SRC = "/images/backgrounds/beautiful-tea-fields.jpg";
+const POSTER_SRC = "/images/backgrounds/heroBg.svg";
 
 /*
  * Crossfade between the two video copies.
