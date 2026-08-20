@@ -20,78 +20,6 @@ const ROOT_RADIUS = 43;
 const NODE_RADIUS = 34;
 
 /* =========================================================
-   NAME DISPLAY
-
-   Node labels have very little horizontal room, so long
-   names are shortened for display while the complete name
-   remains available through the label's title attribute.
-
-   Rules:
-
-   1 word            → shown as-is (character cap applies)
-   2 words           → shown as-is if short enough,
-                       otherwise "First L."
-   3 or more words   → always "First L."
-   any result        → hard character cap with ellipsis
-
-   Examples:
-
-   "Issac"                        → "Issac"
-   "Josphine Kamau"               → "Josphine Kamau"
-   "Josphine Wanjiru Kamau"       → "Josphine K."
-   "Wickliffe Ondiek Omondi Ouma" → "Wickliffe O."
-========================================================= */
-
-const NAME_MAX_CHARS = 16;
-
-function formatDisplayName(rawName) {
-  const cleaned = String(rawName || "")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  if (!cleaned) {
-    return "Participant";
-  }
-
-  const words = cleaned.split(" ");
-
-  let display;
-
-  if (words.length >= 3) {
-    /*
-     * Long multi-part names collapse to
-     * first name + last-name initial.
-     */
-    const first = words[0];
-    const lastInitial = words[words.length - 1].charAt(0).toUpperCase();
-
-    display = `${first} ${lastInitial}.`;
-  } else if (words.length === 2 && cleaned.length > NAME_MAX_CHARS) {
-    /*
-     * Two-word names only shorten when the
-     * combination itself is too long.
-     */
-    const first = words[0];
-    const lastInitial = words[1].charAt(0).toUpperCase();
-
-    display = `${first} ${lastInitial}.`;
-  } else {
-    display = cleaned;
-  }
-
-  /*
-   * Final guard: a single very long word
-   * (or a very long first name) still gets
-   * capped so the label never overflows.
-   */
-  if (display.length > NAME_MAX_CHARS) {
-    display = `${display.slice(0, NAME_MAX_CHARS - 1)}…`;
-  }
-
-  return display;
-}
-
-/* =========================================================
    TREE HELPERS
 ========================================================= */
 
@@ -117,6 +45,180 @@ function getDepth(node) {
   }
 
   return 1 + Math.max(...children.map(getDepth));
+}
+
+/* =========================================================
+   PER-LEVEL DOWNLINE BADGES
+
+   Every node shows its complete downline, not only its
+   direct referrals. For each participant we traverse
+   their own subtree and count descendants per relative
+   generation:
+
+   level 1 → direct referrals
+   level 2 → referrals of referrals
+   ...
+   level 5 → deepest MGM generation shown
+
+   Each level renders as a small badge arranged on an arc
+   around the circle. Level 1 uses the deepest green and
+   every deeper level fades lighter.
+
+   Example:
+
+   Issac invited Naomi and Josephine.
+   Naomi invited Njerry.
+   Njerry invited 2 people.
+
+   Issac's badges:   level 1 = 2, level 2 = 1, level 3 = 2
+   Naomi's badges:   level 1 = 1, level 2 = 2
+   Njerry's badges:  level 1 = 2
+========================================================= */
+
+const MAX_BADGE_LEVELS = 5;
+
+const LEVEL_SHADES = [
+  { bg: "#3C5E2B", fg: "#FFFFFF" }, /* level 1 — deepest green   */
+  { bg: "#5C9440", fg: "#FFFFFF" }, /* level 2                   */
+  { bg: "#86A96F", fg: "#FFFFFF" }, /* level 3                   */
+  { bg: "#B2CBA3", fg: "#2F4A1E" }, /* level 4                   */
+  { bg: "#DCEFD2", fg: "#4A7C2C" }, /* level 5 — lightest        */
+];
+
+/*
+ * Arc placement around the circle, in degrees.
+ * 0° points right; positive angles sweep clockwise
+ * because screen y grows downward.
+ *
+ * -80° starts just right of the top and each badge
+ * steps 50° clockwise, wrapping down the right side —
+ * matching the design reference.
+ */
+const BADGE_START_ANGLE = -80;
+const BADGE_ANGLE_STEP = 50;
+
+const BADGE_SIZE = 22;
+
+function countDescendantsByLevel(node, maxLevels = MAX_BADGE_LEVELS) {
+  const counts = new Array(maxLevels).fill(0);
+
+  function traverse(current, level) {
+    const children = getChildren(current);
+
+    children.forEach((child) => {
+      if (level < maxLevels) {
+        counts[level] += 1;
+        traverse(child, level + 1);
+      }
+    });
+  }
+
+  traverse(node, 0);
+
+  return counts
+    .map((count, index) => ({ level: index + 1, count }))
+    .filter((entry) => entry.count > 0);
+}
+
+function LevelBadges({ node, circleRadius }) {
+  const levels = countDescendantsByLevel(node);
+
+  if (levels.length === 0) {
+    return null;
+  }
+
+  /*
+   * Badge centres sit just outside the circle edge
+   * so each badge slightly overlaps the ring.
+   */
+  const distance = circleRadius + 3;
+
+  const center = circleRadius;
+
+  return (
+    <>
+      {levels.map((entry, index) => {
+        const angleDeg = BADGE_START_ANGLE + index * BADGE_ANGLE_STEP;
+        const angleRad = (angleDeg * Math.PI) / 180;
+
+        const x = center + distance * Math.cos(angleRad) - BADGE_SIZE / 2;
+        const y = center + distance * Math.sin(angleRad) - BADGE_SIZE / 2;
+
+        const shade = LEVEL_SHADES[entry.level - 1];
+
+        return (
+          <span
+            key={entry.level}
+            className={styles.levelBadge}
+            title={`Level ${entry.level} · ${entry.count} participant${
+              entry.count === 1 ? "" : "s"
+            }`}
+            style={{
+              left: `${x}px`,
+              top: `${y}px`,
+
+              backgroundColor: shade.bg,
+              color: shade.fg,
+            }}
+          >
+            {entry.count}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
+/* =========================================================
+   NAME DISPLAY
+
+   Node labels have very little horizontal room, so long
+   names are shortened for display while the complete name
+   remains available through the label's title attribute.
+
+   Rules:
+
+   1 word            → shown as-is (character cap applies)
+   2 words           → shown as-is if short enough,
+                       otherwise "First L."
+   3 or more words   → always "First L."
+   any result        → hard character cap with ellipsis
+========================================================= */
+
+const NAME_MAX_CHARS = 16;
+
+function formatDisplayName(rawName) {
+  const cleaned = String(rawName || "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!cleaned) {
+    return "Participant";
+  }
+
+  const words = cleaned.split(" ");
+
+  let display;
+
+  if (words.length >= 3) {
+    const first = words[0];
+    const lastInitial = words[words.length - 1].charAt(0).toUpperCase();
+
+    display = `${first} ${lastInitial}.`;
+  } else if (words.length === 2 && cleaned.length > NAME_MAX_CHARS) {
+    const first = words[0];
+    const lastInitial = words[1].charAt(0).toUpperCase();
+
+    display = `${first} ${lastInitial}.`;
+  } else {
+    display = cleaned;
+  }
+
+  if (display.length > NAME_MAX_CHARS) {
+    display = `${display.slice(0, NAME_MAX_CHARS - 1)}…`;
+  }
+
+  return display;
 }
 
 /* =========================================================
@@ -284,9 +386,6 @@ function MemberNode({ layout }) {
 
   const displayName = formatDisplayName(fullName);
 
-  const children = getChildren(node);
-  const childCount = children.length;
-
   return (
     <div
       className={[styles.member, isRoot ? styles.rootMember : ""]
@@ -304,9 +403,12 @@ function MemberNode({ layout }) {
       >
         <LogoMark tone="dark" size={isRoot ? "md" : "sm"} clickable={false} />
 
-        {childCount > 0 && (
-          <span className={styles.childBadge}>{childCount}</span>
-        )}
+        {/*
+         * Per-level downline badges. Level 1 (deepest
+         * green) is the direct referrals; each deeper
+         * generation fades lighter.
+         */}
+        <LevelBadges node={node} circleRadius={radius} />
       </div>
 
       <div className={styles.label}>

@@ -738,7 +738,49 @@ The current implementation uses:
 - shortened participant display names beneath each node (see below)
 - no generation labels inside the tree; generation is communicated by position
 - no referral codes inside tree nodes; referral codes remain available elsewhere in the dashboard
-- direct-child count badges
+- per-level downline badges around each node (see below)
+
+## Tree downline badges
+
+Every node shows its complete downline, one badge per generation, arranged on
+an arc around the circle. `chakanTree.jsx` traverses each participant's own
+subtree with `countDescendantsByLevel()` and renders one badge per non-empty
+level, capped at `MAX_BADGE_LEVELS = 5` to match the reward cascade.
+
+Levels are relative to each node:
+
+```text
+level 1 → that participant's direct referrals
+level 2 → their referrals' referrals
+...
+level 5 → deepest badged generation
+```
+
+Level 1 uses the deepest green and each deeper generation fades lighter:
+
+```text
+Level 1   #3C5E2B   deepest green — direct referrals
+Level 2   #5C9440
+Level 3   #86A96F
+Level 4   #B2CBA3
+Level 5   #DCEFD2   lightest
+```
+
+Hovering a badge shows `Level N · X participants`.
+
+Rules:
+
+1. Badge colours come from the `LEVEL_SHADES` array in `chakanTree.jsx` and
+   are applied inline. `.levelBadge` in the CSS Module carries only the
+   shared shape (size, border, shadow) — do not add colours to the CSS.
+2. Badge positions are computed from `BADGE_START_ANGLE` (-80°) and
+   `BADGE_ANGLE_STEP` (50°), sweeping clockwise from just right of the top.
+   Adjust these constants to change the fan, not per-badge CSS offsets.
+3. `MAX_BADGE_LEVELS` (5) matches the five-generation reward cascade. If the
+   cascade depth ever changes, update both together.
+4. Levels with zero participants render no badge; a leaf node shows none.
+5. The counts are computed from the `referral_tree` the backend supplies —
+   the frontend never invents downline numbers.
 
 All branch connectors are drawn in one SVG layer.
 
@@ -783,6 +825,9 @@ Rules:
 4. `NAME_MAX_CHARS` (16) is tuned to the CSS `max-width: 130px` at the 12px
    label font. If `.name` is widened, raise the cap with it — the two limits
    must not disagree.
+   - [ ] Badge colours live in `LEVEL_SHADES`, not in the CSS Module
+   - [ ] `MAX_BADGE_LEVELS` matches the reward-cascade depth
+
 5. The CSS `text-overflow: ellipsis` rule stays as a last-resort visual guard
    and must not be removed.
 
@@ -1049,30 +1094,32 @@ Before opening a pull request:
 
 ## Troubleshooting
 
-| Symptom                                              | Cause and fix                                                                                                                                                                                 |
-| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| React hydration error `#418` / `#423`                | Check for unstable server/client initial rendering, persisted client state, nested anchors, or render-time redirects. Chakan Tree dashboard membership checks should wait until client mount. |
-| React error `#310`                                   | A Hook was called only on some renders. Keep Hooks before early returns or remove unnecessary `useMemo` usage.                                                                                |
-| Hero video does not play                             | Check `VIDEO_SRC` path and filename case, and confirm the `<video>` keeps `muted` and `playsInline` for mobile autoplay.                                                                      |
-| Hero loop restart is visible                         | The standby copy failed to start (native hard loop was used) or `LOOP_FADE_MS` is too short. Confirm both video copies preload and lengthen the crossfade window.                             |
-| Hero shows only the poster image                     | Autoplay was blocked or the video path is wrong; the poster is the intended fallback. Verify `VIDEO_SRC` first.                                                                               |
-| Hero camera drift resets or stutters at the loop     | The drift animation was moved from the wrapper onto the video elements. Keep the drift on the wrapper around both copies.                                                                     |
-| Tree name looks cut off mid-word                     | The name bypassed `formatDisplayName()` or `NAME_MAX_CHARS` no longer matches the `.name` CSS width. Route the label through the formatter and keep the two limits in sync.                   |
-| Tree shows the wrong surname initial                 | The data source supplies surname-first names. Adjust the initial index inside `formatDisplayName()`.                                                                                          |
-| Chakan Tree page repeats forever                     | `chakanTree.jsx` is rendering `ParticipantDashboard`, causing recursive component rendering. Tree component must contain only the visual tree.                                                |
-| `Can't resolve './ReferralTree'`                     | The actual file is `chakanTree.jsx`. Import from `./chakanTree`.                                                                                                                              |
-| `'ReferralTree' is not exported from './chakanTree'` | Match the import to the export. Current implementation uses `export default ReferralTree` and `import ReferralTree from "./chakanTree"`.                                                      |
-| Tree branch misses a node vertically                 | `.member` is using `translate(-50%, -50%)`. Use `translateX(-50%)` with the current `top: y - radius` positioning.                                                                            |
-| Tree branch misses nodes on mobile                   | CSS node size differs from `NODE_RADIUS` / `ROOT_RADIUS`. Keep 68px and 86px sizes or update both JS and CSS together.                                                                        |
-| Chakan Tree only shows the root or direct referrals  | Backend has not yet returned nested `referralTree`; frontend is using `dashboard.referrals` as Level 1 fallback.                                                                              |
-| Active participant is sent back to join              | Refresh membership and check `membership.isActive`; do not use referral count for access.                                                                                                     |
-| Chakan Tree styles do not load                       | Confirm `chakanTree.jsx` imports `./chakanTree.module.css` with exact filename case.                                                                                                          |
-| React hydration error from logo navigation           | Avoid clickable logo inside another link; use `clickable={false}`.                                                                                                                            |
-| `Module not found: '@components/common/logo'`        | Use `@/components/common/Logo`.                                                                                                                                                               |
-| Colours revert to green and brown                    | Ensure only `src/app/globals.css` controls global design tokens.                                                                                                                              |
-| Gallery thumbnails fail in production                | Check same-origin `/images/...` normalisation in `normalizeProduct()`.                                                                                                                        |
-| Product artwork is cropped                           | Use `object-fit: contain`.                                                                                                                                                                    |
-| Backend images do not load                           | Check `NEXT_PUBLIC_API_URL`.                                                                                                                                                                  |
+| Symptom                                                | Cause and fix                                                                                                                                                                                 |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| React hydration error `#418` / `#423`                  | Check for unstable server/client initial rendering, persisted client state, nested anchors, or render-time redirects. Chakan Tree dashboard membership checks should wait until client mount. |
+| React error `#310`                                     | A Hook was called only on some renders. Keep Hooks before early returns or remove unnecessary `useMemo` usage.                                                                                |
+| Hero video does not play                               | Check `VIDEO_SRC` path and filename case, and confirm the `<video>` keeps `muted` and `playsInline` for mobile autoplay.                                                                      |
+| Hero loop restart is visible                           | The standby copy failed to start (native hard loop was used) or `LOOP_FADE_MS` is too short. Confirm both video copies preload and lengthen the crossfade window.                             |
+| Hero shows only the poster image                       | Autoplay was blocked or the video path is wrong; the poster is the intended fallback. Verify `VIDEO_SRC` first.                                                                               |
+| Hero camera drift resets or stutters at the loop       | The drift animation was moved from the wrapper onto the video elements. Keep the drift on the wrapper around both copies.                                                                     |
+| Tree name looks cut off mid-word                       | The name bypassed `formatDisplayName()` or `NAME_MAX_CHARS` no longer matches the `.name` CSS width. Route the label through the formatter and keep the two limits in sync.                   |
+| Tree shows the wrong surname initial                   | The data source supplies surname-first names. Adjust the initial index inside `formatDisplayName()`.                                                                                          |
+| Node shows only a level 1 badge despite a deep network | The backend `referral_tree` arrived without nested descendants, or the API client flattened it. Confirm the serializer returns nested children and `getDashboard()` normalises recursively.   |
+| Badges overlap the name label or a neighbouring node   | Too many badge levels for the fan angle. Widen `BADGE_ANGLE_STEP` or shift `BADGE_START_ANGLE` in `chakanTree.jsx` — do not move badges with CSS offsets.                                     |
+| Chakan Tree page repeats forever                       | `chakanTree.jsx` is rendering `ParticipantDashboard`, causing recursive component rendering. Tree component must contain only the visual tree.                                                |
+| `Can't resolve './ReferralTree'`                       | The actual file is `chakanTree.jsx`. Import from `./chakanTree`.                                                                                                                              |
+| `'ReferralTree' is not exported from './chakanTree'`   | Match the import to the export. Current implementation uses `export default ReferralTree` and `import ReferralTree from "./chakanTree"`.                                                      |
+| Tree branch misses a node vertically                   | `.member` is using `translate(-50%, -50%)`. Use `translateX(-50%)` with the current `top: y - radius` positioning.                                                                            |
+| Tree branch misses nodes on mobile                     | CSS node size differs from `NODE_RADIUS` / `ROOT_RADIUS`. Keep 68px and 86px sizes or update both JS and CSS together.                                                                        |
+| Chakan Tree only shows the root or direct referrals    | Backend has not yet returned nested `referralTree`; frontend is using `dashboard.referrals` as Level 1 fallback.                                                                              |
+| Active participant is sent back to join                | Refresh membership and check `membership.isActive`; do not use referral count for access.                                                                                                     |
+| Chakan Tree styles do not load                         | Confirm `chakanTree.jsx` imports `./chakanTree.module.css` with exact filename case.                                                                                                          |
+| React hydration error from logo navigation             | Avoid clickable logo inside another link; use `clickable={false}`.                                                                                                                            |
+| `Module not found: '@components/common/logo'`          | Use `@/components/common/Logo`.                                                                                                                                                               |
+| Colours revert to green and brown                      | Ensure only `src/app/globals.css` controls global design tokens.                                                                                                                              |
+| Gallery thumbnails fail in production                  | Check same-origin `/images/...` normalisation in `normalizeProduct()`.                                                                                                                        |
+| Product artwork is cropped                             | Use `object-fit: contain`.                                                                                                                                                                    |
+| Backend images do not load                             | Check `NEXT_PUBLIC_API_URL`.                                                                                                                                                                  |
 
 ---
 

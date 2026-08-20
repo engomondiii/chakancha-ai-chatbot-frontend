@@ -207,27 +207,25 @@
 }
 
 /* =========================================================
-   DIRECT CHILD COUNT BADGE
+   PER-LEVEL DOWNLINE BADGES
+
+   One badge per generation of the node's own network,
+   arranged on an arc around the circle. Colours are set
+   inline by chakanTree.jsx: level 1 is the deepest green
+   and each deeper level fades lighter.
 ========================================================= */
 
-.childBadge {
+.levelBadge {
   position: absolute;
 
-  right: -5px;
-  bottom: -3px;
+  width: 22px;
+  height: 22px;
 
-  min-width: 21px;
-  height: 21px;
-
-  padding: 0 5px;
-
-  border-radius: 999px;
+  border-radius: 50%;
 
   display: flex;
   align-items: center;
   justify-content: center;
-
-  background: var(--color-background-dark);
 
   border: 2px solid var(--color-background-main);
 
@@ -236,7 +234,13 @@
   font-size: 9px;
   font-weight: 700;
 
-  color: var(--color-text-inverse);
+  line-height: 1;
+
+  box-shadow: 0 2px 6px rgba(17, 17, 17, 0.14);
+
+  cursor: default;
+
+  z-index: 4;
 }
 
 /* =========================================================

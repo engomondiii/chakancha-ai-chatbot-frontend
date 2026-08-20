@@ -1,5 +1,73 @@
 # Changelog
 
+### Chakan Tree Per-Level Downline Badges
+
+Tree nodes previously showed a single badge counting only direct referrals.
+Each node now shows its complete downline, one badge per generation, so a
+participant's full network depth is visible at a glance.
+
+For every node, `chakanTree.jsx` traverses that participant's own subtree and
+counts descendants per relative generation:
+
+```text
+level 1 → direct referrals
+level 2 → referrals of referrals
+level 3 → third generation
+level 4 → fourth generation
+level 5 → fifth generation (deepest shown)
+```
+
+The five-level cap matches the reward cascade — generations that earn nothing
+are not badged.
+
+Levels are relative to each node, mirroring the reward cascade. Example:
+
+```text
+Issac invited Naomi and Josephine.
+Naomi invited Njerry.
+Njerry invited 2 people.
+
+Issac's badges:   level 1 = 2, level 2 = 1, level 3 = 2
+Naomi's badges:   level 1 = 1, level 2 = 2
+Njerry's badges:  level 1 = 2
+```
+
+#### Visual treatment
+
+- Badges are arranged on an arc around each circle, starting just right of
+  the top and stepping clockwise (`BADGE_START_ANGLE = -80°`,
+  `BADGE_ANGLE_STEP = 50°`).
+- Level 1 uses the deepest green and each deeper generation fades lighter:
+
+```text
+Level 1   #3C5E2B   deepest green — direct referrals
+Level 2   #5C9440
+Level 3   #86A96F
+Level 4   #B2CBA3
+Level 5   #DCEFD2   lightest
+```
+
+- Levels with zero participants render no badge.
+- Hovering a badge shows a tooltip: `Level N · X participants`.
+
+#### Implementation
+
+- `countDescendantsByLevel()` performs the per-node traversal, capped at
+  `MAX_BADGE_LEVELS = 5`.
+- `LevelBadges` renders the arc; badge colours come from the `LEVEL_SHADES`
+  scale in `chakanTree.jsx`, not from CSS.
+- The old single `.childBadge` style was removed from
+  `chakanTree.module.css` and replaced by `.levelBadge`, which carries the
+  shared shape while colour and position are set inline per badge.
+- Only `chakanTree.jsx` and `chakanTree.module.css` changed.
+  `ParticipantDashboard.jsx` passes the same `root` prop as before, and the
+  participant-count chip in the dashboard header is unaffected.
+
+Badge depth follows the data: nodes show as many generations as the backend
+`referral_tree` supplies, up to five.
+
+---
+
 ### Chakan Tree Multi-Generation Referral Network
 
 The Chakan Tree now renders and pays out across five generations. Previously
