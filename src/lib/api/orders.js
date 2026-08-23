@@ -16,31 +16,6 @@
 
 import api from './client';
 import { ENDPOINTS } from './endpoints';
-import { nanoid }    from 'nanoid';
-
-// ─── Mock generator ───────────────────────────────────────────────────────────
-
-function createMockOrder(payload) {
-  return {
-    id:               `ORD-${nanoid(8).toUpperCase()}`,
-    status:           'confirmed',
-    payment_status:   'paid',
-    payment_method:   payload.payment_method || 'card',
-    created_at:       new Date().toISOString(),
-    items:            [],
-    subtotal:         payload.subtotal || 0,
-    shipping_cost:    5.00,
-    tax:              (payload.subtotal || 0) * 0.16,
-    discount:         0,
-    total:            (payload.subtotal || 0) * 1.16 + 5,
-    currency:         'USD',
-    coupon_code:      payload.coupon_code || '',
-    shipping_address: payload.shipping || {},
-    estimated_delivery: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-    tracking_url:     null,
-    tracking_number:  null,
-  };
-}
 
 // ─── Create order ─────────────────────────────────────────────────────────────
 
@@ -80,18 +55,38 @@ export async function createOrder(payload) {
     payment_method: payload.payment?.method || payload.payment_method || 'card',
     coupon_code:    payload.coupon_code     || '',
     country:        payload.shipping?.country || 'US',
+    // Payment tokens — the backend verifies/captures these server-side before
+    // creating the order. Dropping them silently skips verification.
+    paypal_order_id:          payload.paypal_order_id          || '',
+    stripe_payment_intent_id: payload.stripe_payment_intent_id || '',
   };
 
   try {
     const data = await api.post(ENDPOINTS.ORDERS.CREATE, backendPayload);
     return data.order || data;
   } catch (err) {
-    if (process.env.NODE_ENV === 'development' || err?.isNetworkError) {
-      console.warn('[orders.js] Using mock order creation');
-      await new Promise((r) => setTimeout(r, 1200));
-      return createMockOrder(backendPayload);
-    }
-    throw err;
+    // RECOVERY CONTEXT ONLY — this payload is NOT safe to re-POST.
+    // The failure may have happened after PayPal captured, or after Django
+    // created the order but before the response reached the browser. Re-sending
+    // the same paypal_order_id could attempt a second capture or duplicate
+    // application state. Any recovery must be a deliberate, server-checked
+    // operation — never an automatic retry of this payload.
+    try {
+      sessionStorage.setItem('chakancha_pending_order', JSON.stringify({
+        payload:  backendPayload,
+        failedAt: new Date().toISOString(),
+        reason:   err?.isNetworkError ? 'network' : `http_${err?.status ?? 'unknown'}`,
+        note:     'recovery/debug context only — do not auto-retry',
+      }));
+    } catch { /* storage unavailable — recovery data is best-effort */ }
+
+    // We genuinely do not know whether the payment or the order succeeded,
+    // so do not tell the buyer the payment failed. Original error kept as cause.
+    throw new Error(
+      'We could not confirm your order. Please do not retry payment. ' +
+      'Check your orders or contact support.',
+      { cause: err }
+    );
   }
 }
 

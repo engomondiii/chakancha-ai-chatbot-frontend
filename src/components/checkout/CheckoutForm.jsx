@@ -24,6 +24,7 @@ import { ShippingForm }       from './ShippingForm';
 import { PaymentForm }        from './PaymentForm';
 import { ShippingCalculator } from './ShippingCalculator';
 import { createOrder, initStripePayment, initPayPalPayment } from '@/lib/api/orders';
+import { syncCartToServer }   from '@/lib/api/cart';
 import { useStore }           from '@/store';
 import styles                 from './CheckoutForm.module.css';
 
@@ -161,6 +162,7 @@ export function CheckoutForm() {
     // cardNumber / expiry / cvv removed — Stripe CardElement owns those
   });
 
+  const cartItems     = useStore((s) => s.cartItems);
   const cartTotal     = useStore((s) => s.cartTotal);
   const appliedCoupon = useStore((s) => s.appliedCoupon);
   const clearCart     = useStore((s) => s.clearCart);
@@ -259,6 +261,19 @@ export function CheckoutForm() {
 
       // ── PayPal flow ───────────────────────────────────────────────────────
       } else if (paymentMethod === 'paypal') {
+        // Step 0: push the local cart to the authenticated Django cart.
+        // orders/services.py builds the order from Cart.objects.get(user=...),
+        // which is otherwise empty. Server-side only — the local zustand /
+        // localStorage cart is untouched and is still cleared later, only
+        // after createOrder() succeeds on the PayPal return page.
+        try {
+          await syncCartToServer(cartItems);
+        } catch (syncErr) {
+          throw new Error(
+            syncErr.message || 'Could not prepare your cart for checkout. Please try again.'
+          );
+        }
+
         // Step 1: Backend creates a PayPal order and returns approval_url
         const paypalInit = await initPayPalPayment(cartTotal);
 

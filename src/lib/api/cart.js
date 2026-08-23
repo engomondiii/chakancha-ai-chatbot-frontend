@@ -88,6 +88,30 @@ export async function clearServerCart() {
 }
 
 /**
+ * Push the local (zustand/localStorage) cart to the server cart.
+ *
+ * The local cart is the source of truth for the UI, but orders/services.py
+ * builds the order from the Django Cart bound to request.user. Without this
+ * sync that cart is always empty and /orders/create/ returns 400
+ * "Your cart is empty. Please add items before placing an order."
+ *
+ * Clears first because CartAddView is additive (item.quantity + quantity),
+ * so a retry would otherwise double every line. Sequential because all the
+ * writes race on the same get_or_create(user=...) row.
+ *
+ * @param {Array} items - local cartItems: [{ id, quantity }]
+ */
+export async function syncCartToServer(items = []) {
+  await api.post(ENDPOINTS.CART.CLEAR);
+  for (const item of items) {
+    await api.post(ENDPOINTS.CART.ADD, {
+      product_id: item.id,
+      quantity:   item.quantity,
+    });
+  }
+}
+
+/**
  * Validate cart items — check stock availability.
  * Backend expects: { items: [{ product_id, quantity }] }
  * @param {Array} cartItems - Local cart items
@@ -126,6 +150,7 @@ export async function validateCoupon(code, subtotal = 0) {
 
 export default {
   fetchServerCart,
+  syncCartToServer,
   addToServerCart,
   updateServerCartItem,
   removeFromServerCart,
