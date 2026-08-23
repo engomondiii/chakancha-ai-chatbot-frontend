@@ -31,7 +31,16 @@ function StatusBadge({ status }) {
 
 function OrderCard({ order }) {
   const router = useRouter();
-  const date   = new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  // OrderListSerializer sends snake_case, and DRF serialises DecimalField as a
+  // string (COERCE_DECIMAL_TO_STRING defaults to True), so `total` arrives as
+  // "63.77". Optional chaining does not guard against the wrong type — calling
+  // .toFixed() on a string is what crashed this page.
+  const createdAt   = order.created_at ?? order.createdAt;
+  const date        = createdAt
+    ? new Date(createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+    : '';
+  const total       = Number(order.total);
+  const trackingUrl = order.tracking_url ?? order.trackingUrl;
 
   return (
     <div style={{ backgroundColor: 'white', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
@@ -43,7 +52,7 @@ function OrderCard({ order }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)' }}>
           <StatusBadge status={order.status} />
           <span style={{ fontFamily: 'var(--font-sans)', fontSize: 16, fontWeight: 700, color: 'var(--color-tea-green)' }}>
-            ${order.total?.toFixed(2)}
+            ${Number.isFinite(total) ? total.toFixed(2) : '0.00'}
           </span>
         </div>
       </div>
@@ -68,8 +77,8 @@ function OrderCard({ order }) {
 
       {/* Actions */}
       <div style={{ display: 'flex', gap: 'var(--spacing-sm)', flexWrap: 'wrap' }}>
-        {order.trackingUrl && (
-          <a href={order.trackingUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, fontFamily: 'var(--font-sans)', fontWeight: 500, color: 'var(--color-tea-green)', textDecoration: 'none', backgroundColor: 'rgba(45,80,22,0.06)', border: '1px solid rgba(45,80,22,0.15)', borderRadius: 'var(--radius-md)', padding: '6px 12px' }}>
+        {trackingUrl && (
+          <a href={trackingUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, fontFamily: 'var(--font-sans)', fontWeight: 500, color: 'var(--color-tea-green)', textDecoration: 'none', backgroundColor: 'rgba(45,80,22,0.06)', border: '1px solid rgba(45,80,22,0.15)', borderRadius: 'var(--radius-md)', padding: '6px 12px' }}>
             <ExternalLink size={12} /> Track order
           </a>
         )}
