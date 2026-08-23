@@ -1,4 +1,83 @@
 # Changelog
+### PayPal Sandbox Checkout Flow
+
+PayPal testing moved off the local mock implementation onto PayPal Sandbox, and
+the checkout path was corrected so an order can actually be created from it.
+
+#### Cart synchronisation
+
+The cart lived only in Zustand and `localStorage`; nothing ever wrote it to the
+Django `Cart` bound to the authenticated user. `orders/services.py` builds an
+order from that server cart, so `/orders/create/` returned:
+
+```text
+400 {"error": "Your cart is empty. Please add items before placing an order."}
+```
+
+on every checkout attempt. `syncCartToServer()` was added to
+`src/lib/api/cart.js` and is called from `CheckoutForm.jsx` immediately before
+the PayPal redirect, after shipping and payment validation have passed. It
+clears the server cart first — `CartAddView` is additive, so a retry would
+otherwise double every line — then adds each item sequentially.
+
+The local cart is not touched: only the server-side `/cart/` endpoints are
+called, and `clearCart()` still runs only after `createOrder()` succeeds.
+
+#### Payment token pass-through
+
+`createOrder()` built its backend payload from four fields and silently dropped
+`paypal_order_id`, even though the PayPal return page passes it. Without the
+token `_verify_payment()` skipped capture entirely while the order was still
+marked paid. Both `paypal_order_id` and `stripe_payment_intent_id` are now
+forwarded.
+
+#### Removed fabricated order fallback
+
+On a network error or timeout `createOrder()` previously returned a
+`createMockOrder()` object — a `nanoid` order ID, `payment_status: 'paid'`, and
+an invented total. After a real PayPal capture this showed a success page for an
+order that did not exist, with referral/MGM logic never having run.
+
+The fallback and its generator were removed. A failure now stores recovery
+context under `chakancha_pending_order` in `sessionStorage` and raises:
+
+```text
+We could not confirm your order. Please do not retry payment.
+Check your orders or contact support.
+```
+
+The wording is deliberately neutral — at that point neither the payment nor the
+order outcome is known. The stored payload is recovery/debug context only; it is
+not re-POSTed, and no automatic retry was added, because replaying the same
+`paypal_order_id` could attempt a second capture.
+
+#### Payment amount
+
+The amount sent to PayPal comes from the customer's cart at checkout time
+(`cartTotal` → `initPayPalPayment()` → `subtotal` → `create_paypal_order()` →
+`amount.value`). No fixed test amount is used anywhere on that path.
+
+This figure is **not** the same as `Order.total` — the backend recomputes
+shipping and tax independently in `orders/services.py`, and nothing currently
+reconciles the two.
+
+#### Backend — sandbox lock
+
+`services/paypal_service.py` had hardcoded mock bodies that returned before any
+HTTP call. `create_paypal_order()` and `capture_paypal_order()` now issue real
+PayPal Sandbox requests, and `_get_base_url()` raises unless `PAYPAL_MODE` is
+`sandbox`, so the live host is unreachable from every code path.
+`get_paypal_order()` and `refund_paypal_capture()` remain mocked.
+
+#### Known gaps
+
+- `/orders/create/` has no idempotency protection: the `Order` model stores
+  neither `paypal_order_id` nor `capture_id`, so a duplicate cannot be detected.
+- A capture that succeeds before order creation fails leaves money taken with no
+  recoverable order.
+- Stripe is unchanged and still live; it is not part of the sandbox work.
+- The Sandbox flow has not yet been exercised end to end.
+
 ### Traceability Section Redesign
 
 The From Field to Cup traceability timeline was rebuilt from a plain timeline
