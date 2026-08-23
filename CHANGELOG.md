@@ -1,4 +1,55 @@
 # Changelog
+### Kenya Shipping Zone and PayPal Amount Inputs
+
+#### Kenya shipping zone
+
+`src/lib/constants/shippingZones.js` mirrors the backend shipping zones. The
+Kenya entry was denominated in KES while orders are priced in USD:
+
+```text
+baseCost:       300   KES  →  3.00   USD
+freeThreshold:  5000  KES  →  40.00  USD
+currency:       'KES'      →  'USD'
+```
+
+The other seven zones were already USD and are unchanged.
+
+These frontend values are **not** the authoritative payment source. They feed
+`ShippingCalculator`'s offline fallback and display only — the payable total is
+calculated by the backend from the authenticated Django cart.
+
+#### PayPal amount inputs
+
+The backend now calculates the PayPal Sandbox amount itself from the
+authenticated Django cart, using `country` for the shipping zone and tax rate
+and `coupon_code` for the discount. `initPayPalPayment()` was sending neither,
+so the backend fell back to `country='US'` with no coupon — a Kenyan order would
+have been charged the North America rate ($40.00) while `create_order()`
+recorded the Kenya total ($26.20).
+
+`initPayPalPayment()` now accepts and sends both:
+
+```js
+initPayPalPayment(cartTotal, country, couponCode)
+→ { payment_method, subtotal, currency, country, coupon_code }
+```
+
+`CheckoutForm.jsx` passes `shippingPayload.country || 'US'` and
+`appliedCoupon?.code || ''` — the same expressions the PayPal return page uses
+when it calls `createOrder()`, so both legs resolve to identical values and the
+charged amount matches the recorded `Order.total`.
+
+`subtotal` is still sent for backward compatibility, but the backend does not
+trust it for PayPal. Replaced code in both files is preserved in commented
+`LEGACY` blocks.
+
+#### Known gap
+
+The cart page still shows a hardcoded $5 flat shipping estimate with no tax
+(`cartSlice.js`), so a buyer can see $25.00 while PayPal charges $26.20. This
+work aligns PayPal with the Order, not with the cart display — that is later
+checkout-quote UI work.
+
 ### PayPal Sandbox Checkout Flow
 
 PayPal testing moved off the local mock implementation onto PayPal Sandbox, and

@@ -11,9 +11,9 @@ export const SHIPPING_ZONES = [
     name:           'Kenya',
     carrier:        'DHL Kenya',
     estimatedDays:  '1–3 business days',
-    baseCost:       300,   // KES
-    freeThreshold:  5000,  // KES
-    currency:       'KES',
+    baseCost:       3.00,  // USD
+    freeThreshold:  40.00, // USD
+    currency:       'USD',
     countries: [
       { code: 'KE', name: 'Kenya' },
     ],

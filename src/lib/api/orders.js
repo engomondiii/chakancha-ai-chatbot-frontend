@@ -237,14 +237,33 @@ export async function initStripePayment(subtotal, currency = 'USD') {
  *   3. After buyer approves, PayPal redirects to return_url with ?token=PAYPAL_ORDER_ID
  *   4. Call createOrder() with paypal_order_id = token from URL
  *
- * @param {number} subtotal  - Cart subtotal in USD
- * @param {string} currency  - ISO 4217 (default 'USD')
+ * `subtotal` is sent for backward compatibility only — the backend recomputes
+ * the payable amount from the authenticated Django cart and does NOT trust it.
+ * `country` and `coupon_code` DO affect the amount: the backend uses them for
+ * the shipping zone, tax rate, and discount, so they must match what
+ * createOrder() will later send or the charge and the Order will disagree.
+ *
+ * @param {number} subtotal   - Cart subtotal in USD (legacy, untrusted)
+ * @param {string} country    - ISO 3166-1 alpha-2 shipping country
+ * @param {string} couponCode - Applied coupon code, or '' when none
+ * @param {string} currency   - ISO 4217 (default 'USD')
  */
-export async function initPayPalPayment(subtotal, currency = 'USD') {
+export async function initPayPalPayment(subtotal, country = 'US', couponCode = '', currency = 'USD') {
+  // ── LEGACY payload — DISABLED DURING PHASE A ──────────────────────────────
+  // Sent only subtotal + currency, so the backend fell back to country='US'
+  // and no coupon, producing a PayPal amount that disagreed with Order.total.
+  // const data = await api.post(ENDPOINTS.CHECKOUT.PROCESS_PAYMENT, {
+  //   payment_method: 'paypal',
+  //   subtotal:       parseFloat(subtotal.toFixed(2)),
+  //   currency,
+  // });
+  // ── END LEGACY ────────────────────────────────────────────────────────────
   const data = await api.post(ENDPOINTS.CHECKOUT.PROCESS_PAYMENT, {
     payment_method: 'paypal',
     subtotal:       parseFloat(subtotal.toFixed(2)),
     currency,
+    country,
+    coupon_code:    couponCode,
   });
   return data; // { paypal_order_id, approval_url, status }
 }

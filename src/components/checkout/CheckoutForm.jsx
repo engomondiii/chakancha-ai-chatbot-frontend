@@ -274,8 +274,17 @@ export function CheckoutForm() {
           );
         }
 
-        // Step 1: Backend creates a PayPal order and returns approval_url
-        const paypalInit = await initPayPalPayment(cartTotal);
+        // Step 1: Backend creates a PayPal order and returns approval_url.
+        //         country + coupon must match what createOrder() sends later,
+        //         or the PayPal charge and Order.total will disagree.
+        // ── LEGACY — DISABLED DURING PHASE A ──────────────────────────────
+        // const paypalInit = await initPayPalPayment(cartTotal);
+        // ── END LEGACY ────────────────────────────────────────────────────
+        const paypalInit = await initPayPalPayment(
+          cartTotal,
+          shippingPayload.country || 'US',
+          appliedCoupon?.code || '',
+        );
 
         // Step 2: Save checkout data so /checkout/paypal/success can complete the order
         if (typeof window !== 'undefined') {
