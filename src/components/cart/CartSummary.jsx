@@ -12,11 +12,12 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tag, X, Check, ChevronRight } from 'lucide-react';
 import { useStore } from '@/store';
 import { useCart }  from '@/lib/hooks/useCart';
 import { formatCurrency } from '@/lib/utils/currency';
+import { syncCartToServer, fetchServerCart } from '@/lib/api/cart';
 
 const FREE_SHIPPING_THRESHOLD = 50; // USD
 
@@ -25,7 +26,9 @@ export function CartSummary({ onCheckout, compact = false }) {
   const [couponStatus, setCouponStatus] = useState(null);
   const [couponMsg,    setCouponMsg]    = useState('');
   const [applying,     setApplying]     = useState(false);
+  const [quote,        setQuote]        = useState(null);
 
+  const cartItems     = useStore((s) => s.cartItems);
   const cartSubtotal  = useStore((s) => s.cartSubtotal);
   const cartShipping  = useStore((s) => s.cartShipping);
   const cartTax       = useStore((s) => s.cartTax);
@@ -33,6 +36,60 @@ export function CartSummary({ onCheckout, compact = false }) {
   const cartDiscount  = useStore((s) => s.cartDiscount);
   const appliedCoupon = useStore((s) => s.appliedCoupon);
   const removeCoupon  = useStore((s) => s.removeCoupon);
+  const isAuthenticated  = useStore((s) => s.isAuthenticated);
+  const shippingCountry  = useStore((s) => s.shippingCountry);
+
+  // ── Backend quote — the single pricing authority ─────────────────────────
+  // quote_cart() computes subtotal, discount, shipping, tax and total, and is
+  // the same function behind /checkout, PayPal initialisation and
+  // create_order(). The cart must not re-derive any of it in React: the local
+  // estimate taxes the POST-discount amount while the backend taxes the
+  // PRE-discount subtotal, so the two disagree the moment a discount exists.
+  //
+  // An eligible referred buyer's 5% Chakan Tree benefit is applied
+  // automatically from Membership.referred_by, with no code to enter.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadQuote() {
+      if (!isAuthenticated || cartItems.length === 0) {
+        setQuote(null);
+        return;
+      }
+      try {
+        // NOTE ON MULTI-DEVICE CARTS (existing behaviour, documented not changed):
+        // syncCartToServer() makes THIS browser's cart authoritative over the
+        // server-side cart — a cart built on another device is replaced. This
+        // is what checkout has always done; pricing the cart here simply makes
+        // it happen earlier. Redesigning multi-device merge is out of scope.
+        await syncCartToServer(cartItems);
+        const serverCart = await fetchServerCart(shippingCountry);
+        if (!cancelled) setQuote(serverCart || null);
+      } catch {
+        if (!cancelled) setQuote(null);   // fall back to the local estimate
+      }
+    }
+
+    loadQuote();
+    return () => { cancelled = true; };
+  }, [isAuthenticated, cartItems, shippingCountry, appliedCoupon]);
+
+  // Displayed figures: backend quote when available, local estimate otherwise.
+  //
+  // The referral discount is shown as soon as the backend returns it: it depends
+  // only on the product subtotal and the buyer's referral eligibility, neither
+  // of which needs a shipping country. Shipping and tax DO need one, so until
+  // the buyer supplies it they are labelled as calculated at checkout and no
+  // final payable total is implied. /checkout remains the authoritative quote.
+  const countryKnown = Boolean(shippingCountry);
+  const num       = (v, fallback) => (v === undefined || v === null ? fallback : Number(v));
+  const dSubtotal = quote ? num(quote.subtotal,      cartSubtotal) : cartSubtotal;
+  const dDiscount = quote ? num(quote.discount,      cartDiscount) : cartDiscount;
+  const dShipping = quote ? num(quote.shipping_cost, cartShipping) : cartShipping;
+  const dTax      = quote ? num(quote.tax,           cartTax)      : cartTax;
+  const dTotal    = quote ? num(quote.total,         cartTotal)    : cartTotal;
+  const dLabel    = quote ? (quote.discount_label || 'Discount')
+                          : `Discount${appliedCoupon?.code ? ` (${appliedCoupon.code})` : ''}`;
 
   // Use the hook's applyCoupon which calls the real backend
   const { applyCoupon } = useCart();
@@ -54,7 +111,10 @@ export function CartSummary({ onCheckout, compact = false }) {
       setCouponInput('');
     } else {
       setCouponStatus('error');
-      setCouponMsg(result.error || 'Invalid coupon code. Try WELCOME10, SAVE50, or FREESHIP.');
+      // LEGACY: suggested WELCOME10 / SAVE50 / FREESHIP — mock codes that do
+      // not exist in production. Referred customers need no code at all: the
+      // 5% Chakan Tree benefit is applied automatically at checkout.
+      setCouponMsg(result.error || 'Invalid coupon code.');
     }
 
     setApplying(false);
@@ -159,17 +219,33 @@ export function CartSummary({ onCheckout, compact = false }) {
       {/* Totals */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8,
         borderTop: '1px solid var(--color-border)', paddingTop: 'var(--spacing-md)' }}>
-        <TotalRow label="Subtotal"  value={fmt(cartSubtotal)} />
-        {cartDiscount > 0 && (
-          <TotalRow label="Discount" value={`−${fmt(cartDiscount)}`} valueColor="var(--color-success)" />
+        <TotalRow label="Subtotal"  value={fmt(dSubtotal)} />
+        {dDiscount > 0 && (
+          <TotalRow label={dLabel} value={`−${fmt(dDiscount)}`} valueColor="var(--color-success)" />
         )}
-        <TotalRow
-          label="Shipping"
-          value={cartShipping === 0 ? 'Free' : fmt(cartShipping)}
-          valueColor={cartShipping === 0 ? 'var(--color-success)' : undefined}
-        />
-        <TotalRow label="Tax" value={cartTax > 0 ? fmt(cartTax) : 'Calculated at checkout'} small />
-        <TotalRow label="Total" value={fmt(cartTotal)} bold />
+
+        {countryKnown ? (
+          <>
+            <TotalRow
+              label="Shipping"
+              value={dShipping === 0 ? 'Free' : fmt(dShipping)}
+              valueColor={dShipping === 0 ? 'var(--color-success)' : undefined}
+            />
+            <TotalRow label="Tax" value={dTax > 0 ? fmt(dTax) : 'Calculated at checkout'} small />
+            <TotalRow label="Total" value={fmt(dTotal)} bold />
+          </>
+        ) : (
+          <>
+            <TotalRow label="Shipping" value="Calculated at checkout" small />
+            <TotalRow label="Tax"      value="Calculated at checkout" small />
+            <TotalRow label="Estimated total" value={fmt(dSubtotal - dDiscount)} bold />
+            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12,
+              color: 'var(--color-text-secondary)', margin: '2px 0 0' }}>
+              Shipping and tax are calculated at checkout once your delivery
+              country is known. Your final total is shown before payment.
+            </p>
+          </>
+        )}
       </div>
 
       {onCheckout && (

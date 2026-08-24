@@ -20,9 +20,15 @@ import { ENDPOINTS }     from './endpoints';
  * Fetch the server-side cart for authenticated users.
  * Response shape: { id, items, item_count, subtotal, tax, shipping_cost, discount, total }
  */
-export async function fetchServerCart() {
+export async function fetchServerCart(country = '') {
   try {
-    const data = await api.get(ENDPOINTS.CART.GET);
+    // country drives shipping + tax in the backend quote. Passing the same
+    // value the checkout will use keeps /cart, /checkout, PayPal and
+    // create_order() on one set of figures.
+    const data = await api.get(
+      ENDPOINTS.CART.GET,
+      country ? { params: { country } } : {},
+    );
     return data.cart || data;
   } catch (err) {
     if (err?.status === 401) return null;   // Guest user

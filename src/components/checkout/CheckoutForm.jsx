@@ -164,7 +164,8 @@ export function CheckoutForm() {
 
   const cartItems     = useStore((s) => s.cartItems);
   const cartTotal     = useStore((s) => s.cartTotal);
-  const appliedCoupon = useStore((s) => s.appliedCoupon);
+  const appliedCoupon      = useStore((s) => s.appliedCoupon);
+  const setShippingCountry = useStore((s) => s.setShippingCountry);
   const clearCart     = useStore((s) => s.clearCart);
   const showSuccess   = useStore((s) => s.showSuccess);
   const showError     = useStore((s) => s.showError);
@@ -325,7 +326,16 @@ export function CheckoutForm() {
       <div className={styles.stepContent}>
         {step === 'shipping' && (
           <>
-            <ShippingForm data={shipping} onChange={setShipping} errors={errors} />
+            <ShippingForm
+              data={shipping}
+              onChange={(next) => {
+                setShipping(next);
+                // Publish the country so /cart requests the SAME backend quote
+                // this checkout will use — one set of figures everywhere.
+                setShippingCountry(next?.country || '');
+              }}
+              errors={errors}
+            />
             <div style={{ marginTop: 'var(--spacing-lg)' }}>
               <ShippingCalculator
                 orderSubtotal={cartTotal}

@@ -66,6 +66,10 @@ export const createCartSlice = (set, get) => ({
   cartItems:     [],
   appliedCoupon: null,
   isCartOpen:    false,
+  // Shipping country, shared so /cart and /checkout request the SAME backend
+  // quote. Empty until the buyer picks one, in which case the backend applies
+  // its own default.
+  shippingCountry: '',
   cartSubtotal:  0,
   cartTax:       0,
   cartShipping:  0,
@@ -77,6 +81,8 @@ export const createCartSlice = (set, get) => ({
     const { cartItems, appliedCoupon } = get();
     set(computeTotals(cartItems, appliedCoupon));
   },
+
+  setShippingCountry: (country) => set({ shippingCountry: country || '' }),
 
   addToCart: (product, quantity = 1) => {
     const MAX_QTY = 10;

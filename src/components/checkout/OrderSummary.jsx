@@ -24,7 +24,7 @@ function formatDeliveryEstimate(minDays, maxDays) {
   return `${from.toLocaleDateString('en-US', opts)} – ${to.toLocaleDateString('en-US', opts)}`;
 }
 
-export function OrderSummary({ shippingCountry }) {
+export function OrderSummary({ shippingCountry, quote = null }) {
   const cartItems     = useStore((s) => s.cartItems);
   const cartSubtotal  = useStore((s) => s.cartSubtotal);
   const cartShipping  = useStore((s) => s.cartShipping);
@@ -95,14 +95,35 @@ export function OrderSummary({ shippingCountry }) {
 
       {/* Totals */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <Row label="Subtotal"  value={fmt(cartSubtotal)} />
-        {cartDiscount > 0 && (
-          <Row label={`Discount (${appliedCoupon?.code})`} value={`−${fmt(cartDiscount)}`} green />
+        {/* When the backend quote is available it is authoritative: these are
+            the exact figures create_order() records and PayPal charges. The
+            local estimate is only a fallback before the cart has synced. */}
+        <Row label="Subtotal"
+             value={fmt(quote ? Number(quote.subtotal) : cartSubtotal)} />
+        {(quote ? Number(quote.discount) : cartDiscount) > 0 && (
+          <Row
+            label={
+              quote
+                ? (quote.discount_label || 'Discount')
+                : `Discount (${appliedCoupon?.code})`
+            }
+            value={`−${fmt(quote ? Number(quote.discount) : cartDiscount)}`}
+            green
+          />
         )}
-        <Row label="Shipping"  value={cartShipping === 0 ? 'Free' : fmt(cartShipping)} green={cartShipping === 0} />
-        <Row label="Est. Tax"  value={cartTax > 0 ? fmt(cartTax) : 'Calculated at order'} small />
+        <Row label="Shipping"
+             value={(quote ? Number(quote.shipping_cost) : cartShipping) === 0
+               ? 'Free'
+               : fmt(quote ? Number(quote.shipping_cost) : cartShipping)}
+             green={(quote ? Number(quote.shipping_cost) : cartShipping) === 0} />
+        <Row label={quote ? 'Tax' : 'Est. Tax'}
+             value={(quote ? Number(quote.tax) : cartTax) > 0
+               ? fmt(quote ? Number(quote.tax) : cartTax)
+               : 'Calculated at order'}
+             small />
         <div style={{ height: 1, backgroundColor: 'var(--color-border)', margin: '4px 0' }} />
-        <Row label="Total"     value={fmt(cartTotal)} bold />
+        <Row label="Total"
+             value={fmt(quote ? Number(quote.total) : cartTotal)} bold />
       </div>
 
       {/* Estimated delivery */}

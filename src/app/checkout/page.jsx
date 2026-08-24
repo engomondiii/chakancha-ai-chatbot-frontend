@@ -17,7 +17,7 @@
  *   yarn add @stripe/stripe-js @stripe/react-stripe-js
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter }         from 'next/navigation';
 import { Lock }              from 'lucide-react';
 import { loadStripe }        from '@stripe/stripe-js';
@@ -25,6 +25,8 @@ import { Elements }          from '@stripe/react-stripe-js';
 import { useStore }          from '@/store';
 import { CheckoutForm }      from '@/components/checkout/CheckoutForm';
 import { OrderSummary }      from '@/components/checkout/OrderSummary';
+import { syncCartToServer }  from '@/lib/api/cart';
+import { fetchCheckoutQuote } from '@/lib/api/orders';
 
 // Initialise Stripe once at module level — not inside a component
 // so it is not recreated on every render.
@@ -67,8 +69,11 @@ const ELEMENTS_OPTIONS = {
 };
 
 export default function CheckoutPage() {
-  const router    = useRouter();
-  const cartItems = useStore((s) => s.cartItems);
+  const router        = useRouter();
+  const cartItems     = useStore((s) => s.cartItems);
+  const appliedCoupon   = useStore((s) => s.appliedCoupon);
+  const shippingCountry = useStore((s) => s.shippingCountry);
+  const [quote, setQuote] = useState(null);
 
   // Redirect to cart if empty
   useEffect(() => {
@@ -76,6 +81,34 @@ export default function CheckoutPage() {
       router.replace('/cart');
     }
   }, [cartItems.length, router]);
+
+  // Pull the authoritative price quote from the backend.
+  //
+  // quote_cart() is the single source of truth for subtotal, shipping, tax,
+  // discount and total — the same function that prices the PayPal charge and
+  // the recorded Order. A referred customer's 5% Chakan Tree benefit is applied
+  // automatically from Membership.referred_by, with no code to enter, so the
+  // summary must render the backend's figures rather than a local estimate.
+  // Nothing is discounted invisibly.
+  //
+  // The cart is synced first because the backend prices the server-side Cart.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadQuote() {
+      if (cartItems.length === 0) return;
+      try {
+        await syncCartToServer(cartItems);
+        const q = await fetchCheckoutQuote(shippingCountry, appliedCoupon?.code || '');
+        if (!cancelled) setQuote(q);
+      } catch {
+        if (!cancelled) setQuote(null);   // fall back to the local estimate
+      }
+    }
+
+    loadQuote();
+    return () => { cancelled = true; };
+  }, [cartItems, appliedCoupon, shippingCountry]);
 
   if (cartItems.length === 0) return null;
 
@@ -132,8 +165,8 @@ export default function CheckoutPage() {
           </Elements>
         </div>
 
-        {/* Right: summary */}
-        <OrderSummary />
+        {/* Right: summary — shows the authoritative backend quote */}
+        <OrderSummary quote={quote} />
       </div>
 
       <style>{`

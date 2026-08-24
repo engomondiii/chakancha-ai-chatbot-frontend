@@ -248,6 +248,34 @@ export async function initStripePayment(subtotal, currency = 'USD') {
  * @param {string} couponCode - Applied coupon code, or '' when none
  * @param {string} currency   - ISO 4217 (default 'USD')
  */
+/**
+ * Fetch the authoritative backend price quote for the current server-side cart.
+ *
+ * The backend's quote_cart() is the single source of truth for subtotal,
+ * shipping, tax, discount and total — the same function that prices the PayPal
+ * charge and the recorded Order. The browser must display these figures rather
+ * than its own estimate, so a referral discount is never applied invisibly.
+ *
+ * Requires the cart to have been synced to the server first.
+ *
+ * @param {string} country    - ISO 3166-1 alpha-2 shipping country
+ * @param {string} couponCode - Applied coupon code, or '' when none
+ * @returns {Promise<object|null>} the quote, or null if it could not be fetched
+ */
+export async function fetchCheckoutQuote(country = 'US', couponCode = '') {
+  try {
+    const { data } = await apiClient.post('checkout/initialize/', {
+      country,
+      coupon_code: couponCode,
+    });
+    return data;
+  } catch (err) {
+    console.error('[orders.js] fetchCheckoutQuote failed:', err.message);
+    return null;
+  }
+}
+
+
 export async function initPayPalPayment(subtotal, country = 'US', couponCode = '', currency = 'USD') {
   // ── LEGACY payload — DISABLED DURING PHASE A ──────────────────────────────
   // Sent only subtotal + currency, so the backend fell back to country='US'
