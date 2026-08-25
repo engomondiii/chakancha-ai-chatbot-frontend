@@ -30,7 +30,7 @@ import { __setNext } from '../client.js';
 const COMPLETE = {
   subtotal: '20.00', discount: '1.00', shipping_cost: '3.00',
   tax: '3.20', total: '25.20',
-  discount_label: 'Referral benefit', currency: 'USD',
+  discount_label: 'Referral Coupon (5%)', currency: 'USD',
 };
 
 // What an older backend returns from /checkout/initialize/ — truthy, but not a quote.
@@ -79,7 +79,7 @@ async function main() {
   check('checkout renders canonical Kenya figures', rendered,
         { subtotal: 20, discount: 1, shipping: 3, tax: 3.2, total: 25.2 });
   check('legacy $5 shipping never shown with a quote', rendered.shipping === 5, false);
-  check('referral benefit label present', q.discount_label, 'Referral benefit');
+  check('referral benefit label present', q.discount_label, 'Referral Coupon (5%)');
 
   console.log(`\n  ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
