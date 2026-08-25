@@ -262,12 +262,64 @@ export async function initStripePayment(subtotal, currency = 'USD') {
  * @param {string} couponCode - Applied coupon code, or '' when none
  * @returns {Promise<object|null>} the quote, or null if it could not be fetched
  */
+// Money fields a quote MUST carry before checkout may treat it as authoritative.
+const REQUIRED_QUOTE_FIELDS = ['subtotal', 'discount', 'shipping_cost', 'tax', 'total'];
+
+/**
+ * True only when every required money field is present and parseable.
+ *
+ * A truthy response is not the same as a usable quote. An older backend that
+ * predates quote_cart() answers /checkout/initialize/ with just
+ * { subtotal, item_count, shipping, can_proceed } — no discount, tax, total or
+ * shipping_cost. Treating that as a quote renders Number(undefined) => NaN, so
+ * the summary would show "$NaN" instead of falling back cleanly.
+ *
+ * Callers must use a quote in full or not at all: never mix backend fields with
+ * local estimates, because the two use different shipping and tax rules and the
+ * mixture would match neither what the cart shows nor what PayPal charges.
+ */
+export function isUsableQuote(quote) {
+  if (!quote || typeof quote !== 'object') return false;
+
+  return REQUIRED_QUOTE_FIELDS.every((field) => {
+    const value = quote[field];
+    if (value === null || value === undefined || value === '') return false;
+    return Number.isFinite(Number(value));
+  });
+}
+
 export async function fetchCheckoutQuote(country = 'US', couponCode = '') {
   try {
-    const { data } = await apiClient.post('checkout/initialize/', {
+    // ── LEGACY: apiClient.post — DISABLED ─────────────────────────────────
+    // orders.js imports only the default `api` helper; `apiClient` was never
+    // in scope here, so this threw ReferenceError on every call. The catch
+    // below swallowed it and returned null, leaving checkout permanently on
+    // the local Redux estimate ($5 flat shipping, 0% tax, no referral
+    // benefit) while the cart drawer showed the correct backend figures.
+    //
+    // const { data } = await apiClient.post('checkout/initialize/', {
+    //   country,
+    //   coupon_code: couponCode,
+    // });
+    // ── END LEGACY ────────────────────────────────────────────────────────
+    //
+    // `api.post` unwraps the axios response, so `data` is the payload itself.
+    const data = await api.post(ENDPOINTS.CHECKOUT.INITIALIZE, {
       country,
       coupon_code: couponCode,
     });
+
+    if (!isUsableQuote(data)) {
+      console.warn(
+        '[orders.js] checkout quote incomplete — falling back to local estimate.',
+        'missing:',
+        REQUIRED_QUOTE_FIELDS.filter(
+          (f) => !Number.isFinite(Number(data?.[f]))
+        ),
+      );
+      return null;
+    }
+
     return data;
   } catch (err) {
     console.error('[orders.js] fetchCheckoutQuote failed:', err.message);
