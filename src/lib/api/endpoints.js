@@ -168,6 +168,31 @@ export const ENDPOINTS = {
   },
 
   // ── Health ────────────────────────────────────────────────────────────────
+  // ── Payouts (/api/v1/payouts/) ────────────────────────────────────────────
+  // Matches payouts/urls.py. Every member endpoint requires a verified account
+  // and an active Chakan Tree membership.
+  PAYOUTS: {
+    BALANCE:        '/payouts/balance/',
+    ENTRIES:        '/payouts/entries/',
+    DESTINATIONS:   '/payouts/destinations/',
+    DESTINATION:    (id) => `/payouts/destinations/${id}/`,
+    QUOTE:          '/payouts/quote/',
+    REQUEST:        '/payouts/request/',
+    REQUESTS:       '/payouts/requests/',
+    REQUEST_DETAIL: (id) => `/payouts/requests/${id}/`,
+    REQUEST_CANCEL: (id) => `/payouts/requests/${id}/cancel/`,
+  },
+
+  // ── Payout admin (/api/v1/admin/payouts/) — staff only ────────────────────
+  PAYOUT_ADMIN: {
+    QUEUE:         '/admin/payouts/queue/',
+    DETAIL:        (id) => `/admin/payouts/${id}/`,
+    APPROVE:       (id) => `/admin/payouts/${id}/approve/`,
+    REJECT:        (id) => `/admin/payouts/${id}/reject/`,
+    FRAUD_REVIEWS: '/admin/payouts/fraud-reviews/',
+    FRAUD_RESOLVE: (id) => `/admin/payouts/fraud-reviews/${id}/`,
+  },
+
   HEALTH: '/health/',
 };
 
