@@ -124,6 +124,17 @@
   list-style: none;
 }
 
+/*
+ * .blockItem is a flex row: icon, then text. EVERY direct child becomes a flex
+ * item, so bare text beside a <strong> renders as two columns rather than one
+ * sentence — which is what it did at 375px. Wrap the text half in .blockText.
+ */
+.blockText {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .blockItem {
   display: flex;
   align-items: flex-start;

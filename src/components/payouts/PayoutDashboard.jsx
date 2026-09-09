@@ -357,7 +357,9 @@ export function PayoutDashboard() {
             {balance.blockedReasons.map((code) => (
               <li key={code} className={styles.blockItem}>
                 <AlertCircle size={15} aria-hidden />
-                {describeBlock(code, blockContext)}
+                <span className={styles.blockText}>
+                  {describeBlock(code, blockContext)}
+                </span>
               </li>
             ))}
           </ul>
@@ -518,7 +520,7 @@ export function PayoutDashboard() {
                 {r.requiresReconfirmation && (
                   <div className={styles.blockItem} style={{ marginTop: "0.7rem" }}>
                     <AlertCircle size={15} aria-hidden />
-                    <span>
+                    <span className={styles.blockText}>
                       The transfer fee changed while this was being reviewed. You
                       agreed to <strong>{r.confirmedNet?.display}</strong>; the amount
                       is now <strong>{r.net?.display}</strong>. Nothing has been sent.
@@ -551,7 +553,8 @@ export function PayoutDashboard() {
 
                 {r.rejectionReason && (
                   <p className={styles.blockItem} style={{ marginTop: "0.6rem" }}>
-                    <AlertCircle size={14} aria-hidden /> {r.rejectionReason}
+                    <AlertCircle size={14} aria-hidden />
+                    <span className={styles.blockText}>{r.rejectionReason}</span>
                   </p>
                 )}
 

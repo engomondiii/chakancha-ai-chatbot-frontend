@@ -172,7 +172,8 @@ export function AdminPayoutQueue() {
       {error && <div className={styles.error} role="alert">{error}</div>}
       {notice && (
         <div className={styles.blockItem}>
-          <CheckCircle2 size={15} aria-hidden /> {notice}
+          <CheckCircle2 size={15} aria-hidden />
+          <span className={styles.blockText}>{notice}</span>
         </div>
       )}
 
@@ -340,7 +341,9 @@ export function AdminPayoutQueue() {
               <ul className={styles.blockList}>
                 {selected.riskSignals.map((s, i) => (
                   <li key={i} className={styles.blockItem}>
-                    <strong>{s.code}</strong>&nbsp;— {s.detail}
+                    <span className={styles.blockText}>
+                      <strong>{s.code}</strong> — {s.detail}
+                    </span>
                   </li>
                 ))}
               </ul>
