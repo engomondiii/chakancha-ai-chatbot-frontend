@@ -135,3 +135,89 @@
     font-size: 16px;
   }
 }
+
+/* ── Live weather card ─────────────────────────────────────────────────────
+   Sits opposite the location card. Rendered only when a reading is available,
+   so the map layout is unchanged when the forecast cannot be retrieved.      */
+
+.weatherCard {
+  position: absolute;
+
+  right: 28px;
+  top: 28px;
+
+  min-width: 150px;
+  padding: 14px 16px;
+
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(6px);
+
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+
+  box-sizing: border-box;
+}
+
+.weatherMain {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.weatherTemp {
+  font-family: var(--font-sans);
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--color-text-primary);
+}
+
+.weatherCondition {
+  margin: 6px 0 0;
+
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.weatherDetail {
+  margin: 2px 0 0;
+
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  color: var(--color-text-secondary);
+}
+
+.weatherSource {
+  margin: 8px 0 0;
+
+  font-family: var(--font-sans);
+  font-size: 10px;
+  color: var(--color-text-secondary);
+}
+
+.weatherSourceLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.weatherSourceLink:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .weatherCard {
+    right: 16px;
+    top: 16px;
+
+    min-width: 0;
+    padding: 10px 12px;
+  }
+
+  .weatherTemp {
+    font-size: 19px;
+  }
+}

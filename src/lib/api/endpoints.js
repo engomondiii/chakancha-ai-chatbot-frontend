@@ -111,6 +111,7 @@ export const ENDPOINTS = {
     TEA_PICKERS:    '/content/tea-pickers/',
     IMPACT_METRICS: '/content/impact/',
     BREWING_GUIDES: '/content/brewing-guides/',
+    WEATHER:        '/content/weather/',
   },
 
   // ── Chakan Tree (/api/v1/chakan-tree/) ────────────────────────────────────
