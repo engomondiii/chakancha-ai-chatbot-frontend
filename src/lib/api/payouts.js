@@ -33,6 +33,10 @@ export const BLOCK_MESSAGES = {
     "A refund reversed more commission than your balance covered. Future earnings will offset it first.",
   OPEN_REQUEST_EXISTS: () =>
     "You already have a withdrawal in progress.",
+  NEEDS_RECONFIRMATION: () =>
+    "The transfer fee changed while your withdrawal was being reviewed. Confirm the new amount to continue.",
+  BALANCE_CHANGED: () =>
+    "Your available balance changed while we were preparing the quote. Please try again.",
   ACCOUNT_FROZEN: () =>
     "Some of your earnings are on hold pending a review. Support can tell you more.",
   NOT_A_MEMBER: () => "Join Chakan Tree to earn and withdraw commission.",
@@ -113,6 +117,10 @@ export function normalizeRequest(raw) {
     net: money(raw.net),
     currency: raw.currency ?? "USD",
     destination: normalizeDestination(raw.destination),
+    confirmedNet: money(raw.confirmed_net),
+    requiresReconfirmation: raw.requires_reconfirmation ?? false,
+    quoteExpiresAt: raw.quote_expires_at ?? null,
+    requoteCount: raw.requote_count ?? 0,
     requestedAt: raw.requested_at ?? null,
     approvedAt: raw.approved_at ?? null,
     completedAt: raw.completed_at ?? null,
@@ -222,6 +230,16 @@ export async function cancelRequest(id) {
   return normalizeRequest(data);
 }
 
+/**
+ * Accept a revised net after the original quote expired and re-quoting moved the
+ * amount. Only the member can do this — staff approved the figure the member
+ * agreed to, and a different figure is a new agreement.
+ */
+export async function confirmRequest(id) {
+  const { data } = await api.post(ENDPOINTS.PAYOUTS.REQUEST_CONFIRM(id), {});
+  return normalizeRequest(data);
+}
+
 // ─── Admin endpoints ──────────────────────────────────────────────────────────
 
 export function normalizeAdminRequest(raw) {
@@ -304,7 +322,7 @@ export function daysUntil(iso) {
 
 export default {
   getBalance, getEntries, getDestinations, addDestination, archiveDestination,
-  getQuote, requestPayout, getRequests, getRequest, cancelRequest,
+  getQuote, requestPayout, getRequests, getRequest, cancelRequest, confirmRequest,
   getAdminQueue, getAdminRequest, approvePayout, rejectPayout,
   getFraudReviews, resolveFraudReview,
   newIdempotencyKey, daysUntil, describeBlock,

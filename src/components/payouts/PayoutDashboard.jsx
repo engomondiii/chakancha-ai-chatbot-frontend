@@ -27,8 +27,8 @@ import {
 } from "lucide-react";
 
 import {
-  addDestination, archiveDestination, cancelRequest, daysUntil, describeBlock,
-  getBalance, getDestinations, getEntries, getQuote, getRequests,
+  addDestination, archiveDestination, cancelRequest, confirmRequest, daysUntil,
+  describeBlock, getBalance, getDestinations, getEntries, getQuote, getRequests,
   newIdempotencyKey, requestPayout,
 } from "@/lib/api/payouts";
 
@@ -39,6 +39,7 @@ const STATUS_TONE = {
   PROCESSING: styles.badgeWarn,
   APPROVED: styles.badgeWarn,
   PENDING_REVIEW: styles.badgeWarn,
+  AWAITING_RECONFIRM: styles.badgeWarn,
   BLOCKED: styles.badgeBad,
   FAILED: styles.badgeBad,
   REJECTED: styles.badgeBad,
@@ -174,6 +175,19 @@ export function PayoutDashboard() {
           ? describeCodes(codes)
           : err?.response?.data?.detail || "Could not submit your withdrawal.",
       );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleReconfirm = async (id) => {
+    setBusy(true);
+    setError("");
+    try {
+      await confirmRequest(id);
+      await refresh();
+    } catch (err) {
+      setError(err?.response?.data?.detail || "Could not confirm the new amount.");
     } finally {
       setBusy(false);
     }
@@ -488,6 +502,40 @@ export function PayoutDashboard() {
                   {r.fee?.minor > 0 ? ` · ${r.fee.display} fee` : ""}
                 </p>
 
+                {r.requiresReconfirmation && (
+                  <div className={styles.blockItem} style={{ marginTop: "0.7rem" }}>
+                    <AlertCircle size={15} aria-hidden />
+                    <span>
+                      The transfer fee changed while this was being reviewed. You
+                      agreed to <strong>{r.confirmedNet?.display}</strong>; the amount
+                      is now <strong>{r.net?.display}</strong>. Nothing has been sent.
+                    </span>
+                  </div>
+                )}
+
+                {r.requiresReconfirmation && (
+                  <div className={styles.actions}>
+                    <button
+                      type="button"
+                      className={styles.button}
+                      disabled={busy}
+                      onClick={() => handleReconfirm(r.id)}
+                    >
+                      {busy ? <Loader2 size={15} className={styles.spin} />
+                            : <CheckCircle2 size={15} />}
+                      Confirm {r.net?.display} and send
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.button} ${styles.buttonDanger}`}
+                      disabled={busy}
+                      onClick={() => handleCancel(r.id)}
+                    >
+                      Cancel instead
+                    </button>
+                  </div>
+                )}
+
                 {r.rejectionReason && (
                   <p className={styles.blockItem} style={{ marginTop: "0.6rem" }}>
                     <AlertCircle size={14} aria-hidden /> {r.rejectionReason}
@@ -508,7 +556,8 @@ export function PayoutDashboard() {
                   </ul>
                 )}
 
-                {["REQUESTED", "PENDING_REVIEW", "APPROVED"].includes(r.status) && (
+                {["REQUESTED", "PENDING_REVIEW", "APPROVED"].includes(r.status) &&
+                  !r.requiresReconfirmation && (
                   <div className={styles.actions}>
                     <button
                       type="button"
