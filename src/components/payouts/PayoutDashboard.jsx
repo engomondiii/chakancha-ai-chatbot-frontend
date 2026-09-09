@@ -28,8 +28,7 @@ import {
 
 import {
   addDestination, archiveDestination, cancelRequest, confirmRequest, daysUntil,
-  describeBlock, getBalance, getDestinations, getEntries, getQuote, getRequests,
-  newIdempotencyKey, requestPayout,
+  describeBlock, getDashboard, getQuote, newIdempotencyKey, requestPayout,
 } from "@/lib/api/payouts";
 
 import styles from "./payouts.module.css";
@@ -53,6 +52,16 @@ function StatusBadge({ status }) {
       {String(status || "").replace(/_/g, " ")}
     </span>
   );
+}
+
+/** Display-only helper for a derived difference. Never used as a sendable amount. */
+function formatMinor(minor, currency = "USD") {
+  const amount = (minor / 100).toLocaleString(undefined, {
+    minimumFractionDigits: 2, maximumFractionDigits: 2,
+  });
+  const symbols = { USD: "$", EUR: "\u20ac", GBP: "\u00a3", KES: "KSh\u00a0" };
+  const symbol = symbols[currency];
+  return symbol ? `${symbol}${amount}` : `${amount} ${currency}`;
 }
 
 function formatDate(iso) {
@@ -92,14 +101,21 @@ export function PayoutDashboard() {
   const refresh = useCallback(async () => {
     setError("");
     try {
-      const [b, d, r, e] = await Promise.all([
-        getBalance(), getDestinations(), getRequests(), getEntries({ limit: 25 }),
-      ]);
-      setBalance(b);
-      setDestinations(d.filter((x) => x.status !== "ARCHIVED"));
-      setRequests(r);
-      setEntries(e);
+      // One request. Four separate calls cost four throttle hits per page load
+      // and let the panels disagree with each other.
+      const data = await getDashboard({ limit: 25 });
+      setBalance(data.balance);
+      setDestinations(data.destinations.filter((x) => x.status !== "ARCHIVED"));
+      setRequests(data.requests);
+      setEntries(data.entries);
     } catch (err) {
+      if (err?.response?.status === 429) {
+        setError(
+          "You are refreshing faster than we can keep up. Please wait a moment.",
+        );
+        setLoading(false);
+        return;
+      }
       // Surfaced, never swallowed — an empty balance and a failed request must
       // not look the same.
       setError(
@@ -132,7 +148,12 @@ export function PayoutDashboard() {
     const shortfall = Math.max(minimumMinor - availableMinor, 0);
     const ctx = {
       minimum: balance?.minimumPayout?.display,
-      shortfall: shortfall > 0 ? `$${(shortfall / 100).toFixed(2)}` : null,
+      // Formatting one derived difference client-side is unavoidable without a
+      // round trip; it reuses the API's currency so it cannot print the wrong
+      // symbol, and it is never used as an amount to send.
+      shortfall: shortfall > 0
+        ? formatMinor(shortfall, balance?.available?.currency)
+        : null,
     };
     return codes.map((c) => describeBlock(c, ctx)).join(" ");
   }, [balance]);
@@ -370,33 +391,25 @@ export function PayoutDashboard() {
           <div className={styles.quoteRows}>
             <div className={styles.quoteRow}>
               <span>Your earnings</span>
-              <span className={styles.quoteAmount}>
-                ${(quote.grossMinor / 100).toFixed(2)}
-              </span>
+              <span className={styles.quoteAmount}>{quote.gross?.display}</span>
             </div>
             <div className={styles.quoteRow}>
               <span>Transfer fee</span>
-              <span className={styles.quoteAmount}>
-                −${(quote.feeMinor / 100).toFixed(2)}
-              </span>
+              <span className={styles.quoteAmount}>−{quote.fee?.display}</span>
             </div>
             {quote.withheldMinor > 0 && (
               <div className={styles.quoteRow}>
                 <span>Tax withheld</span>
-                <span className={styles.quoteAmount}>
-                  −${(quote.withheldMinor / 100).toFixed(2)}
-                </span>
+                <span className={styles.quoteAmount}>−{quote.withheld?.display}</span>
               </div>
             )}
             <div className={`${styles.quoteRow} ${styles.quoteRowTotal}`}>
               <span>You receive</span>
-              <span className={styles.quoteAmount}>
-                ${(quote.netMinor / 100).toFixed(2)}
-              </span>
+              <span className={styles.quoteAmount}>{quote.net?.display}</span>
             </div>
-            {quote.targetCurrency && quote.targetCurrency !== quote.currency && (
+            {quote.targetAmount && quote.targetCurrency !== quote.currency && (
               <p className={styles.panelNote}>
-                Delivered as {quote.targetCurrency}
+                Delivered as {quote.targetAmount.display}
                 {quote.rate ? ` at a rate of ${quote.rate}` : ""}.
               </p>
             )}
@@ -410,7 +423,7 @@ export function PayoutDashboard() {
               onClick={handleConfirm}
             >
               {busy ? <Loader2 size={15} className={styles.spin} /> : <ArrowRight size={15} />}
-              Confirm — send ${(quote.netMinor / 100).toFixed(2)}
+              Confirm — send {quote.net?.display}
             </button>
             <button
               type="button"

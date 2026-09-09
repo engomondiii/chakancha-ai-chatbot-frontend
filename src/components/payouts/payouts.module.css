@@ -411,3 +411,105 @@
 .spin { animation: spin 1s linear infinite; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* =========================================================
+   RESPONSIVE
+
+   Verified at 375px and 768px. The rules that matter:
+   the page body must never scroll sideways, and anything
+   wide (tables, the balance grid) scrolls or stacks inside
+   its own container instead of pushing the layout out.
+========================================================= */
+
+@media (max-width: 768px) {
+  .panel {
+    padding: var(--spacing-md, 1rem);
+  }
+
+  /* Title and note stack rather than squashing into each other. */
+  .panelHead {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+  }
+
+  .balanceGrid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .wrap {
+    gap: var(--spacing-md, 1rem);
+  }
+
+  /* One card per row: two 140px cards plus a gap overflow a 375px viewport. */
+  .balanceGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .balanceValue {
+    font-size: 1.4rem;
+  }
+
+  /* Full-width targets — a 44px row is the smallest comfortable tap area. */
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .actions .button {
+    justify-content: center;
+    width: 100%;
+    min-height: 44px;
+  }
+
+  /* The destination row's delete button must not squeeze the label to nothing. */
+  .destItem {
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+
+  .destMeta {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .destHint,
+  .destSub {
+    overflow-wrap: anywhere;
+  }
+
+  .destItem .button {
+    width: auto;
+    min-height: 40px;
+  }
+
+  .historyHead {
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  /* Timestamps drop below the label instead of being pushed off-screen. */
+  .timelineStep {
+    flex-wrap: wrap;
+  }
+
+  .timelineTime {
+    margin-left: 1.2rem;
+  }
+
+  .maturityBar {
+    align-items: flex-start;
+  }
+
+  /* Tables already scroll inside .tableWrap; make that discoverable. */
+  .tableWrap {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table th,
+  .table td {
+    white-space: nowrap;
+  }
+}

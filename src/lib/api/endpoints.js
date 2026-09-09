@@ -172,6 +172,7 @@ export const ENDPOINTS = {
   // Matches payouts/urls.py. Every member endpoint requires a verified account
   // and an active Chakan Tree membership.
   PAYOUTS: {
+    DASHBOARD:      '/payouts/dashboard/',
     BALANCE:        '/payouts/balance/',
     ENTRIES:        '/payouts/entries/',
     DESTINATIONS:   '/payouts/destinations/',

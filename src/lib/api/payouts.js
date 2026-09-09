@@ -49,7 +49,7 @@ export function describeBlock(code, ctx) {
 
 // ─── Normalizers ──────────────────────────────────────────────────────────────
 
-function money(raw) {
+export function money(raw) {
   if (!raw) return null;
   return {
     minor: raw.minor ?? 0,
@@ -146,10 +146,17 @@ export function normalizeRequest(raw) {
 export function normalizeQuote(raw) {
   if (!raw) return null;
   return {
+    // Minor units for comparisons; `gross`/`fee`/`net` carry the formatted
+    // strings the UI renders. The client never divides by 100 itself.
     grossMinor: raw.gross_minor ?? 0,
     feeMinor: raw.fee_minor ?? 0,
     withheldMinor: raw.withheld_minor ?? 0,
     netMinor: raw.net_minor ?? 0,
+    gross: money(raw.gross),
+    fee: money(raw.fee),
+    withheld: money(raw.withheld),
+    net: money(raw.net),
+    targetAmount: money(raw.target_amount),
     currency: raw.currency ?? "USD",
     targetCurrency: raw.target_currency ?? "",
     targetAmountMinor: raw.target_amount_minor ?? null,
@@ -158,6 +165,27 @@ export function normalizeQuote(raw) {
 }
 
 // ─── Member endpoints ─────────────────────────────────────────────────────────
+
+/**
+ * Everything the payout page needs, in one request.
+ *
+ * The page used to make four calls — balance, destinations, requests, entries —
+ * which cost four round trips, four throttle hits, and left the panels able to
+ * disagree because each was fetched at a different moment.
+ */
+export async function getDashboard({ limit = 25 } = {}) {
+  const { data } = await api.get(ENDPOINTS.PAYOUTS.DASHBOARD, { params: { limit } });
+  return {
+    balance: normalizeBalance(data.balance),
+    destinations: (data.destinations ?? []).map(normalizeDestination),
+    requests: (data.requests ?? []).map(normalizeRequest),
+    entries: {
+      count: data.entries?.count ?? 0,
+      results: (data.entries?.results ?? []).map(normalizeEntry),
+    },
+  };
+}
+
 
 export async function getBalance() {
   const { data } = await api.get(ENDPOINTS.PAYOUTS.BALANCE);
@@ -321,7 +349,7 @@ export function daysUntil(iso) {
 }
 
 export default {
-  getBalance, getEntries, getDestinations, addDestination, archiveDestination,
+  getDashboard, getBalance, getEntries, getDestinations, addDestination, archiveDestination,
   getQuote, requestPayout, getRequests, getRequest, cancelRequest, confirmRequest,
   getAdminQueue, getAdminRequest, approvePayout, rejectPayout,
   getFraudReviews, resolveFraudReview,

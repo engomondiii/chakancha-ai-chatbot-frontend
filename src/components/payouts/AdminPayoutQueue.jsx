@@ -50,7 +50,16 @@ export function AdminPayoutQueue() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [reason, setReason] = useState("");
+
+  // One reason per fraud review, keyed by id, plus a separate one for the
+  // approve/reject panel. A single shared string meant typing a resolution for
+  // one member filled every other textarea on the page — and a reviewer could
+  // submit text they had written about somebody else.
+  const [reviewReasons, setReviewReasons] = useState({});
+  const [decisionReason, setDecisionReason] = useState("");
+
+  const setReviewReason = (id, value) =>
+    setReviewReasons((prev) => ({ ...prev, [id]: value }));
 
   const refresh = useCallback(async () => {
     setError("");
@@ -73,7 +82,7 @@ export function AdminPayoutQueue() {
 
   const open = async (id) => {
     setBusy(true);
-    setReason("");
+    setDecisionReason("");
     setNotice("");
     try {
       setSelected(await getAdminRequest(id));
@@ -89,7 +98,7 @@ export function AdminPayoutQueue() {
     setBusy(true);
     setError("");
     try {
-      const updated = await approvePayout(selected.id, reason);
+      const updated = await approvePayout(selected.id, decisionReason);
       setSelected(updated);
       setNotice(
         updated.dispatched
@@ -107,14 +116,14 @@ export function AdminPayoutQueue() {
 
   const doReject = async () => {
     if (!selected) return;
-    if (!reason.trim()) {
+    if (!decisionReason.trim()) {
       setError("A rejection reason is mandatory — the member is shown this text.");
       return;
     }
     setBusy(true);
     setError("");
     try {
-      const updated = await rejectPayout(selected.id, reason);
+      const updated = await rejectPayout(selected.id, decisionReason);
       setSelected(updated);
       setNotice("Rejected. The reserved earnings have been returned to the member's available balance.");
       await refresh();
@@ -126,17 +135,22 @@ export function AdminPayoutQueue() {
   };
 
   const resolveReview = async (id, clear) => {
-    if (!reason.trim()) {
+    const resolution = (reviewReasons[id] || "").trim();
+    if (!resolution) {
       setError("A resolution note is required.");
       return;
     }
     setBusy(true);
     try {
-      await resolveFraudReview(id, { clear, resolution: reason });
+      await resolveFraudReview(id, { clear, resolution });
       setNotice(clear
         ? "Cleared. The request has returned to the review queue."
         : "Upheld. The request was rejected and the earnings returned.");
-      setReason("");
+      setReviewReasons((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
       await refresh();
     } catch {
       setError("Could not resolve that review.");
@@ -198,8 +212,9 @@ export function AdminPayoutQueue() {
                 <div className={styles.field} style={{ marginTop: "0.8rem" }}>
                   <label htmlFor={`res-${r.id}`}>Resolution (required)</label>
                   <textarea
-                    id={`res-${r.id}`} rows={2} value={reason}
-                    onChange={(e) => setReason(e.target.value)}
+                    id={`res-${r.id}`} rows={2}
+                    value={reviewReasons[r.id] || ""}
+                    onChange={(e) => setReviewReason(r.id, e.target.value)}
                     placeholder="What you checked and what you concluded"
                   />
                 </div>
@@ -359,8 +374,8 @@ export function AdminPayoutQueue() {
               Reason — required to reject, recorded either way
             </label>
             <textarea
-              id="decision-reason" rows={3} value={reason}
-              onChange={(e) => setReason(e.target.value)}
+              id="decision-reason" rows={3} value={decisionReason}
+              onChange={(e) => setDecisionReason(e.target.value)}
               placeholder="What you checked. The member sees this if you reject."
             />
           </div>
