@@ -62,6 +62,11 @@ export function normalizeBalance(raw) {
   if (!raw) return null;
   return {
     currency: raw.currency ?? "USD",
+    // Lifetime gross earnings and the shortfall to the minimum are computed by
+    // the API. The client never adds balances together to produce a total, and
+    // never subtracts to produce "you need X more" — both are money arithmetic.
+    totalEarned: money(raw.total_earned),
+    shortfallToMinimum: money(raw.shortfall_to_minimum),
     pending: money(raw.pending),
     eligible: money(raw.eligible),
     available: money(raw.available),

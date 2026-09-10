@@ -1,29 +1,29 @@
 /**
  * src/components/payouts/PayoutDashboard.jsx
  *
- * The member's withdrawal experience.
+ * The member cash-out experience, in the Chakan Tree visual language.
  *
- * Three rules drive this UI, each preventing a specific support cost:
+ * Four figures, never one:
+ *   Total earned · Pending earnings · Available to withdraw · Paid out
  *
- *  1. Never show one balance. Pending / Available are separate figures with
- *     separate meanings. A member who sees "$60" and cannot withdraw it will
- *     assume the product is broken.
- *  2. Never grey out silently. Every blocker is stated with the shortfall or
- *     the date that resolves it.
- *  3. The member confirms the NET amount, never the gross. The provider fee is
- *     its own line, shown before any commitment.
+ * "Pending earnings", not "pending payout" — nothing has been paid, and calling
+ * it a payout invites a member to ask where their money is.
  *
- * With a 180-day maturity window, most of a new member's balance sits in
- * Pending for half a year. Making that legible from the first reward is the
- * whole job of the maturity strip.
+ * Every financial state on this screen comes from the backend state machine.
+ * The withdraw flow's steps (quote → review → confirm) are UI steps only; they
+ * are not financial states and nothing here invents one. A payout is COMPLETED
+ * when the API says so, which happens only on a verified settlement webhook.
+ *
+ * Money is never computed in the browser. Every amount is rendered from the
+ * API's `display` string, including the shortfall to the minimum.
  */
 
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle, ArrowRight, Ban, CalendarClock, CheckCircle2, Clock,
-  Loader2, Plus, Trash2, Wallet,
+  Coins, Loader2, Plus, Receipt, RefreshCw, Trash2, TrendingUp, Wallet,
 } from "lucide-react";
 
 import {
@@ -33,12 +33,17 @@ import {
 
 import styles from "./payouts.module.css";
 
+/* =========================================================
+   PRESENTATION HELPERS
+========================================================= */
+
 const STATUS_TONE = {
   COMPLETED: styles.badgeGood,
   PROCESSING: styles.badgeWarn,
   APPROVED: styles.badgeWarn,
   PENDING_REVIEW: styles.badgeWarn,
   AWAITING_RECONFIRM: styles.badgeWarn,
+  REQUESTED: styles.badgeWarn,
   BLOCKED: styles.badgeBad,
   FAILED: styles.badgeBad,
   REJECTED: styles.badgeBad,
@@ -46,28 +51,47 @@ const STATUS_TONE = {
   CANCELLED: styles.badgeNeutral,
 };
 
+/** Wording the member understands, keyed by the backend's own state names. */
+const STATUS_WORDS = {
+  REQUESTED: "Requested",
+  VALIDATING: "Checking",
+  PENDING_REVIEW: "Under review",
+  AWAITING_RECONFIRM: "Needs your confirmation",
+  BLOCKED: "On hold",
+  APPROVED: "Approved",
+  PROCESSING: "Sending",
+  COMPLETED: "Paid",
+  FAILED: "Failed",
+  UNCLAIMED: "Unclaimed",
+  RETURNED: "Returned",
+  REJECTED: "Declined",
+  CANCELLED: "Cancelled",
+};
+
+/** Ledger entry states, in the member's language rather than the ledger's. */
+const ENTRY_WORDS = {
+  PENDING: "Maturing",
+  ELIGIBLE: "Ready to release",
+  AVAILABLE: "Available",
+  RESERVED: "In a withdrawal",
+  PAID: "Paid",
+  FROZEN: "On hold",
+  REVERSED: "Reversed",
+  CLAWED_BACK: "Reversed",
+};
+
 function StatusBadge({ status }) {
   return (
     <span className={`${styles.badge} ${STATUS_TONE[status] || styles.badgeNeutral}`}>
-      {String(status || "").replace(/_/g, " ")}
+      {STATUS_WORDS[status] || String(status || "").replace(/_/g, " ")}
     </span>
   );
-}
-
-/** Display-only helper for a derived difference. Never used as a sendable amount. */
-function formatMinor(minor, currency = "USD") {
-  const amount = (minor / 100).toLocaleString(undefined, {
-    minimumFractionDigits: 2, maximumFractionDigits: 2,
-  });
-  const symbols = { USD: "$", EUR: "\u20ac", GBP: "\u00a3", KES: "KSh\u00a0" };
-  const symbol = symbols[currency];
-  return symbol ? `${symbol}${amount}` : `${amount} ${currency}`;
 }
 
 function formatDate(iso) {
   if (!iso) return "";
   return new Date(iso).toLocaleDateString(undefined, {
-    day: "numeric", month: "short", year: "numeric",
+    day: "numeric", month: "long", year: "numeric",
   });
 }
 
@@ -78,50 +102,73 @@ function formatDateTime(iso) {
   });
 }
 
-export function PayoutDashboard() {
-  const [balance, setBalance] = useState(null);
-  const [destinations, setDestinations] = useState([]);
-  const [requests, setRequests] = useState([]);
-  const [entries, setEntries] = useState({ count: 0, results: [] });
+function Section({ icon: Icon, title, note, children }) {
+  return (
+    <section className={styles.section}>
+      <div className={styles.sectionHead}>
+        <h2 className={styles.sectionTitle}>
+          {Icon && <Icon size={18} aria-hidden />}
+          {title}
+        </h2>
+        {note && <span className={styles.sectionNote}>{note}</span>}
+      </div>
+      {children}
+    </section>
+  );
+}
 
+function Figure({ icon: Icon, label, amount, hint, primary }) {
+  return (
+    <div className={`${styles.figure} ${primary ? styles.figurePrimary : ""}`}>
+      <span className={styles.figureLabel}>
+        {Icon && <Icon size={13} aria-hidden />} {label}
+      </span>
+      <span className={styles.figureValue}>{amount?.display ?? "—"}</span>
+      {hint && <span className={styles.figureHint}>{hint}</span>}
+    </div>
+  );
+}
+
+/* =========================================================
+   MAIN
+========================================================= */
+
+export function PayoutDashboard() {
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // UI steps for the withdraw flow. NOT financial states — those live in the
+  // backend and arrive on each request object.
+  const [step, setStep] = useState("idle");     // idle | review
   const [quote, setQuote] = useState(null);
+  const [destinationId, setDestinationId] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
-
-  /* =======================================================
-     LOAD
-
-     Every panel comes from one refresh so the balance and the
-     history can never disagree on screen.
-  ======================================================= */
 
   const refresh = useCallback(async () => {
     setError("");
     try {
-      // One request. Four separate calls cost four throttle hits per page load
-      // and let the panels disagree with each other.
-      const data = await getDashboard({ limit: 25 });
-      setBalance(data.balance);
-      setDestinations(data.destinations.filter((x) => x.status !== "ARCHIVED"));
-      setRequests(data.requests);
-      setEntries(data.entries);
+      const next = await getDashboard({ limit: 50 });
+      setData(next);
+      const preferred =
+        next.destinations.find((d) => d.isDefault && d.status === "VERIFIED") ||
+        next.destinations.find((d) => d.status === "VERIFIED");
+      setDestinationId((current) => current || preferred?.id || "");
     } catch (err) {
-      if (err?.response?.status === 429) {
+      if (err?.response?.status === 503) {
         setError(
-          "You are refreshing faster than we can keep up. Please wait a moment.",
+          err?.response?.data?.detail ||
+          "Withdrawals are closed at the moment. Your earnings are still being recorded.",
         );
-        setLoading(false);
-        return;
+      } else if (err?.response?.status === 429) {
+        setError("You are refreshing faster than we can keep up. Please wait a moment.");
+      } else {
+        setError(
+          err?.response?.data?.detail ||
+          "Could not load your earnings. Please try again.",
+        );
       }
-      // Surfaced, never swallowed — an empty balance and a failed request must
-      // not look the same.
-      setError(
-        err?.response?.data?.detail ||
-        "Could not load your payout information. Please try again.",
-      );
     } finally {
       setLoading(false);
     }
@@ -129,118 +176,81 @@ export function PayoutDashboard() {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  /* =======================================================
-     ACTIONS
-  ======================================================= */
+  const balance = data?.balance ?? null;
+  const destinations = useMemo(
+    () => (data?.destinations ?? []).filter((d) => d.status !== "ARCHIVED"),
+    [data],
+  );
+  const requests = data?.requests ?? [];
+  const entries = data?.entries ?? { count: 0, results: [] };
 
-  const defaultDestination =
-    destinations.find((d) => d.isDefault && d.status === "VERIFIED") ||
-    destinations.find((d) => d.status === "VERIFIED");
+  const openRequest = requests.find((r) =>
+    ["REQUESTED", "VALIDATING", "PENDING_REVIEW", "AWAITING_RECONFIRM",
+     "BLOCKED", "APPROVED", "PROCESSING"].includes(r.status));
 
-  /**
-   * Turn blocked-reason codes into a sentence, with the shortfall filled in.
-   * Defined here rather than further down so the handlers below do not depend
-   * on a `const` declared after them.
-   */
-  const describeCodes = useCallback((codes) => {
-    const minimumMinor = balance?.minimumPayout?.minor ?? 0;
-    const availableMinor = balance?.available?.minor ?? 0;
-    const shortfall = Math.max(minimumMinor - availableMinor, 0);
-    const ctx = {
+  const describeCodes = useCallback(
+    (codes) => codes.map((c) => describeBlock(c, {
       minimum: balance?.minimumPayout?.display,
-      // Formatting one derived difference client-side is unavoidable without a
-      // round trip; it reuses the API's currency so it cannot print the wrong
-      // symbol, and it is never used as an amount to send.
-      shortfall: shortfall > 0
-        ? formatMinor(shortfall, balance?.available?.currency)
+      shortfall: balance?.shortfallToMinimum?.minor > 0
+        ? balance.shortfallToMinimum.display
         : null,
-    };
-    return codes.map((c) => describeBlock(c, ctx)).join(" ");
-  }, [balance]);
+    })).join(" "),
+    [balance],
+  );
+
+  const reportError = (err, fallback) => {
+    const codes = err?.response?.data?.blocked_reasons;
+    setError(codes?.length ? describeCodes(codes)
+                           : err?.response?.data?.detail || fallback);
+  };
+
+  /* ── Actions ──────────────────────────────────────────── */
 
   const handleQuote = async () => {
-    if (!defaultDestination) return;
-    setBusy(true);
-    setError("");
+    if (!destinationId) return;
+    setBusy(true); setError("");
     try {
-      setQuote(await getQuote(defaultDestination.id));
+      setQuote(await getQuote(destinationId));
+      setStep("review");
     } catch (err) {
-      const codes = err?.response?.data?.blocked_reasons;
-      setError(
-        codes?.length
-          ? describeCodes(codes)
-          : err?.response?.data?.detail || "Could not get a quote.",
-      );
-    } finally {
-      setBusy(false);
-    }
+      reportError(err, "Could not prepare your withdrawal.");
+    } finally { setBusy(false); }
   };
 
   const handleConfirm = async () => {
-    if (!defaultDestination) return;
-    setBusy(true);
-    setError("");
+    if (!destinationId) return;
+    setBusy(true); setError("");
     try {
-      // One key per confirmed attempt: a double-click resubmits the SAME key
-      // and the server returns the same payout rather than creating a second.
-      await requestPayout({
-        destinationId: defaultDestination.id,
-        idempotencyKey: newIdempotencyKey(),
-      });
-      setQuote(null);
+      await requestPayout({ destinationId, idempotencyKey: newIdempotencyKey() });
+      setQuote(null); setStep("idle");
       await refresh();
     } catch (err) {
-      const codes = err?.response?.data?.blocked_reasons;
-      setError(
-        codes?.length
-          ? describeCodes(codes)
-          : err?.response?.data?.detail || "Could not submit your withdrawal.",
-      );
-    } finally {
-      setBusy(false);
-    }
+      reportError(err, "Could not submit your withdrawal.");
+    } finally { setBusy(false); }
   };
 
   const handleReconfirm = async (id) => {
-    setBusy(true);
-    setError("");
-    try {
-      await confirmRequest(id);
-      await refresh();
-    } catch (err) {
-      setError(err?.response?.data?.detail || "Could not confirm the new amount.");
-    } finally {
-      setBusy(false);
-    }
+    setBusy(true); setError("");
+    try { await confirmRequest(id); await refresh(); }
+    catch (err) { reportError(err, "Could not confirm the new amount."); }
+    finally { setBusy(false); }
   };
 
   const handleCancel = async (id) => {
-    setBusy(true);
-    try {
-      await cancelRequest(id);
-      await refresh();
-    } catch (err) {
-      setError(err?.response?.data?.detail || "Could not cancel that request.");
-    } finally {
-      setBusy(false);
-    }
+    setBusy(true); setError("");
+    try { await cancelRequest(id); await refresh(); }
+    catch (err) { reportError(err, "Could not cancel that withdrawal."); }
+    finally { setBusy(false); }
   };
 
   const handleArchive = async (id) => {
-    setBusy(true);
-    try {
-      await archiveDestination(id);
-      await refresh();
-    } catch {
-      setError("Could not remove that destination.");
-    } finally {
-      setBusy(false);
-    }
+    setBusy(true); setError("");
+    try { await archiveDestination(id); await refresh(); }
+    catch (err) { reportError(err, "Could not remove that destination."); }
+    finally { setBusy(false); }
   };
 
-  /* =======================================================
-     RENDER
-  ======================================================= */
+  /* ── Render ───────────────────────────────────────────── */
 
   if (loading) {
     return (
@@ -252,208 +262,252 @@ export function PayoutDashboard() {
   }
 
   if (!balance) {
-    return <div className={styles.error}>{error || "No payout data available."}</div>;
+    return (
+      <div className={styles.error} role="alert">
+        <AlertCircle size={16} aria-hidden />
+        {error || "No earnings information is available."}
+      </div>
+    );
   }
 
-  const shortfallMinor = Math.max(
-    (balance.minimumPayout?.minor ?? 0) - (balance.available?.minor ?? 0), 0,
-  );
-  const blockContext = {
-    minimum: balance.minimumPayout?.display,
-    shortfall: shortfallMinor > 0
-      ? `$${(shortfallMinor / 100).toFixed(2)}`
-      : null,
-  };
   const daysToMaturity = daysUntil(balance.nextMaturityAt);
+  const availableMinor = balance.available?.minor ?? 0;
+  const minimumMinor = balance.minimumPayout?.minor ?? 0;
+  const shortfallMinor = balance.shortfallToMinimum?.minor ?? 0;
+  const progressPct = minimumMinor > 0
+    ? Math.min(100, Math.round((availableMinor / minimumMinor) * 100))
+    : 0;
 
   return (
     <div className={styles.wrap}>
       {error && (
         <div className={styles.error} role="alert">
-          <AlertCircle size={15} aria-hidden /> {error}
+          <AlertCircle size={16} aria-hidden /> {error}
         </div>
       )}
 
-      {/* ── Balance ───────────────────────────────────────────────────────── */}
-      <section className={styles.panel}>
-        <div className={styles.panelHead}>
-          <h2 className={styles.panelTitle}>Your earnings</h2>
-          <span className={styles.panelNote}>
-            Commission matures {balance.maturityDays} days after the order
-          </span>
+      {/* ═══ EARNINGS ══════════════════════════════════════ */}
+      <Section
+        icon={TrendingUp}
+        title="Your earnings"
+        note={`Commission matures ${balance.maturityDays} days after the order`}
+      >
+        <div className={styles.figureGrid}>
+          <Figure
+            icon={Coins} label="Total earned" amount={balance.totalEarned}
+            hint="Everything your network has ever earned you."
+          />
+          <Figure
+            icon={Clock} label="Pending earnings" amount={balance.pending}
+            hint={`Earned, still inside the ${balance.maturityDays}-day window that covers returns and refunds.`}
+          />
+          <Figure
+            primary icon={Wallet} label="Available to withdraw" amount={balance.available}
+            hint={`Minimum withdrawal is ${balance.minimumPayout?.display}.`}
+          />
+          <Figure
+            icon={CheckCircle2} label="Paid out" amount={balance.paid}
+            hint="Settled to your payout destination."
+          />
         </div>
 
-        <div className={styles.balanceGrid}>
-          <div className={`${styles.balanceCard} ${styles.balanceCardPrimary}`}>
-            <span className={styles.balanceLabel}>
-              <Wallet size={13} aria-hidden /> Available
+        {(balance.reserved?.minor ?? 0) > 0 && (
+          <div className={styles.strip}>
+            <ArrowRight size={15} className={styles.stripIcon} aria-hidden />
+            <span className={styles.stripText}>
+              <span className={styles.emphasis}>{balance.reserved.display}</span> is
+              held for a withdrawal in progress and is not counted as available.
             </span>
-            <div className={styles.balanceValue}>{balance.available?.display}</div>
-            <p className={styles.balanceHint}>
-              Ready to withdraw. Minimum {balance.minimumPayout?.display}.
-            </p>
           </div>
+        )}
 
-          <div className={styles.balanceCard}>
-            <span className={styles.balanceLabel}>
-              <Clock size={13} aria-hidden /> Pending
+        {(balance.negativeBalance?.minor ?? 0) > 0 && (
+          <div className={styles.strip}>
+            <Ban size={15} className={styles.stripIcon} aria-hidden />
+            <span className={styles.stripText}>
+              A refund reversed more commission than your balance covered.{" "}
+              <span className={styles.emphasis}>{balance.negativeBalance.display}</span>{" "}
+              will be offset by future earnings before you can withdraw again.
             </span>
-            <div className={styles.balanceValue}>{balance.pending?.display}</div>
-            <p className={styles.balanceHint}>
-              Earned, still inside the {balance.maturityDays}-day window that
-              covers returns and refunds.
-            </p>
           </div>
+        )}
 
-          <div className={styles.balanceCard}>
-            <span className={styles.balanceLabel}>
-              <CheckCircle2 size={13} aria-hidden /> Paid out
-            </span>
-            <div className={styles.balanceValue}>{balance.paid?.display}</div>
-            <p className={styles.balanceHint}>Settled to your destination.</p>
-          </div>
-
-          {(balance.reserved?.minor ?? 0) > 0 && (
-            <div className={styles.balanceCard}>
-              <span className={styles.balanceLabel}>
-                <ArrowRight size={13} aria-hidden /> In progress
-              </span>
-              <div className={styles.balanceValue}>{balance.reserved?.display}</div>
-              <p className={styles.balanceHint}>
-                Held for a withdrawal that is being processed.
-              </p>
-            </div>
-          )}
-
-          {(balance.negativeBalance?.minor ?? 0) > 0 && (
-            <div className={styles.balanceCard}>
-              <span className={styles.balanceLabel}>
-                <Ban size={13} aria-hidden /> Owed back
-              </span>
-              <div className={styles.balanceValue}>
-                {balance.negativeBalance?.display}
-              </div>
-              <p className={styles.balanceHint}>
-                A refund reversed more than your balance covered. Future earnings
-                offset this first.
-              </p>
-            </div>
-          )}
-        </div>
-
+        {/* Maturity — with a 180-day window this is the single most important
+            thing on the page for a new member. */}
         {daysToMaturity !== null && (balance.pending?.minor ?? 0) > 0 && (
-          <div className={styles.maturityBar}>
-            <CalendarClock size={15} aria-hidden />
-            <span>
+          <div className={styles.strip}>
+            <CalendarClock size={15} className={styles.stripIcon} aria-hidden />
+            <span className={styles.stripText}>
               Your next earnings become available in{" "}
-              <span className={styles.maturityCount}>{daysToMaturity} days</span>
-              {" "}— {formatDate(balance.nextMaturityAt)}
+              <span className={styles.emphasis}>{daysToMaturity} days</span>, on{" "}
+              <span className={styles.emphasis}>{formatDate(balance.nextMaturityAt)}</span>.
+              Commission is held until the return and refund window on the order has closed.
             </span>
           </div>
         )}
 
-        {balance.blockedReasons.length > 0 && (
-          <ul className={styles.blockList}>
-            {balance.blockedReasons.map((code) => (
-              <li key={code} className={styles.blockItem}>
-                <AlertCircle size={15} aria-hidden />
-                <span className={styles.blockText}>
-                  {describeBlock(code, blockContext)}
-                </span>
-              </li>
-            ))}
-          </ul>
+        {/* Minimum requirement, with the exact shortfall. */}
+        {shortfallMinor > 0 && (
+          <div className={styles.strip}>
+            <Wallet size={15} className={styles.stripIcon} aria-hidden />
+            <span className={styles.stripText}>
+              You need <span className={styles.emphasis}>{balance.minimumPayout?.display}</span>{" "}
+              available to withdraw. You have{" "}
+              <span className={styles.emphasis}>{balance.available?.display}</span>, so{" "}
+              <span className={styles.emphasis}>{balance.shortfallToMinimum?.display}</span> to go.
+              <span className={styles.progressTrack} style={{ display: "block" }}>
+                <span className={styles.progressFill} style={{ width: `${progressPct}%` }} />
+              </span>
+            </span>
+          </div>
         )}
+      </Section>
 
-        <div className={styles.actions}>
-          {!quote && (
-            <button
-              type="button"
-              className={styles.button}
-              disabled={!balance.canRequestPayout || busy}
-              onClick={handleQuote}
-            >
-              {busy ? <Loader2 size={15} className={styles.spin} /> : <Wallet size={15} />}
-              Withdraw {balance.available?.display}
-            </button>
+      {/* ═══ WITHDRAW ══════════════════════════════════════ */}
+      <Section icon={Wallet} title="Withdraw your earnings">
+        <div className={`${styles.card} ${styles.cardSoft}`}>
+          {openRequest ? (
+            <p className={styles.figureHint}>
+              You have a withdrawal in progress — see <strong>Withdrawal history</strong> below.
+              Only one withdrawal can be open at a time.
+            </p>
+          ) : balance.blockedReasons.length > 0 ? (
+            <>
+              <p className={styles.figureHint}>
+                Withdrawal is not available yet. Here is exactly why:
+              </p>
+              <ul className={styles.blockList}>
+                {balance.blockedReasons.map((code) => (
+                  <li key={code} className={styles.blockItem}>
+                    <AlertCircle size={15} className={styles.blockIcon} aria-hidden />
+                    <span className={styles.blockText}>
+                      {describeBlock(code, {
+                        minimum: balance.minimumPayout?.display,
+                        shortfall: shortfallMinor > 0
+                          ? balance.shortfallToMinimum?.display : null,
+                      })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {destinations.length === 0 && (
+                <div className={styles.actions}>
+                  <button type="button" className={`${styles.button} ${styles.buttonGhost}`}
+                          onClick={() => setShowAddForm(true)}>
+                    <Plus size={15} /> Add a payout destination
+                  </button>
+                </div>
+              )}
+            </>
+          ) : step === "idle" ? (
+            <>
+              <div className={styles.quoteRows}>
+                <div className={styles.quoteRow}>
+                  <span>Amount to withdraw</span>
+                  <span className={styles.quoteAmount}>{balance.available?.display}</span>
+                </div>
+              </div>
+              <p className={styles.figureHint}>
+                Withdrawals cover your whole available balance. Earnings still
+                maturing are not included and stay in Pending earnings.
+              </p>
+
+              <div className={styles.field} style={{ marginTop: "var(--spacing-md)" }}>
+                <label htmlFor="destination">Send to</label>
+                <select id="destination" value={destinationId}
+                        onChange={(e) => setDestinationId(e.target.value)}>
+                  {destinations.filter((d) => d.status === "VERIFIED").map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.displayHint || d.label} · {d.rail.replace("_", " ")} · {d.currency}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className={styles.actions}>
+                <button type="button" className={styles.button}
+                        disabled={!destinationId || busy} onClick={handleQuote}>
+                  {busy ? <Loader2 size={15} className={styles.spin} /> : <Wallet size={15} />}
+                  Withdraw {balance.available?.display}
+                </button>
+              </div>
+            </>
+          ) : (
+            /* ── Quote review: the member confirms the NET ── */
+            <>
+              <p className={styles.figureHint}>
+                Check the amount you will receive before confirming.
+              </p>
+              <div className={styles.quoteRows}>
+                <div className={styles.quoteRow}>
+                  <span>Your earnings</span>
+                  <span className={styles.quoteAmount}>{quote?.gross?.display}</span>
+                </div>
+                <div className={styles.quoteRow}>
+                  <span>Transfer fee</span>
+                  <span className={styles.quoteAmount}>−{quote?.fee?.display}</span>
+                </div>
+                {(quote?.withheldMinor ?? 0) > 0 && (
+                  <div className={styles.quoteRow}>
+                    <span>Tax withheld</span>
+                    <span className={styles.quoteAmount}>−{quote?.withheld?.display}</span>
+                  </div>
+                )}
+                <div className={`${styles.quoteRow} ${styles.quoteRowTotal}`}>
+                  <span>You receive</span>
+                  <span className={styles.quoteAmount}>{quote?.net?.display}</span>
+                </div>
+              </div>
+
+              {quote?.targetAmount && quote.targetCurrency !== quote.currency && (
+                <p className={styles.figureHint}>
+                  Delivered as {quote.targetAmount.display}
+                  {quote.rate ? ` at a rate of ${quote.rate}` : ""}.
+                </p>
+              )}
+
+              <p className={styles.figureHint}>
+                Transfer fees are quoted by the provider and can change. If the
+                amount moves before we send it, we will ask you to confirm again.
+              </p>
+
+              <div className={styles.actions}>
+                <button type="button" className={styles.button} disabled={busy}
+                        onClick={handleConfirm}>
+                  {busy ? <Loader2 size={15} className={styles.spin} /> : <ArrowRight size={15} />}
+                  Confirm — send {quote?.net?.display}
+                </button>
+                <button type="button" className={`${styles.button} ${styles.buttonQuiet}`}
+                        disabled={busy} onClick={() => { setStep("idle"); setQuote(null); }}>
+                  Back
+                </button>
+              </div>
+            </>
           )}
         </div>
-      </section>
+      </Section>
 
-      {/* ── Quote confirmation ────────────────────────────────────────────── */}
-      {quote && (
-        <section className={styles.panel}>
-          <div className={styles.panelHead}>
-            <h2 className={styles.panelTitle}>Confirm your withdrawal</h2>
-            <span className={styles.panelNote}>
-              To {defaultDestination?.displayHint}
-            </span>
-          </div>
-
-          <div className={styles.quoteRows}>
-            <div className={styles.quoteRow}>
-              <span>Your earnings</span>
-              <span className={styles.quoteAmount}>{quote.gross?.display}</span>
-            </div>
-            <div className={styles.quoteRow}>
-              <span>Transfer fee</span>
-              <span className={styles.quoteAmount}>−{quote.fee?.display}</span>
-            </div>
-            {quote.withheldMinor > 0 && (
-              <div className={styles.quoteRow}>
-                <span>Tax withheld</span>
-                <span className={styles.quoteAmount}>−{quote.withheld?.display}</span>
-              </div>
-            )}
-            <div className={`${styles.quoteRow} ${styles.quoteRowTotal}`}>
-              <span>You receive</span>
-              <span className={styles.quoteAmount}>{quote.net?.display}</span>
-            </div>
-            {quote.targetAmount && quote.targetCurrency !== quote.currency && (
-              <p className={styles.panelNote}>
-                Delivered as {quote.targetAmount.display}
-                {quote.rate ? ` at a rate of ${quote.rate}` : ""}.
-              </p>
-            )}
-          </div>
-
-          <div className={styles.actions}>
-            <button
-              type="button"
-              className={styles.button}
-              disabled={busy}
-              onClick={handleConfirm}
-            >
-              {busy ? <Loader2 size={15} className={styles.spin} /> : <ArrowRight size={15} />}
-              Confirm — send {quote.net?.display}
-            </button>
-            <button
-              type="button"
-              className={`${styles.button} ${styles.buttonGhost}`}
-              disabled={busy}
-              onClick={() => setQuote(null)}
-            >
-              Cancel
-            </button>
-          </div>
-        </section>
-      )}
-
-      {/* ── Destinations ──────────────────────────────────────────────────── */}
-      <section className={styles.panel}>
-        <div className={styles.panelHead}>
-          <h2 className={styles.panelTitle}>Where your money goes</h2>
-          <span className={styles.panelNote}>
-            We store only a reference from the provider, never your account number
-          </span>
-        </div>
-
+      {/* ═══ DESTINATIONS ══════════════════════════════════ */}
+      <Section
+        icon={Receipt} title="Payout destinations"
+        note="We store only a reference from the provider, never your account number"
+      >
         {destinations.length === 0 && !showAddForm && (
-          <p className={styles.empty}>No payout destination yet.</p>
+          <div className={styles.card}>
+            <p className={styles.empty}>
+              No payout destination yet. Add one so your earnings have somewhere to go.
+            </p>
+            <div className={styles.actions} style={{ marginTop: 0 }}>
+              <button type="button" className={`${styles.button} ${styles.buttonGhost}`}
+                      onClick={() => setShowAddForm(true)}>
+                <Plus size={15} /> Add a destination
+              </button>
+            </div>
+          </div>
         )}
 
         {destinations.length > 0 && (
-          <ul className={styles.destList}>
+          <ul className={styles.list}>
             {destinations.map((d) => (
               <li key={d.id} className={styles.destItem}>
                 <div className={styles.destMeta}>
@@ -463,14 +517,10 @@ export function PayoutDashboard() {
                     {d.isDefault ? " · default" : ""} · {d.status.toLowerCase()}
                   </span>
                 </div>
-                <button
-                  type="button"
-                  className={`${styles.button} ${styles.buttonDanger}`}
-                  disabled={busy}
-                  onClick={() => handleArchive(d.id)}
-                  aria-label="Remove destination"
-                >
-                  <Trash2 size={14} />
+                <button type="button" className={`${styles.button} ${styles.buttonQuiet}`}
+                        disabled={busy} onClick={() => handleArchive(d.id)}
+                        aria-label={`Remove ${d.displayHint || "destination"}`}>
+                  <Trash2 size={14} /> Remove
                 </button>
               </li>
             ))}
@@ -478,109 +528,93 @@ export function PayoutDashboard() {
         )}
 
         {showAddForm ? (
-          <AddDestinationForm
-            onCancel={() => setShowAddForm(false)}
-            onAdded={async () => { setShowAddForm(false); await refresh(); }}
-          />
-        ) : (
+          <div className={styles.card} style={{ marginTop: "var(--spacing-md)" }}>
+            <AddDestinationForm
+              onCancel={() => setShowAddForm(false)}
+              onAdded={async () => { setShowAddForm(false); await refresh(); }}
+            />
+          </div>
+        ) : destinations.length > 0 && (
           <div className={styles.actions}>
-            <button
-              type="button"
-              className={`${styles.button} ${styles.buttonGhost}`}
-              onClick={() => setShowAddForm(true)}
-            >
-              <Plus size={15} /> Add a destination
+            <button type="button" className={`${styles.button} ${styles.buttonGhost}`}
+                    onClick={() => setShowAddForm(true)}>
+              <Plus size={15} /> Add another destination
             </button>
           </div>
         )}
-      </section>
+      </Section>
 
-      {/* ── History ───────────────────────────────────────────────────────── */}
-      <section className={styles.panel}>
-        <div className={styles.panelHead}>
-          <h2 className={styles.panelTitle}>Withdrawal history</h2>
-        </div>
-
+      {/* ═══ HISTORY ═══════════════════════════════════════ */}
+      <Section icon={Clock} title="Withdrawal history"
+               note={requests.length ? `${requests.length} withdrawal(s)` : null}>
         {requests.length === 0 ? (
-          <p className={styles.empty}>You have not withdrawn yet.</p>
+          <div className={styles.card}><p className={styles.empty}>
+            You have not withdrawn yet.
+          </p></div>
         ) : (
-          <ul className={styles.historyList}>
+          <ul className={styles.list}>
             {requests.map((r) => (
               <li key={r.id} className={styles.historyItem}>
                 <div className={styles.historyHead}>
                   <span className={styles.historyAmount}>{r.net?.display}</span>
                   <StatusBadge status={r.status} />
                 </div>
-                <p className={styles.destSub}>
+                <p className={styles.destSub} style={{ marginTop: 4 }}>
                   Requested {formatDate(r.requestedAt)}
                   {r.destination?.displayHint ? ` · to ${r.destination.displayHint}` : ""}
-                  {r.fee?.minor > 0 ? ` · ${r.fee.display} fee` : ""}
+                  {(r.fee?.minor ?? 0) > 0 ? ` · ${r.fee.display} fee` : ""}
                 </p>
 
+                {/* Re-confirmation: the quote moved, nothing has been sent. */}
                 {r.requiresReconfirmation && (
-                  <div className={styles.blockItem} style={{ marginTop: "0.7rem" }}>
-                    <AlertCircle size={15} aria-hidden />
-                    <span className={styles.blockText}>
-                      The transfer fee changed while this was being reviewed. You
-                      agreed to <strong>{r.confirmedNet?.display}</strong>; the amount
-                      is now <strong>{r.net?.display}</strong>. Nothing has been sent.
-                    </span>
-                  </div>
-                )}
-
-                {r.requiresReconfirmation && (
-                  <div className={styles.actions}>
-                    <button
-                      type="button"
-                      className={styles.button}
-                      disabled={busy}
-                      onClick={() => handleReconfirm(r.id)}
-                    >
-                      {busy ? <Loader2 size={15} className={styles.spin} />
-                            : <CheckCircle2 size={15} />}
-                      Confirm {r.net?.display} and send
-                    </button>
-                    <button
-                      type="button"
-                      className={`${styles.button} ${styles.buttonDanger}`}
-                      disabled={busy}
-                      onClick={() => handleCancel(r.id)}
-                    >
-                      Cancel instead
-                    </button>
+                  <div className={styles.reconfirmBox}>
+                    <p className={styles.figureHint} style={{ marginBottom: 10 }}>
+                      <RefreshCw size={14} aria-hidden />{" "}
+                      The transfer fee changed while this was being reviewed. You agreed to{" "}
+                      <span className={styles.emphasis}>{r.confirmedNet?.display}</span>; the
+                      amount is now <span className={styles.emphasis}>{r.net?.display}</span>.
+                      Nothing has been sent.
+                    </p>
+                    <div className={styles.actions} style={{ marginTop: 0 }}>
+                      <button type="button" className={styles.button} disabled={busy}
+                              onClick={() => handleReconfirm(r.id)}>
+                        {busy ? <Loader2 size={15} className={styles.spin} />
+                              : <CheckCircle2 size={15} />}
+                        Confirm {r.net?.display} and send
+                      </button>
+                      <button type="button" className={`${styles.button} ${styles.buttonQuiet}`}
+                              disabled={busy} onClick={() => handleCancel(r.id)}>
+                        Cancel instead
+                      </button>
+                    </div>
                   </div>
                 )}
 
                 {r.rejectionReason && (
-                  <p className={styles.blockItem} style={{ marginTop: "0.6rem" }}>
-                    <AlertCircle size={14} aria-hidden />
+                  <div className={styles.blockItem} style={{ marginTop: 12 }}>
+                    <AlertCircle size={15} className={styles.blockIcon} aria-hidden />
                     <span className={styles.blockText}>{r.rejectionReason}</span>
-                  </p>
+                  </div>
                 )}
 
                 {r.timeline?.length > 0 && (
                   <ul className={styles.timeline}>
-                    {r.timeline.map((step, i) => (
+                    {r.timeline.map((s, i) => (
                       <li key={`${r.id}-${i}`} className={styles.timelineStep}>
-                        <span className={styles.timelineDot} aria-hidden />
-                        <span className={styles.timelineLabel}>{step.label}</span>
-                        <span className={styles.timelineTime}>
-                          {formatDateTime(step.at)}
-                        </span>
+                        <span className={`${styles.timelineDot} ${
+                          s.state === "COMPLETED" ? styles.timelineDotDone : ""}`} aria-hidden />
+                        <span className={styles.timelineLabel}>{s.label}</span>
+                        <span className={styles.timelineTime}>{formatDateTime(s.at)}</span>
                       </li>
                     ))}
                   </ul>
                 )}
 
-                {["REQUESTED", "PENDING_REVIEW", "APPROVED"].includes(r.status) &&
-                  !r.requiresReconfirmation && (
+                {["REQUESTED", "PENDING_REVIEW", "APPROVED"].includes(r.status)
+                  && !r.requiresReconfirmation && (
                   <div className={styles.actions}>
-                    <button
-                      type="button"
-                      className={`${styles.button} ${styles.buttonDanger}`}
-                      disabled={busy}
-                      onClick={() => handleCancel(r.id)}
-                    >
+                    <button type="button" className={`${styles.button} ${styles.buttonQuiet}`}
+                            disabled={busy} onClick={() => handleCancel(r.id)}>
                       Cancel withdrawal
                     </button>
                   </div>
@@ -589,44 +623,50 @@ export function PayoutDashboard() {
             ))}
           </ul>
         )}
-      </section>
+      </Section>
 
-      {/* ── Ledger ────────────────────────────────────────────────────────── */}
-      <section className={styles.panel}>
-        <div className={styles.panelHead}>
-          <h2 className={styles.panelTitle}>Earnings statement</h2>
-          <span className={styles.panelNote}>{entries.count} entries</span>
-        </div>
-
-        {entries.results.length === 0 ? (
-          <p className={styles.empty}>No commission earned yet.</p>
-        ) : (
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Order</th>
-                  <th>Level</th>
-                  <th className={styles.numeric}>Amount</th>
-                  <th>Status</th>
-                  <th>Available from</th>
-                </tr>
-              </thead>
-              <tbody>
-                {entries.results.map((e) => (
-                  <tr key={e.id}>
-                    <td>{e.order || "—"}</td>
-                    <td>{e.level ? `L${e.level}` : "adjustment"}</td>
-                    <td className={styles.numeric}>{e.amount?.display}</td>
-                    <td><StatusBadge status={e.state} /></td>
-                    <td>{formatDate(e.maturesAt)}</td>
+      {/* ═══ STATEMENT ═════════════════════════════════════ */}
+      <Section icon={Receipt} title="Earnings statement"
+               note={`${entries.count} entr${entries.count === 1 ? "y" : "ies"}`}>
+        <div className={styles.card} style={{ padding: 0, overflow: "hidden" }}>
+          {entries.results.length === 0 ? (
+            <p className={styles.empty}>
+              No commission earned yet. You earn when someone in your Chakan Tree buys tea.
+            </p>
+          ) : (
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Order</th><th>Level</th>
+                    <th className={styles.numeric}>Amount</th>
+                    <th>Status</th><th>Available from</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+                </thead>
+                <tbody>
+                  {entries.results.map((e) => (
+                    <tr key={e.id}>
+                      <td>{e.order || "—"}</td>
+                      <td>{e.level ? `Level ${e.level}` : "Adjustment"}</td>
+                      <td className={styles.numeric}>{e.amount?.display}</td>
+                      <td>
+                        <span className={`${styles.badge} ${
+                          e.state === "PAID" ? styles.badgeGood
+                          : e.state === "AVAILABLE" ? styles.badgeGood
+                          : e.state === "PENDING" ? styles.badgeNeutral
+                          : styles.badgeWarn}`}>
+                          {ENTRY_WORDS[e.state] || e.state}
+                        </span>
+                      </td>
+                      <td>{formatDate(e.maturesAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </Section>
     </div>
   );
 }
@@ -634,8 +674,8 @@ export function PayoutDashboard() {
 /* =========================================================
    ADD DESTINATION
 
-   The raw value is sent to the provider and never persisted by
-   us — the provider returns a recipient id and we keep that.
+   Raw details go straight to the provider and are never stored by us — the
+   provider returns a recipient id, and that plus a masked hint is all we keep.
 ========================================================= */
 
 function AddDestinationForm({ onCancel, onAdded }) {
@@ -648,13 +688,10 @@ function AddDestinationForm({ onCancel, onAdded }) {
 
   const submit = async (event) => {
     event.preventDefault();
-    setSubmitting(true);
-    setFormError("");
+    setSubmitting(true); setFormError("");
     try {
       await addDestination({
-        rail,
-        country,
-        currency: "USD",
+        rail, country, currency: "USD",
         type: rail === "WISE" ? "email" : "internal",
         account_holder_name: holder,
         details: rail === "WISE" ? { email: value } : {},
@@ -666,61 +703,60 @@ function AddDestinationForm({ onCancel, onAdded }) {
         err?.response?.data?.detail ||
         "The provider could not accept that destination.",
       );
-    } finally {
-      setSubmitting(false);
-    }
+    } finally { setSubmitting(false); }
   };
 
   return (
-    <form onSubmit={submit} style={{ marginTop: "1rem" }}>
+    <form onSubmit={submit}>
       <div className={styles.field}>
-        <label htmlFor="rail">Method</label>
+        <label htmlFor="rail">How would you like to be paid?</label>
         <select id="rail" value={rail} onChange={(e) => setRail(e.target.value)}>
-          <option value="WISE">Wise transfer</option>
+          <option value="WISE">Bank transfer via Wise</option>
           <option value="STORE_CREDIT">Store credit</option>
         </select>
       </div>
 
-      {rail === "WISE" && (
+      {rail === "WISE" ? (
         <>
           <div className={styles.field}>
             <label htmlFor="holder">Account holder name</label>
-            <input
-              id="holder" value={holder} required
-              onChange={(e) => setHolder(e.target.value)}
-              placeholder="As it appears on the account"
-            />
+            <input id="holder" value={holder} required
+                   onChange={(e) => setHolder(e.target.value)}
+                   placeholder="As it appears on the account" />
           </div>
           <div className={styles.field}>
             <label htmlFor="value">Recipient email</label>
-            <input
-              id="value" type="email" value={value} required
-              onChange={(e) => setValue(e.target.value)}
-              placeholder="you@example.com"
-            />
+            <input id="value" type="email" value={value} required
+                   onChange={(e) => setValue(e.target.value)}
+                   placeholder="you@example.com" />
           </div>
           <div className={styles.field}>
             <label htmlFor="country">Country</label>
-            <input
-              id="country" value={country} maxLength={2}
-              onChange={(e) => setCountry(e.target.value.toUpperCase())}
-            />
+            <input id="country" value={country} maxLength={2}
+                   onChange={(e) => setCountry(e.target.value.toUpperCase())} />
           </div>
         </>
+      ) : (
+        <p className={styles.figureHint}>
+          Store credit is applied to your Chakancha account and can be spent on tea.
+          No bank details are needed.
+        </p>
       )}
 
-      {formError && <p className={styles.error}>{formError}</p>}
+      {formError && (
+        <div className={styles.blockItem}>
+          <AlertCircle size={15} className={styles.blockIcon} aria-hidden />
+          <span className={styles.blockText}>{formError}</span>
+        </div>
+      )}
 
       <div className={styles.actions}>
         <button type="submit" className={styles.button} disabled={submitting}>
           {submitting ? <Loader2 size={15} className={styles.spin} /> : <Plus size={15} />}
           Add destination
         </button>
-        <button
-          type="button"
-          className={`${styles.button} ${styles.buttonGhost}`}
-          onClick={onCancel}
-        >
+        <button type="button" className={`${styles.button} ${styles.buttonQuiet}`}
+                onClick={onCancel}>
           Cancel
         </button>
       </div>
