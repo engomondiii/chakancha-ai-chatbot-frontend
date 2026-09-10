@@ -7,6 +7,13 @@
  * { minor, display, currency } and the UI renders `display` — a frontend that
  * divides by 100 is a frontend that eventually rounds someone's money wrong.
  *
+ * IMPORTANT — response shape: `api.get/post/...` from ./client ALREADY unwraps
+ * the axios response (`.then(r => r.data)`), so it resolves to the payload
+ * itself. Use `const data = await api.get(...)`, never
+ * `const { data } = await api.get(...)` — the latter destructures a `.data` key
+ * that does not exist, yielding undefined and a TypeError on first property
+ * access. Every other API module in this project uses the correct form.
+ *
  * Normalizers map snake_case → camelCase and shape only what the backend sent.
  * They never invent values: a missing field stays missing so a broken endpoint
  * is visible rather than disguised as a zero balance.
@@ -271,7 +278,7 @@ function hasStoredSession() {
  * disagree because each was fetched at a different moment.
  */
 export async function getDashboard({ limit = 25 } = {}) {
-  const { data } = await api.get(ENDPOINTS.PAYOUTS.DASHBOARD, { params: { limit } });
+  const data = await api.get(ENDPOINTS.PAYOUTS.DASHBOARD, { params: { limit } });
   return {
     balance: normalizeBalance(data.balance),
     destinations: (data.destinations ?? []).map(normalizeDestination),
@@ -285,14 +292,14 @@ export async function getDashboard({ limit = 25 } = {}) {
 
 
 export async function getBalance() {
-  const { data } = await api.get(ENDPOINTS.PAYOUTS.BALANCE);
+  const data = await api.get(ENDPOINTS.PAYOUTS.BALANCE);
   return normalizeBalance(data);
 }
 
 export async function getEntries({ state, limit = 50, offset = 0 } = {}) {
   const params = { limit, offset };
   if (state) params.state = state;
-  const { data } = await api.get(ENDPOINTS.PAYOUTS.ENTRIES, { params });
+  const data = await api.get(ENDPOINTS.PAYOUTS.ENTRIES, { params });
   return {
     count: data.count ?? 0,
     limit: data.limit ?? limit,
@@ -302,7 +309,7 @@ export async function getEntries({ state, limit = 50, offset = 0 } = {}) {
 }
 
 export async function getDestinations() {
-  const { data } = await api.get(ENDPOINTS.PAYOUTS.DESTINATIONS);
+  const data = await api.get(ENDPOINTS.PAYOUTS.DESTINATIONS);
   return (data ?? []).map(normalizeDestination);
 }
 
@@ -311,7 +318,7 @@ export async function getDestinations() {
  * only the provider's recipient id and a masked hint come back.
  */
 export async function addDestination(payload) {
-  const { data } = await api.post(ENDPOINTS.PAYOUTS.DESTINATIONS, payload);
+  const data = await api.post(ENDPOINTS.PAYOUTS.DESTINATIONS, payload);
   return normalizeDestination(data);
 }
 
@@ -320,7 +327,7 @@ export async function archiveDestination(id) {
 }
 
 export async function getQuote(destinationId) {
-  const { data } = await api.post(ENDPOINTS.PAYOUTS.QUOTE, {
+  const data = await api.post(ENDPOINTS.PAYOUTS.QUOTE, {
     destination_id: destinationId,
   });
   return normalizeQuote(data);
@@ -332,7 +339,7 @@ export async function getQuote(destinationId) {
  * resubmitted request returns the SAME payout rather than creating a second.
  */
 export async function requestPayout({ destinationId, idempotencyKey }) {
-  const { data } = await api.post(
+  const data = await api.post(
     ENDPOINTS.PAYOUTS.REQUEST,
     { destination_id: destinationId },
     { headers: { "Idempotency-Key": idempotencyKey } },
@@ -341,17 +348,17 @@ export async function requestPayout({ destinationId, idempotencyKey }) {
 }
 
 export async function getRequests() {
-  const { data } = await api.get(ENDPOINTS.PAYOUTS.REQUESTS);
+  const data = await api.get(ENDPOINTS.PAYOUTS.REQUESTS);
   return (data ?? []).map(normalizeRequest);
 }
 
 export async function getRequest(id) {
-  const { data } = await api.get(ENDPOINTS.PAYOUTS.REQUEST_DETAIL(id));
+  const data = await api.get(ENDPOINTS.PAYOUTS.REQUEST_DETAIL(id));
   return normalizeRequest(data);
 }
 
 export async function cancelRequest(id) {
-  const { data } = await api.post(ENDPOINTS.PAYOUTS.REQUEST_CANCEL(id), {});
+  const data = await api.post(ENDPOINTS.PAYOUTS.REQUEST_CANCEL(id), {});
   return normalizeRequest(data);
 }
 
@@ -361,7 +368,7 @@ export async function cancelRequest(id) {
  * agreed to, and a different figure is a new agreement.
  */
 export async function confirmRequest(id) {
-  const { data } = await api.post(ENDPOINTS.PAYOUTS.REQUEST_CONFIRM(id), {});
+  const data = await api.post(ENDPOINTS.PAYOUTS.REQUEST_CONFIRM(id), {});
   return normalizeRequest(data);
 }
 
@@ -386,29 +393,29 @@ export function normalizeAdminRequest(raw) {
 }
 
 export async function getAdminQueue(status) {
-  const { data } = await api.get(ENDPOINTS.PAYOUT_ADMIN.QUEUE, {
+  const data = await api.get(ENDPOINTS.PAYOUT_ADMIN.QUEUE, {
     params: status ? { status } : {},
   });
   return (data ?? []).map(normalizeAdminRequest);
 }
 
 export async function getAdminRequest(id) {
-  const { data } = await api.get(ENDPOINTS.PAYOUT_ADMIN.DETAIL(id));
+  const data = await api.get(ENDPOINTS.PAYOUT_ADMIN.DETAIL(id));
   return normalizeAdminRequest(data);
 }
 
 export async function approvePayout(id, reason) {
-  const { data } = await api.post(ENDPOINTS.PAYOUT_ADMIN.APPROVE(id), { reason });
+  const data = await api.post(ENDPOINTS.PAYOUT_ADMIN.APPROVE(id), { reason });
   return normalizeAdminRequest(data);
 }
 
 export async function rejectPayout(id, reason) {
-  const { data } = await api.post(ENDPOINTS.PAYOUT_ADMIN.REJECT(id), { reason });
+  const data = await api.post(ENDPOINTS.PAYOUT_ADMIN.REJECT(id), { reason });
   return normalizeAdminRequest(data);
 }
 
 export async function getFraudReviews() {
-  const { data } = await api.get(ENDPOINTS.PAYOUT_ADMIN.FRAUD_REVIEWS);
+  const data = await api.get(ENDPOINTS.PAYOUT_ADMIN.FRAUD_REVIEWS);
   return (data ?? []).map((r) => ({
     id: r.id,
     member: r.member,
@@ -422,7 +429,7 @@ export async function getFraudReviews() {
 }
 
 export async function resolveFraudReview(id, { clear, resolution }) {
-  const { data } = await api.post(ENDPOINTS.PAYOUT_ADMIN.FRAUD_RESOLVE(id), {
+  const data = await api.post(ENDPOINTS.PAYOUT_ADMIN.FRAUD_RESOLVE(id), {
     clear,
     resolution,
   });
