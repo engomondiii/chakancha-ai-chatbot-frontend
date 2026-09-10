@@ -138,6 +138,7 @@ export function PayoutDashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [needsSignIn, setNeedsSignIn] = useState(false);
   const [busy, setBusy] = useState(false);
 
   // UI steps for the withdraw flow. NOT financial states — those live in the
@@ -157,8 +158,9 @@ export function PayoutDashboard() {
         next.destinations.find((d) => d.status === "VERIFIED");
       setDestinationId((current) => current || preferred?.id || "");
     } catch (err) {
-      const { message } = describeApiError(err, "Could not load your earnings.");
+      const { message, isAuthError } = describeApiError(err, "Could not load your earnings.");
       setError(message);
+      setNeedsSignIn(Boolean(isAuthError));
     } finally {
       setLoading(false);
     }
@@ -254,7 +256,13 @@ export function PayoutDashboard() {
     return (
       <div className={styles.error} role="alert">
         <AlertCircle size={16} aria-hidden />
-        {error || "No earnings information is available."}
+        <span>{error || "No earnings information is available."}</span>
+        {needsSignIn && (
+          <a className={styles.button} href="/login"
+             style={{ marginLeft: "var(--spacing-sm)", textDecoration: "none" }}>
+            Sign in
+          </a>
+        )}
       </div>
     );
   }
@@ -271,7 +279,14 @@ export function PayoutDashboard() {
     <div className={styles.wrap}>
       {error && (
         <div className={styles.error} role="alert">
-          <AlertCircle size={16} aria-hidden /> {error}
+          <AlertCircle size={16} aria-hidden />
+          <span>{error}</span>
+          {needsSignIn && (
+            <a className={`${styles.button}`} href="/login"
+               style={{ marginLeft: "var(--spacing-sm)", textDecoration: "none" }}>
+              Sign in
+            </a>
+          )}
         </div>
       )}
 

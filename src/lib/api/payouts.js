@@ -196,10 +196,26 @@ export function describeApiError(err, fallback) {
     (typeof err?.message === "string" && err.message !== "Network Error" && err.message) ||
     null;
 
+  // An aborted request has no status, and neither does a genuine network
+  // failure — but they are not the same thing and must not read the same.
+  // A request is aborted when the page navigates away mid-flight, which is
+  // exactly what happens when a rejected refresh token logs the member out.
+  // Reporting that as "check your connection" sends them to debug their wifi
+  // when what they need is to sign in again.
+  const isApiError = err?.name === "ApiError" || status !== null;
+
+  const aborted =
+    err?.code === "ERR_CANCELED" ||
+    err?.name === "CanceledError" ||
+    err?.name === "AbortError" ||
+    /canceled|aborted/i.test(err?.message || "");
+
   let message;
+  let isAuthError = false;
   switch (status) {
     case 401:
       message = "Your session has expired. Please sign in again.";
+      isAuthError = true;
       break;
     case 403:
       message = detail ||
@@ -214,12 +230,35 @@ export function describeApiError(err, fallback) {
       break;
     case null:
     case undefined:
-      message = "We could not reach the server. Check your connection and try again.";
+      if (!isApiError && err instanceof Error) {
+        // A TypeError here is a bug in this code, not a connection problem.
+        // Saying "check your connection" would send someone to debug their wifi
+        // while the real fault sits in the browser — which is how this class of
+        // failure hides.
+        message = `Something went wrong while reading your earnings (${err.name}: ${err.message}).`;
+      } else if (aborted || !hasStoredSession()) {
+        // No status AND no session: the request was cut short by the sign-out
+        // that a rejected refresh token triggers.
+        message = "Your session has expired. Please sign in again.";
+        isAuthError = true;
+      } else {
+        message = "We could not reach the server. Check your connection and try again.";
+      }
       break;
     default:
       message = detail || fallback;
   }
-  return { status, message, codes };
+  return { status, message, codes, isAuthError };
+}
+
+/** Is there still a token in this browser? Distinguishes sign-out from offline. */
+function hasStoredSession() {
+  try {
+    if (typeof window === "undefined") return true;
+    return Boolean(window.localStorage.getItem("chakancha_access_token"));
+  } catch {
+    return true;      // cannot tell — do not claim the session ended
+  }
 }
 
 // ─── Member endpoints ─────────────────────────────────────────────────────────
