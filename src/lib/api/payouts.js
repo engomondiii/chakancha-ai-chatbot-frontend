@@ -169,6 +169,59 @@ export function normalizeQuote(raw) {
   };
 }
 
+
+// ─── Error interpretation ─────────────────────────────────────────────────────
+
+/**
+ * Turn a failure from the API client into something a member can act on.
+ *
+ * client.js rejects with ApiError — `{ status, message, data }`. It is NOT an
+ * axios error, so there is no `err.response`. The payout screens used to read
+ * `err.response.status`, which is always undefined, so 401, 403, 429 and 503
+ * all collapsed into one generic sentence and the server's own explanation in
+ * `err.message` was thrown away. That is why a failing payout page could only
+ * ever say "Could not load your earnings".
+ *
+ * Returns { status, message, codes } — codes being the API's machine-readable
+ * blocked_reasons when present.
+ */
+export function describeApiError(err, fallback) {
+  const status = err?.status ?? err?.response?.status ?? null;
+  const data = err?.data ?? err?.response?.data ?? null;
+  const codes = Array.isArray(data?.blocked_reasons) ? data.blocked_reasons : [];
+
+  // The server's own words, when it gave any.
+  const detail =
+    (typeof data?.detail === "string" && data.detail) ||
+    (typeof err?.message === "string" && err.message !== "Network Error" && err.message) ||
+    null;
+
+  let message;
+  switch (status) {
+    case 401:
+      message = "Your session has expired. Please sign in again.";
+      break;
+    case 403:
+      message = detail ||
+        "Your account cannot access payouts. Chakan Tree membership and a verified email are required.";
+      break;
+    case 429:
+      message = "You are refreshing faster than we can keep up. Please wait a moment and try again.";
+      break;
+    case 503:
+      message = detail ||
+        "Withdrawals are closed at the moment. Your earnings are still being recorded.";
+      break;
+    case null:
+    case undefined:
+      message = "We could not reach the server. Check your connection and try again.";
+      break;
+    default:
+      message = detail || fallback;
+  }
+  return { status, message, codes };
+}
+
 // ─── Member endpoints ─────────────────────────────────────────────────────────
 
 /**

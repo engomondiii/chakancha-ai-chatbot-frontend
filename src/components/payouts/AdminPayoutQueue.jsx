@@ -23,8 +23,8 @@ import {
 } from "lucide-react";
 
 import {
-  approvePayout, getAdminQueue, getAdminRequest, getFraudReviews,
-  rejectPayout, resolveFraudReview,
+  approvePayout, describeApiError, getAdminQueue, getAdminRequest,
+  getFraudReviews, rejectPayout, resolveFraudReview,
 } from "@/lib/api/payouts";
 
 import styles from "./payouts.module.css";
@@ -68,11 +68,8 @@ export function AdminPayoutQueue() {
       setQueue(q);
       setReviews(r);
     } catch (err) {
-      setError(
-        err?.response?.status === 403
-          ? "Payout review is restricted to staff."
-          : "Could not load the payout queue.",
-      );
+      const { status, message } = describeApiError(err, "Could not load the payout queue.");
+      setError(status === 403 ? "Payout review is restricted to staff." : message);
     } finally {
       setLoading(false);
     }
@@ -107,8 +104,8 @@ export function AdminPayoutQueue() {
       );
       await refresh();
     } catch (err) {
-      const detail = err?.response?.data?.detail;
-      setError(Array.isArray(detail) ? detail.join(" ") : detail || "Could not approve.");
+      const { message } = describeApiError(err, "Could not approve.");
+      setError(Array.isArray(message) ? message.join(" ") : message);
     } finally {
       setBusy(false);
     }
@@ -128,7 +125,7 @@ export function AdminPayoutQueue() {
       setNotice("Rejected. The reserved earnings have been returned to the member's available balance.");
       await refresh();
     } catch (err) {
-      setError(err?.response?.data?.detail || "Could not reject.");
+      setError(describeApiError(err, "Could not reject.").message);
     } finally {
       setBusy(false);
     }

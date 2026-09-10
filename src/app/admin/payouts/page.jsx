@@ -20,14 +20,25 @@ export default function AdminPayoutsPage() {
 
   if (!mounted) {
     return (
-      <main style={{ display: "flex", justifyContent: "center", padding: "4rem 1rem" }}>
+      <main style={{
+        display: "flex", justifyContent: "center",
+        padding: "calc(72px + var(--spacing-2xl)) var(--spacing-lg) var(--spacing-3xl)",
+      }}>
         <Loader2 size={20} aria-hidden />
       </main>
     );
   }
 
   return (
-    <main style={{ maxWidth: 1100, margin: "0 auto", padding: "2.5rem 1.25rem 4rem" }}>
+    <main
+      style={{
+        width: "100%",
+        maxWidth: 1100,
+        margin: "0 auto",
+        // Clears the 68px fixed site header — see the member payout page.
+        padding: "calc(72px + var(--spacing-2xl)) var(--spacing-lg) var(--spacing-3xl)",
+      }}
+    >
       <header style={{ marginBottom: "2rem" }}>
         <h1 style={{ fontSize: "1.6rem", fontWeight: 650, letterSpacing: "-0.02em" }}>
           Payout review

@@ -28,7 +28,8 @@ import {
 
 import {
   addDestination, archiveDestination, cancelRequest, confirmRequest, daysUntil,
-  describeBlock, getDashboard, getQuote, newIdempotencyKey, requestPayout,
+  describeApiError, describeBlock, getDashboard, getQuote, newIdempotencyKey,
+  requestPayout,
 } from "@/lib/api/payouts";
 
 import styles from "./payouts.module.css";
@@ -156,19 +157,8 @@ export function PayoutDashboard() {
         next.destinations.find((d) => d.status === "VERIFIED");
       setDestinationId((current) => current || preferred?.id || "");
     } catch (err) {
-      if (err?.response?.status === 503) {
-        setError(
-          err?.response?.data?.detail ||
-          "Withdrawals are closed at the moment. Your earnings are still being recorded.",
-        );
-      } else if (err?.response?.status === 429) {
-        setError("You are refreshing faster than we can keep up. Please wait a moment.");
-      } else {
-        setError(
-          err?.response?.data?.detail ||
-          "Could not load your earnings. Please try again.",
-        );
-      }
+      const { message } = describeApiError(err, "Could not load your earnings.");
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -199,9 +189,8 @@ export function PayoutDashboard() {
   );
 
   const reportError = (err, fallback) => {
-    const codes = err?.response?.data?.blocked_reasons;
-    setError(codes?.length ? describeCodes(codes)
-                           : err?.response?.data?.detail || fallback);
+    const { message, codes } = describeApiError(err, fallback);
+    setError(codes.length ? describeCodes(codes) : message);
   };
 
   /* ── Actions ──────────────────────────────────────────── */
@@ -700,8 +689,7 @@ function AddDestinationForm({ onCancel, onAdded }) {
       await onAdded();
     } catch (err) {
       setFormError(
-        err?.response?.data?.detail ||
-        "The provider could not accept that destination.",
+        describeApiError(err, "The provider could not accept that destination.").message,
       );
     } finally { setSubmitting(false); }
   };

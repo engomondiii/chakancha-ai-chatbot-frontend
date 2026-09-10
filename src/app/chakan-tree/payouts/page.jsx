@@ -32,14 +32,28 @@ export default function PayoutsPage() {
 
   if (!mounted || !isAuthenticated) {
     return (
-      <main style={{ display: "flex", justifyContent: "center", padding: "4rem 1rem" }}>
+      <main style={{
+        display: "flex", justifyContent: "center",
+        // The site header is position:fixed at 68px tall. Clearing it is the
+        // page's job — the same calc() the Chakan Tree dashboard uses.
+        padding: "calc(72px + var(--spacing-2xl)) var(--spacing-lg) var(--spacing-3xl)",
+      }}>
         <Loader2 size={20} aria-hidden />
       </main>
     );
   }
 
   return (
-    <main style={{ maxWidth: 960, margin: "0 auto", padding: "2.5rem 1.25rem 4rem" }}>
+    <main
+      style={{
+        width: "100%",
+        maxWidth: "var(--max-width-content)",
+        margin: "0 auto",
+        // 68px fixed header + 4px + a section's breathing room. Without this the
+        // heading sits underneath the navbar.
+        padding: "calc(72px + var(--spacing-2xl)) var(--spacing-lg) var(--spacing-3xl)",
+      }}
+    >
       <header style={{ marginBottom: "2rem" }}>
         <h1 style={{ fontSize: "1.6rem", fontWeight: 650, letterSpacing: "-0.02em" }}>
           Withdraw your earnings
