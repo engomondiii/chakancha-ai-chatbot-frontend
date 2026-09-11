@@ -28,8 +28,9 @@ import {
 
 import {
   addDestination, archiveDestination, cancelRequest, confirmRequest, daysUntil,
-  describeApiError, describeBlock, getDashboard, getDestinationRequirements,
-  getQuote, newIdempotencyKey, requestPayout,
+  describeApiError, describeBlock, getCorridors, getDashboard,
+  getDestinationRequirements, getQuote, newIdempotencyKey,
+  refineDestinationRequirements, requestPayout, validateRequirementField,
 } from "@/lib/api/payouts";
 
 import styles from "./payouts.module.css";
@@ -682,15 +683,6 @@ export function PayoutDashboard() {
    provider returns a recipient id, and that plus a masked hint is all we keep.
 ========================================================= */
 
-/** Currencies a member can ask to be paid in. The provider decides whether each
- *  is actually payable for their amount, and says so. */
-const PAYOUT_CURRENCIES = [
-  { code: "USD", label: "US dollars (USD)" },
-  { code: "EUR", label: "Euros (EUR)" },
-  { code: "GBP", label: "Pounds sterling (GBP)" },
-  { code: "KES", label: "Kenyan shillings (KES)" },
-];
-
 /**
  * Splits one flat form into the three shapes the API expects.
  *
@@ -715,26 +707,68 @@ function splitDestinationFields(values) {
   return { details, address, legalType };
 }
 
+/**
+ * Currencies, with the ones that suit this country first.
+ *
+ * A hint, not a filter. The provider's country keywords are a search index, so
+ * a member in Kenya sees KES and USD at the top and everything else below —
+ * never a shorter list of what someone here decided Kenyans may choose.
+ */
+function orderCurrencies(currencies, country) {
+  if (!country) return currencies;
+  const suited = [];
+  const rest = [];
+  currencies.forEach((c) => {
+    (c.countryHints?.includes(country) ? suited : rest).push(c);
+  });
+  return [...suited, ...rest];
+}
+
 function AddDestinationForm({ onCancel, onAdded }) {
   const [method, setMethod] = useState("BANK");
-  const [currency, setCurrency] = useState("USD");
+
+  const [corridors, setCorridors] = useState(null);
+  const [loadingCorridors, setLoadingCorridors] = useState(false);
+
+  const [country, setCountry] = useState("");
+  const [currency, setCurrency] = useState("");
+
   const [requirements, setRequirements] = useState(null);
   const [loadingReqs, setLoadingReqs] = useState(false);
   const [reqError, setReqError] = useState("");
+
   const [accountType, setAccountType] = useState("");
   const [values, setValues] = useState({});
+  const [fieldErrors, setFieldErrors] = useState({});
   const [holder, setHolder] = useState("");
+
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
 
-  // Ask the provider what this currency needs. Re-asked whenever the member
-  // changes currency, because both the field list and whether it can be paid
-  // at all depend on it.
+  // The country and currency lists come from the provider, once per form.
   useEffect(() => {
-    if (method !== "BANK") return;
+    if (method !== "BANK" || corridors) return;
+    let cancelled = false;
+    setLoadingCorridors(true);
+    getCorridors()
+      .then((c) => { if (!cancelled) setCorridors(c); })
+      .catch((err) => {
+        if (!cancelled) {
+          setReqError(describeApiError(err, "Could not load the list of countries.").message);
+        }
+      })
+      .finally(() => { if (!cancelled) setLoadingCorridors(false); });
+    return () => { cancelled = true; };
+  }, [method, corridors]);
+
+  // Requirements depend on the currency, so they are re-asked whenever it
+  // changes — and reset, because fields from the previous corridor mean
+  // nothing in this one.
+  useEffect(() => {
+    if (method !== "BANK" || !currency) { setRequirements(null); return; }
     let cancelled = false;
     setLoadingReqs(true); setReqError(""); setRequirements(null);
-    setAccountType(""); setValues({});
+    setAccountType(""); setValues({}); setFieldErrors({});
     getDestinationRequirements(currency)
       .then((reqs) => {
         if (cancelled) return;
@@ -743,9 +777,8 @@ function AddDestinationForm({ onCancel, onAdded }) {
       })
       .catch((err) => {
         if (cancelled) return;
-        setReqError(
-          describeApiError(err, "Could not load the details needed for this currency.").message,
-        );
+        setReqError(describeApiError(err,
+          "Could not load the details needed for this currency.").message);
       })
       .finally(() => { if (!cancelled) setLoadingReqs(false); });
     return () => { cancelled = true; };
@@ -753,10 +786,74 @@ function AddDestinationForm({ onCancel, onAdded }) {
 
   const selectedType = requirements?.types.find((t) => t.type === accountType) ?? null;
   const fields = selectedType?.fields ?? [];
+  const payable = requirements?.available !== false;
+
+  // The member already told us their country; the address field asking again
+  // is the provider's question, not a second decision.
+  useEffect(() => {
+    if (!country) return;
+    const hasCountryField = fields.some((f) => f.key === "address.country");
+    if (hasCountryField && !values["address.country"]) {
+      setValues((prev) => ({ ...prev, "address.country": country }));
+    }
+  }, [country, fields, values]);
+
+  /**
+   * Re-ask the provider when a field it flagged changes.
+   *
+   * Some answers change which other fields are required. Continuing to render
+   * the first reply would show a field set for a question no longer being
+   * asked, and the member would only find out when the account was rejected.
+   */
+  const refresh = useCallback(async (nextValues) => {
+    if (!currency || !accountType) return;
+    setLoadingReqs(true);
+    try {
+      const { details, address, legalType } = splitDestinationFields(nextValues);
+      const reqs = await refineDestinationRequirements({
+        currency,
+        type: accountType,
+        details: { ...details, ...(legalType ? { legalType } : {}),
+                   ...Object.fromEntries(Object.entries(address)
+                     .map(([k, v]) => [`address.${k}`, v])) },
+      });
+      setRequirements(reqs);
+    } catch (err) {
+      setReqError(describeApiError(err, "Could not refresh the required details.").message);
+    } finally {
+      setLoadingReqs(false);
+    }
+  }, [currency, accountType]);
+
+  const setValue = (field, v) => {
+    const next = { ...values, [field.key]: v };
+    setValues(next);
+    setFieldErrors((prev) => ({ ...prev, [field.key]: "" }));
+    if (field.refreshRequirementsOnChange) refresh(next);
+  };
+
+  const validateAll = () => {
+    const errors = {};
+    fields.forEach((f) => {
+      const msg = validateRequirementField(f, values[f.key]);
+      if (msg) errors[f.key] = msg;
+    });
+    // The provider rejects a single-word holder name outright, which is a rule
+    // it does not publish in the field list.
+    if (holder.trim().split(/\s+/).length < 2) {
+      errors.__holder = "Enter the first and last name on the account.";
+    }
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const submit = async (event) => {
     event.preventDefault();
-    setSubmitting(true); setFormError("");
+    setFormError("");
+
+    if (method === "BANK" && !validateAll()) return;
+
+    setSubmitting(true);
     try {
       if (method === "STORE_CREDIT") {
         await addDestination({
@@ -768,7 +865,7 @@ function AddDestinationForm({ onCancel, onAdded }) {
         await addDestination({
           rail: "WISE",
           currency,
-          country: address.country || "",
+          country: address.country || country,
           type: accountType,
           account_holder_name: holder,
           details,
@@ -785,8 +882,7 @@ function AddDestinationForm({ onCancel, onAdded }) {
     } finally { setSubmitting(false); }
   };
 
-  const setValue = (key, v) => setValues((prev) => ({ ...prev, [key]: v }));
-  const payable = requirements?.available !== false;
+  const currencyChoices = orderCurrencies(corridors?.currencies ?? [], country);
 
   return (
     <form onSubmit={submit}>
@@ -806,25 +902,51 @@ function AddDestinationForm({ onCancel, onAdded }) {
       <div className={styles.field}>
         <label htmlFor="holder">Account holder name</label>
         <input id="holder" value={holder} required
-               onChange={(e) => setHolder(e.target.value)}
-               placeholder="As it appears on the account" />
+               onChange={(e) => { setHolder(e.target.value);
+                                  setFieldErrors((p) => ({ ...p, __holder: "" })); }}
+               placeholder="First and last name, as on the account" />
+        {fieldErrors.__holder && (
+          <p className={styles.figureHint}>{fieldErrors.__holder}</p>
+        )}
       </div>
 
       {method === "BANK" && (
         <>
+          {loadingCorridors && (
+            <p className={styles.figureHint}>
+              <Loader2 size={14} className={styles.spin} /> Loading countries…
+            </p>
+          )}
+
           <div className={styles.field}>
-            <label htmlFor="currency">Which currency should we send?</label>
-            <select id="currency" value={currency}
-                    onChange={(e) => setCurrency(e.target.value)}>
-              {PAYOUT_CURRENCIES.map((c) => (
-                <option key={c.code} value={c.code}>{c.label}</option>
+            <label htmlFor="country">Which country is your bank account in?</label>
+            <select id="country" value={country}
+                    onChange={(e) => { setCountry(e.target.value); setCurrency(""); }}>
+              <option value="">Choose a country…</option>
+              {(corridors?.countries ?? []).map((c) => (
+                <option key={c.code} value={c.code}>{c.name}</option>
               ))}
             </select>
           </div>
 
+          {country && (
+            <div className={styles.field}>
+              <label htmlFor="currency">Which currency should we send?</label>
+              <select id="currency" value={currency}
+                      onChange={(e) => setCurrency(e.target.value)}>
+                <option value="">Choose a currency…</option>
+                {currencyChoices.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.name} ({c.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {loadingReqs && (
             <p className={styles.figureHint}>
-              <Loader2 size={14} className={styles.spin} /> Checking what we need for {currency}…
+              <Loader2 size={14} className={styles.spin} /> Checking what we need…
             </p>
           )}
 
@@ -853,7 +975,8 @@ function AddDestinationForm({ onCancel, onAdded }) {
             <div className={styles.field}>
               <label htmlFor="accountType">Account type</label>
               <select id="accountType" value={accountType}
-                      onChange={(e) => { setAccountType(e.target.value); setValues({}); }}>
+                      onChange={(e) => { setAccountType(e.target.value);
+                                         setValues({}); setFieldErrors({}); }}>
                 {requirements.types.map((t) => (
                   <option key={t.type} value={t.type}>{t.title}</option>
                 ))}
@@ -861,23 +984,34 @@ function AddDestinationForm({ onCancel, onAdded }) {
             </div>
           )}
 
+          {selectedType?.usageInfo && (
+            <p className={styles.figureHint}>{selectedType.usageInfo}</p>
+          )}
+
           {payable && fields.map((field) => (
             <div className={styles.field} key={field.key}>
-              <label htmlFor={field.key}>{field.label}</label>
-              {field.options.length > 0 ? (
-                <select id={field.key} required={field.required}
-                        value={values[field.key] ?? ""}
-                        onChange={(e) => setValue(field.key, e.target.value)}>
+              <label htmlFor={field.key}>{field.name}</label>
+              {field.valuesAllowed.length > 0 ? (
+                <select id={field.key} value={values[field.key] ?? ""}
+                        onChange={(e) => setValue(field, e.target.value)}>
                   <option value="">Choose…</option>
-                  {field.options.map((o) => (
+                  {field.valuesAllowed.filter((o) => o.key).map((o) => (
                     <option key={o.key} value={o.key}>{o.name || o.key}</option>
                   ))}
                 </select>
               ) : (
-                <input id={field.key} required={field.required}
+                <input id={field.key}
                        value={values[field.key] ?? ""}
-                       placeholder={field.example || ""}
-                       onChange={(e) => setValue(field.key, e.target.value)} />
+                       placeholder={field.displayFormat || field.example || ""}
+                       maxLength={field.maxLength ?? undefined}
+                       onChange={(e) => setValue(field, e.target.value)}
+                       onBlur={() => setFieldErrors((prev) => ({
+                         ...prev,
+                         [field.key]: validateRequirementField(field, values[field.key]),
+                       }))} />
+              )}
+              {fieldErrors[field.key] && (
+                <p className={styles.figureHint}>{fieldErrors[field.key]}</p>
               )}
             </div>
           ))}
@@ -893,7 +1027,8 @@ function AddDestinationForm({ onCancel, onAdded }) {
 
       <div className={styles.actions}>
         <button type="submit" className={styles.button}
-                disabled={submitting || (method === "BANK" && (!payable || !accountType))}>
+                disabled={submitting ||
+                          (method === "BANK" && (!payable || !accountType || !currency))}>
           {submitting ? <Loader2 size={15} className={styles.spin} /> : <Plus size={15} />}
           Save account
         </button>

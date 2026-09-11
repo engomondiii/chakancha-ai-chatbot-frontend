@@ -314,35 +314,118 @@ export async function getDestinations() {
 }
 
 /**
- * What the payout provider needs in order to pay this currency.
+ * The countries a member may live in and the currencies we can pay them in.
  *
- * The fields differ by currency and account type — a routing number for a US
- * account, an IBAN for a European one — so the form is built from this rather
- * than hardcoded per country. `available: false` means the provider will not
- * pay this currency at the member's current amount, and `disabledReason` is the
- * provider's own explanation, which is the only honest thing to show them.
+ * Both come from the provider, never from a list in this file. A hardcoded
+ * country or currency table here would be a stale copy of the provider's rules,
+ * and the member would meet the difference as a rejection after filling in a
+ * form. `countryHints` is a ranking hint, not a filter — every supported
+ * currency stays selectable whatever country is chosen.
+ */
+export async function getCorridors() {
+  const data = await api.get(ENDPOINTS.PAYOUTS.CORRIDORS);
+  return {
+    countries: (data?.countries ?? []).map((c) => ({ code: c.code, name: c.name })),
+    currencies: (data?.currencies ?? []).map((c) => ({
+      code: c.code,
+      name: c.name,
+      symbol: c.symbol ?? "",
+      countryHints: c.country_hints ?? [],
+    })),
+  };
+}
+
+function normalizeRequirements(data, currency) {
+  return {
+    currency: data?.currency ?? currency,
+    available: data?.available ?? false,
+    disabledReason: data?.disabled_reason ?? "",
+    refined: !!data?.refined,
+    types: (data?.types ?? []).map((t) => ({
+      type: t.type,
+      title: t.title,
+      usageInfo: t.usage_info ?? "",
+      fields: (t.fields ?? []).map((f) => ({
+        key: f.key,
+        name: f.name,
+        type: f.type,
+        required: !!f.required,
+        example: f.example ?? "",
+        minLength: f.min_length ?? null,
+        maxLength: f.max_length ?? null,
+        validationRegexp: f.validation_regexp ?? null,
+        displayFormat: f.display_format ?? null,
+        refreshRequirementsOnChange: !!f.refresh_requirements_on_change,
+        valuesAllowed: f.values_allowed ?? [],
+      })),
+    })),
+  };
+}
+
+/**
+ * What the provider needs in order to pay this currency.
+ *
+ * Every attribute the provider publishes is kept, including the lengths and
+ * regular expression it validates against. Dropping those moves validation the
+ * provider already described to us onto a rejection the member only sees after
+ * submitting a form they cannot tell is wrong.
  */
 export async function getDestinationRequirements(currency) {
   const data = await api.get(ENDPOINTS.PAYOUTS.DESTINATION_REQUIREMENTS, {
     params: { currency },
   });
-  return {
-    currency: data?.currency ?? currency,
-    available: data?.available ?? false,
-    disabledReason: data?.disabled_reason ?? "",
-    types: (data?.types ?? []).map((t) => ({
-      type: t.type,
-      title: t.title,
-      fields: (t.fields ?? []).map((f) => ({
-        key: f.key,
-        label: f.label,
-        type: f.type,
-        required: !!f.required,
-        example: f.example ?? "",
-        options: f.options ?? [],
-      })),
-    })),
-  };
+  return normalizeRequirements(data, currency);
+}
+
+/**
+ * Re-ask with what has been filled in so far.
+ *
+ * Some fields change which other fields are required — the provider marks them
+ * refreshRequirementsOnChange. Continuing to render the initial answer after
+ * one of those changes shows a field set for a question the member is no longer
+ * asking. A POST, because the answer depends on the details sent; it writes
+ * nothing.
+ */
+export async function refineDestinationRequirements({ currency, type, details }) {
+  const data = await api.post(ENDPOINTS.PAYOUTS.DESTINATION_REQUIREMENTS, {
+    currency, type, details: details ?? {},
+  });
+  return normalizeRequirements(data, currency);
+}
+
+/**
+ * Validate one field against what the provider said about it.
+ *
+ * Returns an error string, or "" when the value is acceptable. The provider is
+ * still the final authority — this only avoids spending a round trip, and a
+ * rejection the member has to interpret, on a rule we were already told.
+ */
+export function validateRequirementField(field, rawValue) {
+  const value = (rawValue ?? "").trim();
+  if (!value) return field.required ? `${field.name} is required.` : "";
+
+  if (field.minLength != null && value.length < field.minLength) {
+    return `${field.name} must be at least ${field.minLength} characters.`;
+  }
+  if (field.maxLength != null && value.length > field.maxLength) {
+    return `${field.name} must be at most ${field.maxLength} characters.`;
+  }
+  if (field.valuesAllowed?.length) {
+    const allowed = field.valuesAllowed.some((v) => v.key === value);
+    if (!allowed) return `Choose a valid ${field.name.toLowerCase()}.`;
+  }
+  if (field.validationRegexp) {
+    let re = null;
+    // A pattern we cannot compile must not block a member: the provider still
+    // checks it, so fall through rather than inventing a failure.
+    try { re = new RegExp(field.validationRegexp); } catch { re = null; }
+    if (re && !re.test(value)) {
+      return field.example
+        ? `${field.name} does not look right. Example: ${field.example}`
+        : `${field.name} does not look right.`;
+    }
+  }
+  return "";
 }
 
 /**

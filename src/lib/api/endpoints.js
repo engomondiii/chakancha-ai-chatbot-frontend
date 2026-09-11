@@ -178,6 +178,7 @@ export const ENDPOINTS = {
     DESTINATIONS:   '/payouts/destinations/',
     DESTINATION:    (id) => `/payouts/destinations/${id}/`,
     DESTINATION_REQUIREMENTS: '/payouts/destination-requirements/',
+    CORRIDORS:      '/payouts/corridors/',
     QUOTE:          '/payouts/quote/',
     REQUEST:        '/payouts/request/',
     REQUESTS:       '/payouts/requests/',
