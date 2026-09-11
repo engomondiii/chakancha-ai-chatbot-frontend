@@ -40,6 +40,11 @@ export const BLOCK_MESSAGES = {
     "A refund reversed more commission than your balance covered. Future earnings will offset it first.",
   OPEN_REQUEST_EXISTS: () =>
     "You already have a withdrawal in progress.",
+  // The provider's own explanation is passed through verbatim by the API. It
+  // is the only part a member can act on — "the smallest amount a recipient can
+  // get is 100 KES" tells them to withdraw more or pick another currency.
+  CORRIDOR_UNAVAILABLE: () =>
+    "Your bank cannot receive this amount in that currency yet. Withdraw a larger amount, or choose a different receiving currency.",
   NEEDS_RECONFIRMATION: () =>
     "The transfer fee changed while your withdrawal was being reviewed. Confirm the new amount to continue.",
   BALANCE_CHANGED: () =>

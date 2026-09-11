@@ -177,6 +177,14 @@ export function PayoutDashboard() {
   const requests = data?.requests ?? [];
   const entries = data?.entries ?? { count: 0, results: [] };
 
+  // The ledger's currency is the source and is never the member's choice; the
+  // destination decides the target. They differ whenever the member banks
+  // outside the earnings currency.
+  const isCrossCurrency = Boolean(
+    quote?.targetCurrency && quote.targetCurrency !== quote.currency,
+  );
+  const payoutDestination = destinations.find((d) => d.id === destinationId) ?? null;
+
   const openRequest = requests.find((r) =>
     ["REQUESTED", "VALIDATING", "PENDING_REVIEW", "AWAITING_RECONFIRM",
      "BLOCKED", "APPROVED", "PROCESSING"].includes(r.status));
@@ -445,7 +453,7 @@ export function PayoutDashboard() {
               </p>
               <div className={styles.quoteRows}>
                 <div className={styles.quoteRow}>
-                  <span>Your earnings</span>
+                  <span>Withdrawal</span>
                   <span className={styles.quoteAmount}>{quote?.gross?.display}</span>
                 </div>
                 <div className={styles.quoteRow}>
@@ -458,18 +466,38 @@ export function PayoutDashboard() {
                     <span className={styles.quoteAmount}>−{quote?.withheld?.display}</span>
                   </div>
                 )}
+
+                {/* Earnings are always held in the ledger's currency; only the
+                    payout currency is the member's. When they differ, the rate
+                    and the amount that lands are shown as rows of their own —
+                    a member paid in shillings needs the shilling figure, not a
+                    dollar figure with a footnote. */}
+                {isCrossCurrency && quote?.rate && (
+                  <div className={styles.quoteRow}>
+                    <span>Exchange rate</span>
+                    <span className={styles.quoteAmount}>
+                      1 {quote.currency} = {quote.rate} {quote.targetCurrency}
+                    </span>
+                  </div>
+                )}
                 <div className={`${styles.quoteRow} ${styles.quoteRowTotal}`}>
                   <span>You receive</span>
-                  <span className={styles.quoteAmount}>{quote?.net?.display}</span>
+                  <span className={styles.quoteAmount}>
+                    {isCrossCurrency
+                      ? quote?.targetAmount?.display ?? quote?.net?.display
+                      : quote?.net?.display}
+                  </span>
                 </div>
+                {payoutDestination && (
+                  <div className={styles.quoteRow}>
+                    <span>Destination</span>
+                    <span className={styles.quoteAmount}>
+                      {payoutDestination.displayHint || payoutDestination.label || "Bank account"}
+                      {payoutDestination.country ? ` · ${payoutDestination.country}` : ""}
+                    </span>
+                  </div>
+                )}
               </div>
-
-              {quote?.targetAmount && quote.targetCurrency !== quote.currency && (
-                <p className={styles.figureHint}>
-                  Delivered as {quote.targetAmount.display}
-                  {quote.rate ? ` at a rate of ${quote.rate}` : ""}.
-                </p>
-              )}
 
               <p className={styles.figureHint}>
                 Transfer fees are quoted by the provider and can change. If the
@@ -480,7 +508,9 @@ export function PayoutDashboard() {
                 <button type="button" className={styles.button} disabled={busy}
                         onClick={handleConfirm}>
                   {busy ? <Loader2 size={15} className={styles.spin} /> : <ArrowRight size={15} />}
-                  Confirm — send {quote?.net?.display}
+                  Confirm — send {isCrossCurrency
+                    ? quote?.targetAmount?.display ?? quote?.net?.display
+                    : quote?.net?.display}
                 </button>
                 <button type="button" className={`${styles.button} ${styles.buttonQuiet}`}
                         disabled={busy} onClick={() => { setStep("idle"); setQuote(null); }}>
