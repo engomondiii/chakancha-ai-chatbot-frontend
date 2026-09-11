@@ -28,8 +28,8 @@ import {
 
 import {
   addDestination, archiveDestination, cancelRequest, confirmRequest, daysUntil,
-  describeApiError, describeBlock, getDashboard, getQuote, newIdempotencyKey,
-  requestPayout,
+  describeApiError, describeBlock, getDashboard, getDestinationRequirements,
+  getQuote, newIdempotencyKey, requestPayout,
 } from "@/lib/api/payouts";
 
 import styles from "./payouts.module.css";
@@ -682,68 +682,206 @@ export function PayoutDashboard() {
    provider returns a recipient id, and that plus a masked hint is all we keep.
 ========================================================= */
 
+/** Currencies a member can ask to be paid in. The provider decides whether each
+ *  is actually payable for their amount, and says so. */
+const PAYOUT_CURRENCIES = [
+  { code: "USD", label: "US dollars (USD)" },
+  { code: "EUR", label: "Euros (EUR)" },
+  { code: "GBP", label: "Pounds sterling (GBP)" },
+  { code: "KES", label: "Kenyan shillings (KES)" },
+];
+
+/**
+ * Splits one flat form into the three shapes the API expects.
+ *
+ * The provider describes its fields with dotted keys — 'address.city' belongs
+ * to the holder's address, 'legalType' says whether the account is personal or
+ * a business, and everything else identifies the account itself. Keeping them
+ * flat in the form and separating them here means the form never has to know
+ * which is which, so a field the provider adds later needs no special case.
+ */
+function splitDestinationFields(values) {
+  const details = {};
+  const address = {};
+  let legalType = "";
+
+  Object.entries(values).forEach(([key, value]) => {
+    if (value === "" || value == null) return;
+    if (key.startsWith("address.")) address[key.slice("address.".length)] = value;
+    else if (key === "legalType") legalType = value;
+    else details[key] = value;
+  });
+
+  return { details, address, legalType };
+}
+
 function AddDestinationForm({ onCancel, onAdded }) {
-  const [rail, setRail] = useState("WISE");
-  const [value, setValue] = useState("");
+  const [method, setMethod] = useState("BANK");
+  const [currency, setCurrency] = useState("USD");
+  const [requirements, setRequirements] = useState(null);
+  const [loadingReqs, setLoadingReqs] = useState(false);
+  const [reqError, setReqError] = useState("");
+  const [accountType, setAccountType] = useState("");
+  const [values, setValues] = useState({});
   const [holder, setHolder] = useState("");
-  const [country, setCountry] = useState("KE");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
+
+  // Ask the provider what this currency needs. Re-asked whenever the member
+  // changes currency, because both the field list and whether it can be paid
+  // at all depend on it.
+  useEffect(() => {
+    if (method !== "BANK") return;
+    let cancelled = false;
+    setLoadingReqs(true); setReqError(""); setRequirements(null);
+    setAccountType(""); setValues({});
+    getDestinationRequirements(currency)
+      .then((reqs) => {
+        if (cancelled) return;
+        setRequirements(reqs);
+        setAccountType(reqs.types[0]?.type ?? "");
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setReqError(
+          describeApiError(err, "Could not load the details needed for this currency.").message,
+        );
+      })
+      .finally(() => { if (!cancelled) setLoadingReqs(false); });
+    return () => { cancelled = true; };
+  }, [method, currency]);
+
+  const selectedType = requirements?.types.find((t) => t.type === accountType) ?? null;
+  const fields = selectedType?.fields ?? [];
 
   const submit = async (event) => {
     event.preventDefault();
     setSubmitting(true); setFormError("");
     try {
-      await addDestination({
-        rail, country, currency: "USD",
-        type: rail === "WISE" ? "email" : "internal",
-        account_holder_name: holder,
-        details: rail === "WISE" ? { email: value } : {},
-        is_default: true,
-      });
+      if (method === "STORE_CREDIT") {
+        await addDestination({
+          rail: "STORE_CREDIT", currency: "USD", type: "internal",
+          account_holder_name: holder, details: {}, is_default: true,
+        });
+      } else {
+        const { details, address, legalType } = splitDestinationFields(values);
+        await addDestination({
+          rail: "WISE",
+          currency,
+          country: address.country || "",
+          type: accountType,
+          account_holder_name: holder,
+          details,
+          address,
+          legal_type: legalType,
+          is_default: true,
+        });
+      }
       await onAdded();
     } catch (err) {
       setFormError(
-        describeApiError(err, "The provider could not accept that destination.").message,
+        describeApiError(err, "Those account details could not be accepted.").message,
       );
     } finally { setSubmitting(false); }
   };
 
+  const setValue = (key, v) => setValues((prev) => ({ ...prev, [key]: v }));
+  const payable = requirements?.available !== false;
+
   return (
     <form onSubmit={submit}>
       <div className={styles.field}>
-        <label htmlFor="rail">How would you like to be paid?</label>
-        <select id="rail" value={rail} onChange={(e) => setRail(e.target.value)}>
-          <option value="WISE">Bank transfer via Wise</option>
+        <label htmlFor="method">How would you like to receive your money?</label>
+        <select id="method" value={method} onChange={(e) => setMethod(e.target.value)}>
+          <option value="BANK">Bank account</option>
           <option value="STORE_CREDIT">Store credit</option>
         </select>
+        <p className={styles.figureHint}>
+          {method === "BANK"
+            ? "Receive your earnings directly in your bank account."
+            : "Store credit is applied to your Chakancha account and can be spent on tea."}
+        </p>
       </div>
 
-      {rail === "WISE" ? (
+      <div className={styles.field}>
+        <label htmlFor="holder">Account holder name</label>
+        <input id="holder" value={holder} required
+               onChange={(e) => setHolder(e.target.value)}
+               placeholder="As it appears on the account" />
+      </div>
+
+      {method === "BANK" && (
         <>
           <div className={styles.field}>
-            <label htmlFor="holder">Account holder name</label>
-            <input id="holder" value={holder} required
-                   onChange={(e) => setHolder(e.target.value)}
-                   placeholder="As it appears on the account" />
+            <label htmlFor="currency">Which currency should we send?</label>
+            <select id="currency" value={currency}
+                    onChange={(e) => setCurrency(e.target.value)}>
+              {PAYOUT_CURRENCIES.map((c) => (
+                <option key={c.code} value={c.code}>{c.label}</option>
+              ))}
+            </select>
           </div>
-          <div className={styles.field}>
-            <label htmlFor="value">Recipient email</label>
-            <input id="value" type="email" value={value} required
-                   onChange={(e) => setValue(e.target.value)}
-                   placeholder="you@example.com" />
-          </div>
-          <div className={styles.field}>
-            <label htmlFor="country">Country</label>
-            <input id="country" value={country} maxLength={2}
-                   onChange={(e) => setCountry(e.target.value.toUpperCase())} />
-          </div>
+
+          {loadingReqs && (
+            <p className={styles.figureHint}>
+              <Loader2 size={14} className={styles.spin} /> Checking what we need for {currency}…
+            </p>
+          )}
+
+          {reqError && (
+            <div className={styles.blockItem}>
+              <AlertCircle size={15} className={styles.blockIcon} aria-hidden />
+              <span className={styles.blockText}>{reqError}</span>
+            </div>
+          )}
+
+          {/* The provider's own words. A member told "the smallest amount a
+              recipient can get is 100 KES" can act on it; a generic failure
+              after they had filled the whole form tells them nothing. */}
+          {requirements && !payable && (
+            <div className={styles.blockItem}>
+              <AlertCircle size={15} className={styles.blockIcon} aria-hidden />
+              <span className={styles.blockText}>
+                We cannot send {currency} for this amount right now.
+                {requirements.disabledReason ? ` ${requirements.disabledReason}` : ""}
+                {" "}Choose another currency.
+              </span>
+            </div>
+          )}
+
+          {requirements && payable && requirements.types.length > 1 && (
+            <div className={styles.field}>
+              <label htmlFor="accountType">Account type</label>
+              <select id="accountType" value={accountType}
+                      onChange={(e) => { setAccountType(e.target.value); setValues({}); }}>
+                {requirements.types.map((t) => (
+                  <option key={t.type} value={t.type}>{t.title}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {payable && fields.map((field) => (
+            <div className={styles.field} key={field.key}>
+              <label htmlFor={field.key}>{field.label}</label>
+              {field.options.length > 0 ? (
+                <select id={field.key} required={field.required}
+                        value={values[field.key] ?? ""}
+                        onChange={(e) => setValue(field.key, e.target.value)}>
+                  <option value="">Choose…</option>
+                  {field.options.map((o) => (
+                    <option key={o.key} value={o.key}>{o.name || o.key}</option>
+                  ))}
+                </select>
+              ) : (
+                <input id={field.key} required={field.required}
+                       value={values[field.key] ?? ""}
+                       placeholder={field.example || ""}
+                       onChange={(e) => setValue(field.key, e.target.value)} />
+              )}
+            </div>
+          ))}
         </>
-      ) : (
-        <p className={styles.figureHint}>
-          Store credit is applied to your Chakancha account and can be spent on tea.
-          No bank details are needed.
-        </p>
       )}
 
       {formError && (
@@ -754,9 +892,10 @@ function AddDestinationForm({ onCancel, onAdded }) {
       )}
 
       <div className={styles.actions}>
-        <button type="submit" className={styles.button} disabled={submitting}>
+        <button type="submit" className={styles.button}
+                disabled={submitting || (method === "BANK" && (!payable || !accountType))}>
           {submitting ? <Loader2 size={15} className={styles.spin} /> : <Plus size={15} />}
-          Add destination
+          Save account
         </button>
         <button type="button" className={`${styles.button} ${styles.buttonQuiet}`}
                 onClick={onCancel}>

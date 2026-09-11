@@ -177,6 +177,7 @@ export const ENDPOINTS = {
     ENTRIES:        '/payouts/entries/',
     DESTINATIONS:   '/payouts/destinations/',
     DESTINATION:    (id) => `/payouts/destinations/${id}/`,
+    DESTINATION_REQUIREMENTS: '/payouts/destination-requirements/',
     QUOTE:          '/payouts/quote/',
     REQUEST:        '/payouts/request/',
     REQUESTS:       '/payouts/requests/',

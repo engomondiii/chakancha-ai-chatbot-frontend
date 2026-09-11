@@ -314,6 +314,38 @@ export async function getDestinations() {
 }
 
 /**
+ * What the payout provider needs in order to pay this currency.
+ *
+ * The fields differ by currency and account type — a routing number for a US
+ * account, an IBAN for a European one — so the form is built from this rather
+ * than hardcoded per country. `available: false` means the provider will not
+ * pay this currency at the member's current amount, and `disabledReason` is the
+ * provider's own explanation, which is the only honest thing to show them.
+ */
+export async function getDestinationRequirements(currency) {
+  const data = await api.get(ENDPOINTS.PAYOUTS.DESTINATION_REQUIREMENTS, {
+    params: { currency },
+  });
+  return {
+    currency: data?.currency ?? currency,
+    available: data?.available ?? false,
+    disabledReason: data?.disabled_reason ?? "",
+    types: (data?.types ?? []).map((t) => ({
+      type: t.type,
+      title: t.title,
+      fields: (t.fields ?? []).map((f) => ({
+        key: f.key,
+        label: f.label,
+        type: f.type,
+        required: !!f.required,
+        example: f.example ?? "",
+        options: f.options ?? [],
+      })),
+    })),
+  };
+}
+
+/**
  * Raw account details go straight to the provider and are never stored by us —
  * only the provider's recipient id and a masked hint come back.
  */
