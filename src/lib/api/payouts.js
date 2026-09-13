@@ -10,24 +10,26 @@
  * IMPORTANT — response shape: `api.get/post/...` from ./client ALREADY unwraps
  * the axios response (`.then(r => r.data)`), so it resolves to the payload
  * itself. Use `const data = await api.get(...)`, never
- * `const { data } = await api.get(...)` — the latter destructures a `.data` key
- * that does not exist, yielding undefined and a TypeError on first property
- * access. Every other API module in this project uses the correct form.
+ * `const { data } = await api.get(...)`.
  *
  * Normalizers map snake_case → camelCase and shape only what the backend sent.
  * They never invent values: a missing field stays missing so a broken endpoint
  * is visible rather than disguised as a zero balance.
+ *
+ * The browser talks only to Chakancha's API. No payment-provider credential,
+ * host or rail name belongs in this file.
  */
 
 import api from "./client";
 import { ENDPOINTS } from "./endpoints";
+import { describePayoutError } from "../payouts/errors";
+import { validateField } from "../payouts/requirements";
 
 // ─── Blocked reasons ──────────────────────────────────────────────────────────
 
 /**
  * Machine-readable codes from the API, turned into sentences a member can act
- * on. The API deliberately never sends prose for these — the UI owns wording,
- * the backend owns truth.
+ * on. Kept for the staff queue; the member screens use lib/payouts/errors.js.
  */
 export const BLOCK_MESSAGES = {
   BELOW_MINIMUM: (ctx) =>
@@ -35,18 +37,15 @@ export const BLOCK_MESSAGES = {
       ? `You need ${ctx.minimum} to withdraw — ${ctx.shortfall} to go.`
       : `You have not reached the ${ctx?.minimum ?? "minimum"} withdrawal threshold yet.`,
   NO_VERIFIED_DESTINATION: () =>
-    "Add a payout destination before withdrawing.",
+    "Add a bank account before withdrawing.",
   NEGATIVE_BALANCE: () =>
     "A refund reversed more commission than your balance covered. Future earnings will offset it first.",
   OPEN_REQUEST_EXISTS: () =>
     "You already have a withdrawal in progress.",
-  // The provider's own explanation is passed through verbatim by the API. It
-  // is the only part a member can act on — "the smallest amount a recipient can
-  // get is 100 KES" tells them to withdraw more or pick another currency.
   CORRIDOR_UNAVAILABLE: () =>
-    "Your bank cannot receive this amount in that currency yet. Withdraw a larger amount, or choose a different receiving currency.",
+    "Bank payouts to this destination aren't currently available for this amount.",
   NEEDS_RECONFIRMATION: () =>
-    "The transfer fee changed while your withdrawal was being reviewed. Confirm the new amount to continue.",
+    "The amount changed while your withdrawal was being reviewed. Confirm the new amount to continue.",
   BALANCE_CHANGED: () =>
     "Your available balance changed while we were preparing the quote. Please try again.",
   ACCOUNT_FROZEN: () =>
@@ -56,7 +55,7 @@ export const BLOCK_MESSAGES = {
 
 export function describeBlock(code, ctx) {
   const fn = BLOCK_MESSAGES[code];
-  return fn ? fn(ctx) : code;
+  return fn ? fn(ctx) : "Withdrawals aren't available right now.";
 }
 
 // ─── Normalizers ──────────────────────────────────────────────────────────────
@@ -74,9 +73,6 @@ export function normalizeBalance(raw) {
   if (!raw) return null;
   return {
     currency: raw.currency ?? "USD",
-    // Lifetime gross earnings and the shortfall to the minimum are computed by
-    // the API. The client never adds balances together to produce a total, and
-    // never subtracts to produce "you need X more" — both are money arithmetic.
     totalEarned: money(raw.total_earned),
     shortfallToMinimum: money(raw.shortfall_to_minimum),
     pending: money(raw.pending),
@@ -111,15 +107,21 @@ export function normalizeDestination(raw) {
   if (!raw) return null;
   return {
     id: raw.id,
+    // Kept for the staff queue and for sending back; never rendered to members.
     rail: raw.rail,
     label: raw.label ?? "",
     displayHint: raw.display_hint ?? "",
     country: raw.country ?? "",
-    currency: raw.currency ?? "USD",
+    countryName: raw.country_name ?? "",
+    currency: raw.currency ?? "",
+    currencyName: raw.currency_name ?? "",
     status: raw.status,
     isDefault: raw.is_default ?? false,
     verifiedAt: raw.verified_at ?? null,
     createdAt: raw.created_at ?? null,
+    method: raw.method ?? "",
+    methodLabel: raw.method_label ?? "",
+    last4: raw.last4 ?? "",
   };
 }
 
@@ -142,6 +144,12 @@ export function normalizeRequest(raw) {
     approvedAt: raw.approved_at ?? null,
     completedAt: raw.completed_at ?? null,
     rejectionReason: raw.rejection_reason ?? "",
+    rate: raw.rate ?? "",
+    targetCurrency: raw.target_currency ?? "",
+    targetCurrencyName: raw.target_currency_name ?? "",
+    targetAmount: money(raw.target_amount),
+    // Staff-facing. Failure messages can carry a provider's own words, so the
+    // member screens never render attempts.
     attempts: (raw.attempts ?? []).map((a) => ({
       id: a.id,
       attemptNumber: a.attempt_number,
@@ -163,64 +171,70 @@ export function normalizeRequest(raw) {
 export function normalizeQuote(raw) {
   if (!raw) return null;
   return {
-    // Minor units for comparisons; `gross`/`fee`/`net` carry the formatted
-    // strings the UI renders. The client never divides by 100 itself.
-    grossMinor: raw.gross_minor ?? 0,
-    feeMinor: raw.fee_minor ?? 0,
-    withheldMinor: raw.withheld_minor ?? 0,
-    netMinor: raw.net_minor ?? 0,
+    // The id of the price the member reviewed. Confirming sends it back, so the
+    // withdrawal is created at that price or not at all.
+    quoteId: raw.quote_id ?? raw.provider_quote_id ?? "",
+    expiresAt: raw.expires_at ?? null,
+    grossMinor: raw.gross_minor ?? raw.gross?.minor ?? 0,
+    feeMinor: raw.fee_minor ?? raw.fee?.minor ?? 0,
+    withheldMinor: raw.withheld_minor ?? raw.withheld?.minor ?? 0,
+    netMinor: raw.net_minor ?? raw.net?.minor ?? 0,
     gross: money(raw.gross),
     fee: money(raw.fee),
     withheld: money(raw.withheld),
     net: money(raw.net),
     targetAmount: money(raw.target_amount),
     currency: raw.currency ?? "USD",
+    sourceCurrency: raw.source_currency ?? raw.currency ?? "USD",
     targetCurrency: raw.target_currency ?? "",
+    targetCurrencyName: raw.target_currency_name ?? "",
     targetAmountMinor: raw.target_amount_minor ?? null,
     rate: raw.rate ?? "",
+    estimatedDelivery: raw.estimated_delivery ?? null,
+    formattedEstimatedDelivery: raw.formatted_estimated_delivery ?? "",
+    destination: normalizeDestination(raw.destination),
   };
 }
 
-
 // ─── Error interpretation ─────────────────────────────────────────────────────
 
+/** Is there still a token in this browser? Distinguishes sign-out from offline. */
+export function hasStoredSession() {
+  try {
+    if (typeof window === "undefined") return true;
+    return Boolean(window.localStorage.getItem("chakancha_access_token"));
+  } catch {
+    return true;      // cannot tell — do not claim the session ended
+  }
+}
+
+/** Options for describePayoutError that only the browser can supply. */
+export function payoutErrorOptions(context) {
+  return {
+    context,
+    online: typeof navigator === "undefined" ? undefined : navigator.onLine,
+    hasSession: hasStoredSession(),
+  };
+}
+
 /**
- * Turn a failure from the API client into something a member can act on.
+ * Turn a failure from the API client into something a person can act on.
  *
- * client.js rejects with ApiError — `{ status, message, data }`. It is NOT an
- * axios error, so there is no `err.response`. The payout screens used to read
- * `err.response.status`, which is always undefined, so 401, 403, 429 and 503
- * all collapsed into one generic sentence and the server's own explanation in
- * `err.message` was thrown away. That is why a failing payout page could only
- * ever say "Could not load your earnings".
+ * Kept for the staff queue (AdminPayoutQueue). The member screens use
+ * describePayoutError, which never shows the server's `detail`.
  *
- * Returns { status, message, codes } — codes being the API's machine-readable
- * blocked_reasons when present.
+ * Returns { status, message, codes, isAuthError }.
  */
 export function describeApiError(err, fallback) {
   const status = err?.status ?? err?.response?.status ?? null;
   const data = err?.data ?? err?.response?.data ?? null;
   const codes = Array.isArray(data?.blocked_reasons) ? data.blocked_reasons : [];
+  const detail = typeof data?.detail === "string" && data.detail ? data.detail : null;
 
-  // The server's own words, when it gave any.
-  const detail =
-    (typeof data?.detail === "string" && data.detail) ||
-    (typeof err?.message === "string" && err.message !== "Network Error" && err.message) ||
-    null;
-
-  // An aborted request has no status, and neither does a genuine network
-  // failure — but they are not the same thing and must not read the same.
-  // A request is aborted when the page navigates away mid-flight, which is
-  // exactly what happens when a rejected refresh token logs the member out.
-  // Reporting that as "check your connection" sends them to debug their wifi
-  // when what they need is to sign in again.
-  const isApiError = err?.name === "ApiError" || status !== null;
-
-  const aborted =
-    err?.code === "ERR_CANCELED" ||
-    err?.name === "CanceledError" ||
-    err?.name === "AbortError" ||
-    /canceled|aborted/i.test(err?.message || "");
+  if (status === null || status === undefined) {
+    const info = describePayoutError(err, payoutErrorOptions());
+    return { status, message: info.message, codes, isAuthError: info.isAuthError };
+  }
 
   let message;
   let isAuthError = false;
@@ -240,48 +254,15 @@ export function describeApiError(err, fallback) {
       message = detail ||
         "Withdrawals are closed at the moment. Your earnings are still being recorded.";
       break;
-    case null:
-    case undefined:
-      if (!isApiError && err instanceof Error) {
-        // A TypeError here is a bug in this code, not a connection problem.
-        // Saying "check your connection" would send someone to debug their wifi
-        // while the real fault sits in the browser — which is how this class of
-        // failure hides.
-        message = `Something went wrong while reading your earnings (${err.name}: ${err.message}).`;
-      } else if (aborted || !hasStoredSession()) {
-        // No status AND no session: the request was cut short by the sign-out
-        // that a rejected refresh token triggers.
-        message = "Your session has expired. Please sign in again.";
-        isAuthError = true;
-      } else {
-        message = "We could not reach the server. Check your connection and try again.";
-      }
-      break;
     default:
       message = detail || fallback;
   }
   return { status, message, codes, isAuthError };
 }
 
-/** Is there still a token in this browser? Distinguishes sign-out from offline. */
-function hasStoredSession() {
-  try {
-    if (typeof window === "undefined") return true;
-    return Boolean(window.localStorage.getItem("chakancha_access_token"));
-  } catch {
-    return true;      // cannot tell — do not claim the session ended
-  }
-}
-
 // ─── Member endpoints ─────────────────────────────────────────────────────────
 
-/**
- * Everything the payout page needs, in one request.
- *
- * The page used to make four calls — balance, destinations, requests, entries —
- * which cost four round trips, four throttle hits, and left the panels able to
- * disagree because each was fetched at a different moment.
- */
+/** Everything the payout page needs, in one request. */
 export async function getDashboard({ limit = 25 } = {}) {
   const data = await api.get(ENDPOINTS.PAYOUTS.DASHBOARD, { params: { limit } });
   return {
@@ -294,7 +275,6 @@ export async function getDashboard({ limit = 25 } = {}) {
     },
   };
 }
-
 
 export async function getBalance() {
   const data = await api.get(ENDPOINTS.PAYOUTS.BALANCE);
@@ -319,13 +299,9 @@ export async function getDestinations() {
 }
 
 /**
- * The countries a member may live in and the currencies we can pay them in.
+ * The countries a bank account can be in, and currency names.
  *
- * Both come from the provider, never from a list in this file. A hardcoded
- * country or currency table here would be a stale copy of the provider's rules,
- * and the member would meet the difference as a rejection after filling in a
- * form. `countryHints` is a ranking hint, not a filter — every supported
- * currency stays selectable whatever country is chosen.
+ * Both come from the backend, never from a list in this file.
  */
 export async function getCorridors() {
   const data = await api.get(ENDPOINTS.PAYOUTS.CORRIDORS);
@@ -340,102 +316,74 @@ export async function getCorridors() {
   };
 }
 
-function normalizeRequirements(data, currency) {
+export function normalizeRequirements(data, country) {
+  const available = data?.available ?? false;
   return {
-    currency: data?.currency ?? currency,
-    available: data?.available ?? false,
+    country: data?.country ?? country,
+    countryName: data?.country_name ?? "",
+    // Derived from the country by the backend and confirmed payable, never
+    // chosen by the member. Earnings stay USD; this is what their bank receives.
+    currency: data?.currency ?? "",
+    currencyName: data?.currency_name ?? "",
+    sourceCurrency: data?.source_currency ?? "USD",
+    available,
+    // Whether a bank account in this country can be paid at all. Amount limits
+    // (unavailableCode recipient_minimum / source_minimum) do not make this
+    // false: a member may save an account before they have enough to withdraw.
+    bankPayoutAvailable: data?.bank_payout_available ?? available,
+    unavailableCode: data?.unavailable_code ?? "",
     disabledReason: data?.disabled_reason ?? "",
     refined: !!data?.refined,
-    types: (data?.types ?? []).map((t) => ({
-      type: t.type,
-      title: t.title,
-      usageInfo: t.usage_info ?? "",
-      fields: (t.fields ?? []).map((f) => ({
-        key: f.key,
-        name: f.name,
-        type: f.type,
-        required: !!f.required,
-        example: f.example ?? "",
-        minLength: f.min_length ?? null,
-        maxLength: f.max_length ?? null,
-        validationRegexp: f.validation_regexp ?? null,
-        displayFormat: f.display_format ?? null,
-        refreshRequirementsOnChange: !!f.refresh_requirements_on_change,
-        valuesAllowed: f.values_allowed ?? [],
-      })),
+    // Opaque to the member: sent back on refresh, never displayed.
+    accountType: data?.account_type ?? "",
+    usageInfo: data?.usage_info ?? "",
+    fields: (data?.fields ?? []).map((f) => ({
+      key: f.key,
+      name: f.name,
+      type: f.type,
+      required: !!f.required,
+      example: f.example ?? "",
+      minLength: f.min_length ?? null,
+      maxLength: f.max_length ?? null,
+      validationRegexp: f.validation_regexp ?? null,
+      displayFormat: f.display_format ?? null,
+      refreshRequirementsOnChange: !!f.refresh_requirements_on_change,
+      valuesAllowed: f.values_allowed ?? [],
+      usageInfo: f.usage_info ?? "",
+      default: f.default ?? null,
     })),
   };
 }
 
-/**
- * What the provider needs in order to pay this currency.
- *
- * Every attribute the provider publishes is kept, including the lengths and
- * regular expression it validates against. Dropping those moves validation the
- * provider already described to us onto a rejection the member only sees after
- * submitting a form they cannot tell is wrong.
- */
-export async function getDestinationRequirements(currency) {
+/** What a bank account in this country needs. */
+export async function getDestinationRequirements(country, { signal } = {}) {
   const data = await api.get(ENDPOINTS.PAYOUTS.DESTINATION_REQUIREMENTS, {
-    params: { currency },
+    params: { country },
+    signal,
   });
-  return normalizeRequirements(data, currency);
+  return normalizeRequirements(data, country);
 }
 
 /**
- * Re-ask with what has been filled in so far.
- *
- * Some fields change which other fields are required — the provider marks them
- * refreshRequirementsOnChange. Continuing to render the initial answer after
- * one of those changes shows a field set for a question the member is no longer
- * asking. A POST, because the answer depends on the details sent; it writes
- * nothing.
+ * Re-ask with what has been filled in so far. Some fields change which other
+ * fields are required. A POST because the answer depends on the details sent;
+ * it writes nothing.
  */
-export async function refineDestinationRequirements({ currency, type, details }) {
+export async function refineDestinationRequirements({ country, type, details }, { signal } = {}) {
   const data = await api.post(ENDPOINTS.PAYOUTS.DESTINATION_REQUIREMENTS, {
-    currency, type, details: details ?? {},
-  });
-  return normalizeRequirements(data, currency);
+    country, type, details: details ?? {},
+  }, { signal });
+  return normalizeRequirements(data, country);
 }
 
-/**
- * Validate one field against what the provider said about it.
- *
- * Returns an error string, or "" when the value is acceptable. The provider is
- * still the final authority — this only avoids spending a round trip, and a
- * rejection the member has to interpret, on a rule we were already told.
- */
+/** Kept for callers of the old name; lib/payouts/requirements.js owns the rules. */
 export function validateRequirementField(field, rawValue) {
-  const value = (rawValue ?? "").trim();
-  if (!value) return field.required ? `${field.name} is required.` : "";
-
-  if (field.minLength != null && value.length < field.minLength) {
-    return `${field.name} must be at least ${field.minLength} characters.`;
-  }
-  if (field.maxLength != null && value.length > field.maxLength) {
-    return `${field.name} must be at most ${field.maxLength} characters.`;
-  }
-  if (field.valuesAllowed?.length) {
-    const allowed = field.valuesAllowed.some((v) => v.key === value);
-    if (!allowed) return `Choose a valid ${field.name.toLowerCase()}.`;
-  }
-  if (field.validationRegexp) {
-    let re = null;
-    // A pattern we cannot compile must not block a member: the provider still
-    // checks it, so fall through rather than inventing a failure.
-    try { re = new RegExp(field.validationRegexp); } catch { re = null; }
-    if (re && !re.test(value)) {
-      return field.example
-        ? `${field.name} does not look right. Example: ${field.example}`
-        : `${field.name} does not look right.`;
-    }
-  }
-  return "";
+  return validateField(field, rawValue);
 }
 
 /**
- * Raw account details go straight to the provider and are never stored by us —
- * only the provider's recipient id and a masked hint come back.
+ * Raw account details go straight to the backend and are never stored by us —
+ * only a recipient reference and the last four digits come back.
  */
 export async function addDestination(payload) {
   const data = await api.post(ENDPOINTS.PAYOUTS.DESTINATIONS, payload);
@@ -454,14 +402,21 @@ export async function getQuote(destinationId) {
 }
 
 /**
- * The idempotency key is what makes a double-clicked withdraw button safe. It
- * is generated once per attempt by the caller and reused on retry, so a
- * resubmitted request returns the SAME payout rather than creating a second.
+ * Confirm the withdrawal the member reviewed.
+ *
+ * quoteId is the price they saw. If it no longer holds, the API answers 409
+ * needs_reconfirmation with a new quote instead of creating the withdrawal at a
+ * different price.
+ *
+ * The idempotency key is generated once per review by the caller and reused on
+ * retry, so a double click returns the SAME payout rather than creating a second.
  */
-export async function requestPayout({ destinationId, idempotencyKey }) {
+export async function requestPayout({ destinationId, quoteId, idempotencyKey }) {
+  const body = { destination_id: destinationId };
+  if (quoteId) body.quote_id = quoteId;
   const data = await api.post(
     ENDPOINTS.PAYOUTS.REQUEST,
-    { destination_id: destinationId },
+    body,
     { headers: { "Idempotency-Key": idempotencyKey } },
   );
   return normalizeRequest(data);
@@ -482,11 +437,7 @@ export async function cancelRequest(id) {
   return normalizeRequest(data);
 }
 
-/**
- * Accept a revised net after the original quote expired and re-quoting moved the
- * amount. Only the member can do this — staff approved the figure the member
- * agreed to, and a different figure is a new agreement.
- */
+/** Accept a revised amount. Only the member can do this. */
 export async function confirmRequest(id) {
   const data = await api.post(ENDPOINTS.PAYOUTS.REQUEST_CONFIRM(id), {});
   return normalizeRequest(data);
@@ -572,10 +523,12 @@ export function daysUntil(iso) {
   return Math.max(0, Math.ceil(ms / 86_400_000));
 }
 
-export default {
+const payoutsApi = {
   getDashboard, getBalance, getEntries, getDestinations, addDestination, archiveDestination,
   getQuote, requestPayout, getRequests, getRequest, cancelRequest, confirmRequest,
   getAdminQueue, getAdminRequest, approvePayout, rejectPayout,
   getFraudReviews, resolveFraudReview,
   newIdempotencyKey, daysUntil, describeBlock,
 };
+
+export default payoutsApi;
