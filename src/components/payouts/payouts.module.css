@@ -754,3 +754,14 @@
   .reviewValue { text-align: left; }
   .error { flex-wrap: wrap; text-align: left; }
 }
+
+/* A saved bank account, acknowledged next to what happens next. */
+.savedNote {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: var(--spacing-sm, 8px) 0 0;
+  font-size: 0.875rem;
+  color: var(--color-success, #2f7d4f);
+  overflow-wrap: anywhere;
+}

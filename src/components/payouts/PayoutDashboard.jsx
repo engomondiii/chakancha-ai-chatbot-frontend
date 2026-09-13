@@ -30,6 +30,9 @@ import {
 import {
   describePayoutError, NEEDS_RECONFIRMATION_MESSAGE, PRICE_EXPIRED_MESSAGE, reconfirmReasons,
 } from "@/lib/payouts/errors";
+import {
+  checkFromError, checkFromQuote, checkKey, checkPending,
+} from "@/lib/payouts/withdrawState";
 
 import { AddBankAccountForm } from "./AddBankAccountForm";
 import { DestinationList } from "./DestinationList";
@@ -68,6 +71,10 @@ export function PayoutDashboard() {
   // { quote, key, notice, reasons } while the member is reviewing.
   const [review, setReview] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  // What the selected account can receive for the current balance, asked before
+  // the member acts, so the card can say so next to the action.
+  const [check, setCheck] = useState(null);
+  const checkSeq = useRef(0);
 
   const busyRef = useRef(false);
   const reviewRef = useRef(review);
@@ -114,6 +121,35 @@ export function PayoutDashboard() {
     [errorContext],
   );
 
+  const verifiedCount = destinations.filter((d) => d.status === "VERIFIED").length;
+  const balanceBlocked = (balance?.blockedReasons ?? [])
+    .some((code) => String(code).toUpperCase() !== "NO_VERIFIED_DESTINATION");
+  const currentKey = checkKey(
+    selectedDestination?.status === "VERIFIED" ? destinationId : "", balance?.available?.minor);
+
+  const runCheck = useCallback(async (key, id) => {
+    const seq = ++checkSeq.current;
+    setCheck(checkPending(key));
+    try {
+      const quote = await getQuote(id);
+      if (seq === checkSeq.current) setCheck(checkFromQuote(key, quote));
+    } catch (err) {
+      if (seq === checkSeq.current) setCheck(checkFromError(key, explain(err)));
+    }
+  }, [explain]);
+
+  useEffect(() => {
+    // Once per account and balance, and only when the ledger would allow a
+    // withdrawal — a quote is what tells us whether the provider will too.
+    if (!currentKey || openRequest || review || balanceBlocked || verifiedCount === 0) return;
+    if (check && check.key === currentKey) return;
+    runCheck(currentKey, destinationId);
+  }, [currentKey, openRequest, review, balanceBlocked, verifiedCount, check, runCheck, destinationId]);
+
+  const handleRetryCheck = () => {
+    if (currentKey) runCheck(currentKey, destinationId);
+  };
+
   /** One action at a time; a second click while one runs is ignored. */
   const withBusy = useCallback(async (fn) => {
     if (busyRef.current) return;
@@ -139,10 +175,22 @@ export function PayoutDashboard() {
   const handleReview = () => withBusy(async () => {
     if (!destinationId) return;
     setNotice("");
+    const checked = check && check.key === currentKey && check.status === "ok" ? check.quote : null;
+    const holdsFor = checked?.expiresAt ? new Date(checked.expiresAt).getTime() - Date.now() : 0;
+    if (checked && holdsFor > MIN_PRICE_HOLD_MS) {
+      // The price the card was checked with still holds: review exactly that one.
+      startReview(checked);
+      return;
+    }
     try {
-      startReview(await getQuote(destinationId));
+      const quote = await getQuote(destinationId);
+      setCheck(checkFromQuote(currentKey, quote));
+      startReview(quote);
     } catch (err) {
-      setActionError(explain(err));
+      // The reason belongs on the card, beside the action. A banner at the top
+      // of the page is where it used to go, and a member who had scrolled down
+      // to save a bank account never saw it.
+      setCheck(checkFromError(currentKey, explain(err)));
     }
   });
 
@@ -246,9 +294,14 @@ export function PayoutDashboard() {
 
   const handleAdded = async (destination) => {
     setShowAddForm(false);
-    setNotice("Bank account added.");
+    setNotice("Bank account saved.");
     await refresh();
     if (destination?.id && destination.status === "VERIFIED") setDestinationId(destination.id);
+    // Bring the member back to the withdraw card, where what happens next is shown.
+    if (typeof window !== "undefined") {
+      window.requestAnimationFrame(() =>
+        document.getElementById("payout-withdraw")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    }
   };
 
   /* ── Render ───────────────────────────────────────────── */
@@ -296,8 +349,10 @@ export function PayoutDashboard() {
           onDestinationChange={(id) => { setDestinationId(id); setReview(null); }}
           openRequest={openRequest}
           review={review}
+          check={check}
           busy={busy}
           onReview={handleReview}
+          onRetryCheck={handleRetryCheck}
           onConfirm={handleConfirm}
           onBack={() => setReview(null)}
           onExpired={handleExpired}

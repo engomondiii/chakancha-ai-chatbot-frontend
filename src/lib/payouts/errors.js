@@ -164,6 +164,9 @@ export function describePayoutError(err, options = {}) {
       data && data.field_errors && typeof data.field_errors === "object" ? { ...data.field_errors } : {},
     reasons: Array.isArray(data?.reasons) ? data.reasons : [],
     quote: data?.quote ?? null,
+    // The facts behind the message (balance, currency name, the provider's
+    // stated minimum), so a caller can place the explanation where it belongs.
+    context: ctx,
   };
 
   if (status === 401) {
