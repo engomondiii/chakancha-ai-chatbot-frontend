@@ -443,6 +443,12 @@ export async function confirmRequest(id) {
   return normalizeRequest(data);
 }
 
+/** Hide finished withdrawals from the member's history. Nothing is deleted. */
+export async function clearWithdrawalHistory() {
+  const data = await api.post(ENDPOINTS.PAYOUTS.REQUESTS_CLEAR_HISTORY, {});
+  return data?.cleared ?? 0;
+}
+
 // ─── Admin endpoints ──────────────────────────────────────────────────────────
 
 export function normalizeAdminRequest(raw) {
@@ -526,6 +532,7 @@ export function daysUntil(iso) {
 const payoutsApi = {
   getDashboard, getBalance, getEntries, getDestinations, addDestination, archiveDestination,
   getQuote, requestPayout, getRequests, getRequest, cancelRequest, confirmRequest,
+  clearWithdrawalHistory,
   getAdminQueue, getAdminRequest, approvePayout, rejectPayout,
   getFraudReviews, resolveFraudReview,
   newIdempotencyKey, daysUntil, describeBlock,

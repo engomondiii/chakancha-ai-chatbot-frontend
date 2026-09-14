@@ -185,6 +185,7 @@ export const ENDPOINTS = {
     REQUEST_DETAIL: (id) => `/payouts/requests/${id}/`,
     REQUEST_CANCEL: (id) => `/payouts/requests/${id}/cancel/`,
     REQUEST_CONFIRM: (id) => `/payouts/requests/${id}/confirm/`,
+    REQUESTS_CLEAR_HISTORY: '/payouts/requests/clear-history/',
   },
 
   // ── Payout admin (/api/v1/admin/payouts/) — staff only ────────────────────

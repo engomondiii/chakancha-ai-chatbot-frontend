@@ -53,6 +53,9 @@ export const OPEN_STATES = [
 
 export const CANCELLABLE_STATES = ["REQUESTED", "PENDING_REVIEW", "APPROVED"];
 
+/** Finished withdrawals a member may clear from their history (server: HIDEABLE_PAYOUT_STATES). */
+export const HIDEABLE_STATES = ["COMPLETED", "FAILED", "RETURNED", "REJECTED", "CANCELLED"];
+
 export function formatDate(iso) {
   if (!iso) return "";
   const date = new Date(iso);
