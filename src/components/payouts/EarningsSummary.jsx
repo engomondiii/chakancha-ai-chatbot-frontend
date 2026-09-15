@@ -66,6 +66,8 @@ export function EarningsSummary({ balance }) {
           The minimum withdrawal is{" "}
           <span className={styles.emphasis}>{balance.minimumPayout?.display}</span>. You currently
           have <span className={styles.emphasis}>{balance.available?.display}</span> available.
+          A transaction fee of about 1% is deducted from each withdrawal; you'll see the
+          exact fee before you confirm.
         </Strip>
       )}
 
