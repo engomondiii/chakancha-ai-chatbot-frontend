@@ -195,7 +195,11 @@
   overflow-y: auto;
   overscroll-behavior-y: contain;
 
-  scroll-behavior: smooth;
+  /*
+   * No scroll-behavior: smooth here — it animates every programmatic
+   * scroll, so following a streaming reply lagged behind the text.
+   * The scroll-to-bottom button asks for smooth scrolling itself.
+   */
   scrollbar-width: thin;
   scrollbar-color: var(--color-border-soft) transparent;
 }

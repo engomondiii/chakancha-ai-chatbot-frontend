@@ -1,0 +1,171 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   LogoLoader.module.css
+
+   Waiting animation built from the Chakancha mark. Colors, typography and
+   spacing come from src/app/globals.css.
+───────────────────────────────────────────────────────────────────────────── */
+
+.loader {
+  display: inline-flex;
+  align-items: center;
+
+  gap: var(--space-1);
+}
+
+.badge {
+  --loader-size: 36px;
+
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  width: var(--loader-size);
+  height: var(--loader-size);
+
+  background-color: var(--color-background-dark);
+  border-radius: 50%;
+
+  box-shadow: 0 2px 8px rgba(17, 17, 17, 0.18);
+}
+
+.sm .badge {
+  --loader-size: 28px;
+}
+
+.md .badge {
+  --loader-size: 36px;
+}
+
+.lg .badge {
+  --loader-size: 56px;
+}
+
+.lg {
+  flex-direction: column;
+
+  gap: var(--space-2);
+}
+
+.mark {
+  display: block;
+
+  width: 46%;
+  height: auto;
+
+  animation: logoBreathe 1.6s ease-in-out infinite;
+}
+
+/* A thin gold arc that sweeps around the disc. */
+.ring {
+  position: absolute;
+  inset: -4px;
+
+  border-radius: 50%;
+
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg 200deg,
+    var(--color-accent-muted-gold) 330deg,
+    var(--color-accent-sand) 360deg
+  );
+
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 2px),
+    #000 calc(100% - 2px)
+  );
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 2px),
+    #000 calc(100% - 2px)
+  );
+
+  animation: logoRingSpin 1.2s linear infinite;
+}
+
+.label {
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-caption);
+
+  color: transparent;
+
+  background: linear-gradient(
+    90deg,
+    var(--color-text-muted) 0%,
+    var(--color-text-muted) 40%,
+    var(--color-accent-muted-gold) 50%,
+    var(--color-text-muted) 60%,
+    var(--color-text-muted) 100%
+  );
+  background-size: 200% 100%;
+
+  -webkit-background-clip: text;
+  background-clip: text;
+
+  animation: labelShimmer 2.2s linear infinite;
+}
+
+.srOnly {
+  position: absolute;
+
+  width: 1px;
+  height: 1px;
+
+  margin: -1px;
+  padding: 0;
+
+  overflow: hidden;
+
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+
+  border: 0;
+}
+
+@keyframes logoBreathe {
+  0%,
+  100% {
+    opacity: 0.75;
+    transform: scale(0.9);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes logoRingSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes labelShimmer {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mark,
+  .ring,
+  .label {
+    animation: none;
+  }
+
+  .label {
+    color: var(--color-text-muted);
+    background: none;
+  }
+}

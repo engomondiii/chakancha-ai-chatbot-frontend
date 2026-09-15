@@ -1,108 +1,253 @@
 /**
  * StreamingText.jsx
- * Renders AI response text with markdown support and a smooth streaming effect.
- * Uses a simple but effective character-by-character reveal via CSS animation stagger.
+ * Renders AI response text as formatted markdown, with a caret at the end of
+ * the text while the reply is still streaming in.
  */
 
 'use client';
 
 import React, { useMemo } from 'react';
+import styles from './StreamingText.module.css';
 
-// ─── Lightweight markdown renderer ───────────────────────────────────────────
+// ─── Block parsing ────────────────────────────────────────────────────────────
 
 /**
- * Convert the subset of markdown Claude uses to JSX.
- * Handles: **bold**, *italic*, bullet lists, line breaks, `code`.
+ * Split the markdown Claude writes into blocks: headings, paragraphs, lists,
+ * blockquotes, fenced code and rules. Consecutive text lines form a single
+ * paragraph, so a lone newline reads as a line break, not a new paragraph.
  */
-function renderMarkdown(text) {
-  if (!text) return null;
+function parseBlocks(text) {
+  const lines  = text.replace(/\r\n?/g, '\n').split('\n');
+  const blocks = [];
+  let para  = null;
+  let list  = null;
+  let quote = null;
+  let code  = null;
 
-  // Split into paragraphs / list blocks
-  const lines = text.split('\n');
-  const elements = [];
-  let listBuffer = [];
-  let key = 0;
-
-  const flushList = () => {
-    if (listBuffer.length > 0) {
-      elements.push(
-        <ul key={`list-${key++}`} style={{ margin: '8px 0 8px 16px', paddingLeft: 0, listStyle: 'disc' }}>
-          {listBuffer.map((item, i) => (
-            <li key={i} style={{ marginBottom: 4, lineHeight: 1.6 }}>
-              {inlineFormat(item)}
-            </li>
-          ))}
-        </ul>
-      );
-      listBuffer = [];
-    }
+  const closeOpen = () => {
+    para  = null;
+    list  = null;
+    quote = null;
   };
 
-  for (const line of lines) {
-    const trimmed = line.trim();
-
-    if (!trimmed) {
-      flushList();
-      elements.push(<br key={`br-${key++}`} />);
+  for (const raw of lines) {
+    if (code) {
+      if (/^\s*```/.test(raw)) code = null;
+      else code.lines.push(raw);
       continue;
     }
 
-    // Bullet list items
-    if (trimmed.startsWith('- ') || trimmed.startsWith('• ')) {
-      listBuffer.push(trimmed.replace(/^[-•]\s/, ''));
+    const line = raw.trim();
+
+    if (line.startsWith('```')) {
+      closeOpen();
+      code = { type: 'code', lines: [] };
+      blocks.push(code);
       continue;
     }
 
-    // Numbered list items
-    if (/^\d+\.\s/.test(trimmed)) {
-      listBuffer.push(trimmed.replace(/^\d+\.\s/, ''));
+    // A blank line ends a paragraph but not a list — Claude often puts
+    // blank lines between numbered items.
+    if (!line) {
+      para  = null;
+      quote = null;
       continue;
     }
 
-    flushList();
+    const heading = line.match(/^(#{1,4})\s+(.*)$/);
+    if (heading) {
+      closeOpen();
+      blocks.push({ type: 'heading', level: heading[1].length, text: heading[2] });
+      continue;
+    }
 
-    elements.push(
-      <span key={`line-${key++}`} style={{ display: 'block', lineHeight: 1.7 }}>
-        {inlineFormat(trimmed)}
-      </span>
-    );
+    if (/^(-{3,}|\*{3,}|_{3,})$/.test(line)) {
+      closeOpen();
+      blocks.push({ type: 'rule' });
+      continue;
+    }
+
+    const bullet   = line.match(/^[-*•]\s+(.*)$/);
+    const numbered = line.match(/^(\d+)[.)]\s+(.*)$/);
+    if (bullet || numbered) {
+      const ordered = Boolean(numbered);
+      if (!list || list.ordered !== ordered) {
+        para  = null;
+        quote = null;
+        list  = {
+          type:  'list',
+          ordered,
+          start: ordered ? Number(numbered[1]) : 1,
+          items: [],
+        };
+        blocks.push(list);
+      }
+      list.items.push(bullet ? bullet[1] : numbered[2]);
+      continue;
+    }
+
+    if (line.startsWith('>')) {
+      if (!quote) {
+        para  = null;
+        list  = null;
+        quote = { type: 'quote', lines: [] };
+        blocks.push(quote);
+      }
+      quote.lines.push(line.replace(/^>\s?/, ''));
+      continue;
+    }
+
+    // Indented text under a list item continues that item.
+    if (list && /^\s{2,}/.test(raw)) {
+      list.items[list.items.length - 1] += ` ${line}`;
+      continue;
+    }
+
+    if (!para) {
+      list  = null;
+      quote = null;
+      para  = { type: 'paragraph', lines: [] };
+      blocks.push(para);
+    }
+    para.lines.push(line);
   }
 
-  flushList();
-  return elements;
+  return blocks;
 }
 
-function inlineFormat(text) {
-  if (!text) return null;
+// ─── Inline formatting ────────────────────────────────────────────────────────
 
-  // Split on **bold**, *italic*, `code`
-  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g);
+const INLINE_PATTERN =
+  /(\*\*[^*]+\*\*|__[^_]+__|`[^`]+`|\[[^\]]+\]\([^)\s]+\)|\*[^*\s][^*]*\*)/g;
 
-  return parts.map((part, i) => {
-    if (part.startsWith('**') && part.endsWith('**')) {
-      return <strong key={i} style={{ fontWeight: 600, color: 'var(--color-earth-brown)' }}>{part.slice(2, -2)}</strong>;
+const SAFE_HREF = /^(https?:\/\/|mailto:|\/)/i;
+
+function renderInline(text, keyPrefix) {
+  return text
+    .split(INLINE_PATTERN)
+    .filter(Boolean)
+    .map((part, i) => {
+      const key = `${keyPrefix}-${i}`;
+
+      if (
+        part.length > 4 &&
+        ((part.startsWith('**') && part.endsWith('**')) ||
+          (part.startsWith('__') && part.endsWith('__')))
+      ) {
+        return <strong key={key} className={styles.strong}>{part.slice(2, -2)}</strong>;
+      }
+
+      if (part.length > 2 && part.startsWith('`') && part.endsWith('`')) {
+        return <code key={key} className={styles.code}>{part.slice(1, -1)}</code>;
+      }
+
+      const link = part.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/);
+      if (link) {
+        const [, label, href] = link;
+        if (!SAFE_HREF.test(href)) return label;
+        const external = /^https?:\/\//i.test(href);
+        return (
+          <a
+            key={key}
+            href={href}
+            className={styles.link}
+            {...(external && { target: '_blank', rel: 'noopener noreferrer' })}
+          >
+            {label}
+          </a>
+        );
+      }
+
+      if (part.length > 2 && part.startsWith('*') && part.endsWith('*')) {
+        return <em key={key} className={styles.em}>{part.slice(1, -1)}</em>;
+      }
+
+      return part;
+    });
+}
+
+function renderLines(lines, keyPrefix) {
+  return lines.map((line, i) => (
+    <React.Fragment key={i}>
+      {i > 0 && <br />}
+      {renderInline(line, `${keyPrefix}-${i}`)}
+    </React.Fragment>
+  ));
+}
+
+// ─── Block rendering ──────────────────────────────────────────────────────────
+
+/** `tail` (the streaming caret) is placed at the end of the last block. */
+function renderBlocks(blocks, tail) {
+  const lastIndex = blocks.length - 1;
+
+  return blocks.map((block, index) => {
+    const key   = `b${index}`;
+    const caret = index === lastIndex ? tail : null;
+
+    switch (block.type) {
+      case 'heading': {
+        const Tag = block.level <= 2 ? 'h3' : 'h4';
+        return (
+          <Tag key={key} className={styles.heading}>
+            {renderInline(block.text, key)}
+            {caret}
+          </Tag>
+        );
+      }
+
+      case 'list': {
+        const Tag = block.ordered ? 'ol' : 'ul';
+        return (
+          <Tag
+            key={key}
+            className={block.ordered ? styles.ol : styles.ul}
+            start={block.ordered && block.start !== 1 ? block.start : undefined}
+          >
+            {block.items.map((item, i) => (
+              <li key={i}>
+                {renderInline(item, `${key}-${i}`)}
+                {i === block.items.length - 1 ? caret : null}
+              </li>
+            ))}
+          </Tag>
+        );
+      }
+
+      case 'quote':
+        return (
+          <blockquote key={key} className={styles.quote}>
+            {renderLines(block.lines, key)}
+            {caret}
+          </blockquote>
+        );
+
+      case 'code':
+        return (
+          <React.Fragment key={key}>
+            <pre className={styles.pre}>
+              <code>{block.lines.join('\n')}</code>
+            </pre>
+            {caret}
+          </React.Fragment>
+        );
+
+      case 'rule':
+        return (
+          <React.Fragment key={key}>
+            <hr className={styles.rule} />
+            {caret}
+          </React.Fragment>
+        );
+
+      default:
+        return (
+          <p key={key} className={styles.paragraph}>
+            {renderLines(block.lines, key)}
+            {caret}
+          </p>
+        );
     }
-    if (part.startsWith('*') && part.endsWith('*')) {
-      return <em key={i} style={{ fontStyle: 'italic', color: 'var(--color-muted-olive)' }}>{part.slice(1, -1)}</em>;
-    }
-    if (part.startsWith('`') && part.endsWith('`')) {
-      return (
-        <code
-          key={i}
-          style={{
-            fontFamily:      'monospace',
-            fontSize:        '0.9em',
-            backgroundColor: 'var(--color-warm-cream)',
-            padding:         '1px 5px',
-            borderRadius:    3,
-            color:           'var(--color-tea-green)',
-          }}
-        >
-          {part.slice(1, -1)}
-        </code>
-      );
-    }
-    return part;
   });
 }
 
@@ -117,43 +262,19 @@ function inlineFormat(text) {
  * @param {string}  className   - Optional CSS class
  */
 export function StreamingText({ content = '', isStreaming = false, className = '' }) {
-  const rendered = useMemo(() => renderMarkdown(content), [content]);
+  const blocks = useMemo(() => parseBlocks(content || ''), [content]);
+
+  const caret = isStreaming
+    ? <span className={styles.caret} aria-hidden="true" />
+    : null;
 
   return (
     <div
-      className={className}
-      style={{
-        fontSize:   'var(--font-size-body)',
-        lineHeight: 1.7,
-        color:      'var(--color-text-primary)',
-        wordBreak:  'break-word',
-      }}
+      className={`${styles.text} ${className}`}
+      aria-busy={isStreaming || undefined}
     >
-      {rendered}
-
-      {/* Blinking cursor while streaming */}
-      {isStreaming && (
-        <span
-          aria-hidden="true"
-          style={{
-            display:         'inline-block',
-            width:           2,
-            height:          '1.1em',
-            backgroundColor: 'var(--color-tea-green)',
-            marginLeft:      2,
-            verticalAlign:   'text-bottom',
-            borderRadius:    1,
-            animation:       'cursorBlink 0.9s step-end infinite',
-          }}
-        />
-      )}
-
-      <style>{`
-        @keyframes cursorBlink {
-          0%, 100% { opacity: 1; }
-          50%       { opacity: 0; }
-        }
-      `}</style>
+      {renderBlocks(blocks, caret)}
+      {blocks.length === 0 && caret}
     </div>
   );
 }

@@ -1,0 +1,158 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   StreamingText.module.css
+
+   Typography for AI replies. Colors, typography and spacing come from
+   src/app/globals.css.
+───────────────────────────────────────────────────────────────────────────── */
+
+.text {
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-body);
+
+  color: var(--color-text-primary);
+
+  overflow-wrap: anywhere;
+}
+
+.text > * + * {
+  margin-top: calc(var(--space-1) + var(--spacing-xs));
+}
+
+.text > * + .heading {
+  margin-top: var(--space-2);
+}
+
+.paragraph {
+  margin: 0;
+}
+
+.heading {
+  margin: 0;
+
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-body-large);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-body-large);
+
+  color: var(--color-text-primary);
+}
+
+.ul,
+.ol {
+  margin: 0;
+  padding-left: var(--space-3);
+}
+
+.ul {
+  list-style: disc;
+}
+
+.ol {
+  list-style: decimal;
+}
+
+.ul li + li,
+.ol li + li {
+  margin-top: var(--spacing-xs);
+}
+
+.ul li::marker,
+.ol li::marker {
+  color: var(--color-accent-muted-gold);
+}
+
+.ol li::marker {
+  font-weight: var(--font-weight-semibold);
+}
+
+.strong {
+  font-weight: var(--font-weight-semibold);
+
+  color: var(--color-text-primary);
+}
+
+.em {
+  font-style: italic;
+}
+
+.code {
+  padding: 1px 6px;
+
+  font-family: var(--font-family-mono);
+  font-size: 0.9em;
+
+  background-color: var(--color-background-muted);
+  border-radius: var(--radius-sm);
+}
+
+.pre {
+  margin: 0;
+  padding: var(--space-2);
+
+  overflow-x: auto;
+
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-caption);
+
+  color: var(--color-text-inverse);
+  background-color: var(--color-background-charcoal);
+
+  border-radius: var(--radius-md);
+}
+
+.link {
+  color: var(--color-accent-dark-olive);
+
+  text-decoration: underline;
+  text-decoration-color: var(--color-accent-muted-gold);
+  text-underline-offset: 3px;
+}
+
+.link:hover {
+  color: var(--color-text-primary);
+}
+
+.quote {
+  margin: 0;
+  padding-left: var(--space-2);
+
+  color: var(--color-text-muted);
+
+  border-left: 3px solid var(--color-accent-muted-gold);
+}
+
+.rule {
+  border: 0;
+  border-top: 1px solid var(--color-divider-soft);
+}
+
+.caret {
+  display: inline-block;
+
+  width: 2px;
+  height: 1.05em;
+
+  margin-left: 2px;
+
+  vertical-align: text-bottom;
+
+  background-color: var(--color-accent-muted-gold);
+  border-radius: 1px;
+
+  animation: caretBlink 1s steps(1) infinite;
+}
+
+@keyframes caretBlink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caret {
+    animation: none;
+  }
+}

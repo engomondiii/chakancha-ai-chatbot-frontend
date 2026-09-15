@@ -132,108 +132,23 @@
   min-width: 0;
 }
 
+/*
+ * AI replies sit directly on the conversation background, beside the
+ * avatar, instead of inside a separate card. Typography lives in
+ * StreamingText.module.css.
+ */
 .aiText {
-  padding: var(--space-2) var(--space-3);
+  padding-top: 2px;
 
-  font-family: var(--font-family-primary);
-  font-size: var(--font-size-body);
-  font-weight: var(--font-weight-regular);
-  line-height: var(--line-height-body);
-
-  color: var(--color-text-secondary);
-  background-color: var(--color-surface-card);
-
-  border: 1px solid var(--color-border-soft);
-
-  border-radius: var(--radius-sm) var(--radius-card) var(--radius-card)
-    var(--radius-card);
-
-  box-shadow: var(--shadow-sm);
-
-  overflow-wrap: anywhere;
+  color: var(--color-text-primary);
 }
 
+/* Keep global paragraph and list colors from overriding reply text. */
 .aiText p,
-.aiText span,
-.aiText li {
+.aiText li,
+.aiText h3,
+.aiText h4 {
   color: inherit;
-}
-
-.aiText p + p {
-  margin-top: var(--space-2);
-}
-
-.aiText ul,
-.aiText ol {
-  margin-top: var(--space-1);
-  margin-bottom: var(--space-1);
-  padding-left: var(--space-3);
-}
-
-.aiText ul {
-  list-style: disc;
-}
-
-.aiText ol {
-  list-style: decimal;
-}
-
-.aiText a {
-  color: var(--color-accent-dark-olive);
-
-  text-decoration: underline;
-  text-decoration-color: var(--color-accent-muted-gold);
-  text-underline-offset: 3px;
-}
-
-.aiText a:hover {
-  color: var(--color-text-primary);
-}
-
-.aiText code {
-  padding: var(--spacing-xs) var(--space-1);
-
-  font-family: var(--font-family-mono);
-  font-size: 0.9em;
-
-  color: var(--color-text-primary);
-  background-color: var(--color-background-muted);
-
-  border-radius: var(--radius-sm);
-}
-
-.aiText pre {
-  max-width: 100%;
-
-  margin-top: var(--space-2);
-  margin-bottom: var(--space-2);
-  padding: var(--space-2);
-
-  overflow-x: auto;
-
-  color: var(--color-text-inverse);
-  background-color: var(--color-background-charcoal);
-
-  border-radius: var(--radius-card);
-}
-
-.aiText pre code {
-  padding: 0;
-
-  color: inherit;
-  background-color: transparent;
-
-  border-radius: 0;
-}
-
-.aiText blockquote {
-  margin: var(--space-2) 0;
-
-  padding-left: var(--space-2);
-
-  color: var(--color-text-muted);
-
-  border-left: 3px solid var(--color-accent-muted-gold);
 }
 
 /* ── Action buttons ──────────────────────────────────────────────────────── */
@@ -287,7 +202,7 @@
   align-items: center;
   justify-content: space-between;
 
-  padding: var(--spacing-xs) var(--spacing-xs) 0;
+  padding: var(--spacing-xs) var(--spacing-xs) 0 0;
 
   opacity: 0;
 
@@ -322,10 +237,6 @@
   .userBubble {
     max-width: 86%;
 
-    padding: var(--space-1) var(--space-2);
-  }
-
-  .aiText {
     padding: var(--space-1) var(--space-2);
   }
 
