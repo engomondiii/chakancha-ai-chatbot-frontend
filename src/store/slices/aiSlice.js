@@ -298,10 +298,21 @@ export const createAISlice = (set, get) => ({
 
   // ── initFromQuery ──────────────────────────────────────────────────────────
   initFromQuery: (queryText) => {
-    if (!queryText?.trim()) return;
-    const { messages } = get();
-    if (messages.length > 0) return;
-    get().sendMessage(queryText.trim());
+    const text = queryText?.trim();
+    if (!text) return;
+
+    // Shortcut chips and the hero input always ask the AI, even when a
+    // conversation is already open: the question becomes the next message.
+    // If a reply is still streaming, wait for it (up to a minute) rather than
+    // dropping the question.
+    const sendWhenIdle = (attemptsLeft) => {
+      if (!get().isStreaming) {
+        get().sendMessage(text);
+      } else if (attemptsLeft > 0) {
+        setTimeout(() => sendWhenIdle(attemptsLeft - 1), 250);
+      }
+    };
+    sendWhenIdle(240);
   },
 
   // ── sendFeedback (Phase 2 addition) ───────────────────────────────────────

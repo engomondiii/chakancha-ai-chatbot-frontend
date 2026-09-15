@@ -14,7 +14,7 @@
 "use client";
 
 import React, { useEffect, useRef, useCallback, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { RotateCcw, Trash2, ChevronDown } from "lucide-react";
 import { useAI } from "@/lib/hooks/useAI";
@@ -107,6 +107,7 @@ function ScrollToBottomBtn({ onClick, visible }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function ConversationView() {
+  const router = useRouter();
   const searchParams = useSearchParams();
 
   const {
@@ -138,9 +139,14 @@ export function ConversationView() {
   useEffect(() => {
     if (hasInitialised.current) return;
     hasInitialised.current = true;
+    // searchParams.get() has already decoded the value; decoding it again
+    // threw on questions containing "%".
     const query = searchParams?.get("q");
-    if (query) initFromQuery(decodeURIComponent(query));
-  }, [searchParams, initFromQuery]);
+    if (!query) return;
+    initFromQuery(query);
+    // Drop ?q= so a refresh or Back doesn't ask the same question again.
+    router.replace("/chat", { scroll: false });
+  }, [searchParams, initFromQuery, router]);
 
   // ── Auto-scroll ────────────────────────────────────────────────────────────
   const scrollToBottom = useCallback((smooth = true) => {
