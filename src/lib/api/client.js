@@ -183,27 +183,40 @@ export const api = {
  *                       { type, url? } | { type, intent?, follow_ups?, ... }
  */
 export async function* createSSEStream(payload) {
-  const token     = getAccessToken();
   const sessionId = getSessionId();
 
-  const headers = {
-    'Content-Type': 'application/json',
-    'X-Session-Id': sessionId || '',
-  };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const post = async (token) => {
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-Session-Id': sessionId || '',
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  let response;
-  try {
-    response = await fetch(
-      `${API_BASE_URL}/api/${API_VERSION}/ai/stream/`,
-      {
-        method:  'POST',
-        headers,
-        body:    JSON.stringify(payload),
-      }
-    );
-  } catch {
-    throw new ApiError(undefined, 'Network error — please check your connection.');
+    try {
+      return await fetch(
+        `${API_BASE_URL}/api/${API_VERSION}/ai/stream/`,
+        {
+          method:  'POST',
+          headers,
+          body:    JSON.stringify(payload),
+        }
+      );
+    } catch {
+      throw new ApiError(undefined, 'Network error — please check your connection.');
+    }
+  };
+
+  const token = getAccessToken();
+  let response = await post(token);
+
+  // An expired sign-in token (they last an hour) makes the backend refuse the
+  // whole request, even though chat doesn't need one. The axios client
+  // refreshes and retries on 401; this raw fetch must do the same. If the
+  // refresh fails, ask again without a token so chat still works.
+  if (response.status === 401 && token) {
+    const refreshed = await _silentRefresh();
+    const newToken  = refreshed ? getAccessToken() : null;
+    response = await post(newToken && newToken !== token ? newToken : null);
   }
 
   if (!response.ok) {

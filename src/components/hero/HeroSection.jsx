@@ -21,6 +21,7 @@ import { PromptInput } from './PromptInput';
 import { PromptChips } from './PromptChips';
 import { SearchResultsPanel } from './SearchResultsPanel';
 import { api } from '@/lib/api/client';
+import { useAIActions } from '@/lib/hooks/useAI';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 import styles from './HeroSection.module.css';
 
@@ -31,8 +32,14 @@ export function HeroSection() {
   const [searchQuery,   setSearchQuery]   = useState('');
   const [heroMode,      setHeroMode]      = useState('chat');
   const resultsRef = useRef(null);
+  const { initFromQuery } = useAIActions();
 
   const hasResults = heroMode === 'search' && (searchResults || searchLoading);
+
+  // Load the chat page in the background so a chip or question opens it at once.
+  useEffect(() => {
+    router.prefetch('/chat');
+  }, [router]);
 
   // Scroll to results smoothly when they appear
   useEffect(() => {
@@ -46,7 +53,10 @@ export function HeroSection() {
     const trimmed = prompt.trim();
 
     if (heroMode === 'chat') {
-      router.push(`/chat?q=${encodeURIComponent(trimmed)}`);
+      // Ask the AI straight away, then open the chat. Loading /chat first and
+      // sending the question from ?q= held it back by 1-2 seconds.
+      initFromQuery(trimmed);
+      router.push('/chat');
       return;
     }
 

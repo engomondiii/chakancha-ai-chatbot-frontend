@@ -63,7 +63,6 @@ export function PromptChips({ onClick }) {
               onClick={(event) => handleChipClick(event, chip)}
               className={styles.chip}
               aria-label={chip.text}
-              prefetch={false}
             >
               <Icon size={16} className={styles.icon} />
               <span className={styles.text}>{chip.text}</span>
