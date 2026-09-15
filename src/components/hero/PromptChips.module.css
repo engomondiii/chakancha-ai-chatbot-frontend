@@ -41,6 +41,7 @@
 
   cursor: pointer;
   white-space: nowrap;
+  text-decoration: none; /* chips are links */
 
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 

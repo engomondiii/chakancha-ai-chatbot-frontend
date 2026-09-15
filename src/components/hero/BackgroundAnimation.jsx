@@ -157,6 +157,59 @@ export function BackgroundAnimation() {
   }, []);
 
   /* =====================================================
+     DEFERRED LOADING
+
+     herovideo2.mp4 is about 47 MB and there are two
+     copies. Loading them (and the 2.7 MB poster) with the
+     page starved the scripts that make the hero input and
+     chips work: on a fast connection they did nothing for
+     ~26s, on a 4 Mbps one for over a minute. Media now
+     starts only after the page is interactive, and the
+     standby copy downloads when the loop first needs it.
+  ===================================================== */
+
+  useEffect(() => {
+    const videoA = videoARef.current;
+    const videoB = videoBRef.current;
+
+    if (!videoA || !videoB) return undefined;
+
+    let cancelled = false;
+    let idleId = null;
+    let timeoutId = null;
+
+    const start = () => {
+      if (cancelled) return;
+
+      videoA.poster = POSTER_SRC;
+      videoA.preload = "auto";
+      videoA.src = VIDEO_SRC;
+
+      videoB.preload = "none";
+      videoB.src = VIDEO_SRC;
+
+      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        videoA.play().catch(() => {
+          // Autoplay may be blocked; the poster remains visible.
+        });
+      }
+    };
+
+    if ("requestIdleCallback" in window) {
+      idleId = window.requestIdleCallback(start, { timeout: 1500 });
+    } else {
+      timeoutId = window.setTimeout(start, 300);
+    }
+
+    return () => {
+      cancelled = true;
+
+      if (idleId !== null) window.cancelIdleCallback(idleId);
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+    };
+  }, []);
+
+  /* =====================================================
      REDUCED MOTION
 
      Pause whichever copies are playing.
@@ -275,26 +328,23 @@ export function BackgroundAnimation() {
        * the loop crossfade.
        */}
       <div className="chakancha-camera">
+        {/* src, poster and playback are set after load; see DEFERRED LOADING. */}
         <video
           ref={videoARef}
-          src={VIDEO_SRC}
-          poster={POSTER_SRC}
-          autoPlay
           muted
           loop
           playsInline
-          preload="auto"
+          preload="none"
           aria-hidden="true"
           style={videoStyle(true)}
         />
 
         <video
           ref={videoBRef}
-          src={VIDEO_SRC}
           muted
           loop
           playsInline
-          preload="auto"
+          preload="none"
           aria-hidden="true"
           style={videoStyle(false)}
         />
