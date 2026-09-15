@@ -24,7 +24,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AlertCircle, Loader2, Wallet } from "lucide-react";
 
 import {
-  archiveDestination, cancelRequest, confirmRequest, getDashboard, getQuote,
+  archiveDestination, cancelRequest, clearWithdrawalHistory, confirmRequest, getDashboard, getQuote,
   newIdempotencyKey, normalizeQuote, payoutErrorOptions, requestPayout,
 } from "@/lib/api/payouts";
 import {
@@ -273,6 +273,23 @@ export function PayoutDashboard() {
     }
   });
 
+  const handleClearHistory = () => {
+    if (typeof window !== "undefined" && !window.confirm(
+      "Clear finished withdrawals from your history? Withdrawals still in progress stay, and your balance is not affected.",
+    )) return;
+    withBusy(async () => {
+      try {
+        const cleared = await clearWithdrawalHistory();
+        setNotice(cleared
+          ? `Cleared ${cleared} finished withdrawal${cleared === 1 ? "" : "s"} from your history.`
+          : "There were no finished withdrawals to clear.");
+        await refresh();
+      } catch (err) {
+        setActionError(explain(err));
+      }
+    });
+  };
+
   const handleRemove = (id) => withBusy(async () => {
     try {
       await archiveDestination(id);
@@ -375,6 +392,7 @@ export function PayoutDashboard() {
         busy={busy}
         onReconfirm={handleReconfirm}
         onCancel={handleCancel}
+        onClearHistory={handleClearHistory}
       />
 
       <EarningsStatement entries={entries} />

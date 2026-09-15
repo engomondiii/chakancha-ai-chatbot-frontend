@@ -6,7 +6,8 @@
  *  - Feedback buttons (thumbs up/down) added to AI messages
  *    calling sendFeedback from aiSlice via useAIActions()
  *  - feedbackState tracks which messages have been rated
- *  - Everything else unchanged
+ *  - An AI message with no text yet shows the animated logo (TypingIndicator)
+ *  - Memoised so a streaming reply only re-renders its own bubble
  */
 
 'use client';
@@ -15,10 +16,11 @@ import React, { useState } from 'react';
 import { RotateCcw, Copy, Check, Trash2, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { AIAvatar } from './AIAvatar';
 import { StreamingText } from './StreamingText';
+import { TypingIndicator } from './TypingIndicator';
 import { useAIActions } from '@/lib/hooks/useAI';
 import styles from './MessageBubble.module.css';
 
-export function MessageBubble({
+export const MessageBubble = React.memo(function MessageBubble({
   message,
   isLast     = false,
   onRetry    = null,
@@ -90,6 +92,11 @@ export function MessageBubble({
         </div>
       </div>
     );
+  }
+
+  // ── AI message waiting for its first words ────────────────────────────────
+  if (isStreaming && !content) {
+    return <TypingIndicator />;
   }
 
   // ── AI message ─────────────────────────────────────────────────────────────
@@ -172,6 +179,6 @@ export function MessageBubble({
       </div>
     </div>
   );
-}
+});
 
 export default MessageBubble;

@@ -9,11 +9,11 @@
 "use client";
 
 import React from "react";
-import { AlertCircle, CheckCircle2, Clock, Loader2, RefreshCw } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, EyeOff, Loader2, RefreshCw } from "lucide-react";
 
 import { Section } from "./Section";
 import {
-  CANCELLABLE_STATES, destinationLabel, formatDate, formatDateTime, statusText,
+  CANCELLABLE_STATES, HIDEABLE_STATES, destinationLabel, formatDate, formatDateTime, statusText,
 } from "./format";
 import styles from "./payouts.module.css";
 
@@ -110,13 +110,25 @@ function WithdrawalItem({ request: r, busy, onReconfirm, onCancel }) {
   );
 }
 
-export function WithdrawalHistory({ requests, busy, onReconfirm, onCancel }) {
+export function WithdrawalHistory({ requests, busy, onReconfirm, onCancel, onClearHistory }) {
+  // Clearing only hides finished withdrawals; one still in progress stays listed.
+  const canClear = Boolean(onClearHistory) && requests.some((r) => HIDEABLE_STATES.includes(r.status));
+
   return (
     <Section id="withdrawal-history" icon={Clock} title="Withdrawal history"
              note={requests.length ? `${requests.length} withdrawal${requests.length === 1 ? "" : "s"}` : null}>
+      {canClear && (
+        <div className={styles.actions} style={{ marginTop: 0, marginBottom: 12 }}>
+          <button type="button" className={`${styles.button} ${styles.buttonQuiet}`}
+                  disabled={busy} onClick={onClearHistory}>
+            <EyeOff size={15} aria-hidden />
+            Clear finished withdrawals
+          </button>
+        </div>
+      )}
       {requests.length === 0 ? (
         <div className={styles.card}>
-          <p className={styles.empty}>You have not withdrawn yet.</p>
+          <p className={styles.empty}>No withdrawals to show.</p>
         </div>
       ) : (
         <ul className={styles.list}>

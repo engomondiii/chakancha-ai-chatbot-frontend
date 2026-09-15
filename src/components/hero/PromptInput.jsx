@@ -2,8 +2,8 @@
  * src/components/hero/PromptInput.jsx — Integration Phase 2
  *
  * What changed from the original:
- *  - isLoading prop added — disables input and shows spinner on submit button
- *    while backend is processing (streaming or search)
+ *  - isLoading prop added — disables input and pulses the logo on the submit
+ *    button while backend is processing (streaming or search)
  *  - chat prop added — when true, switches from glass-morphism (white text on
  *    dark hero background) to solid white card (dark text on white chat background)
  *    so typed text is visible in the ConversationView input bar
@@ -13,7 +13,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Sparkles, Loader2, Icon } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import styles from "./PromptInput.module.css";
 import Image from "next/image";
 
@@ -67,8 +67,8 @@ export function PromptInput({
             style={{
               color: chat
                 ? value.trim()
-                  ? "#2D5016"
-                  : "#B8C5D6"
+                  ? "var(--color-accent-dark-olive)"
+                  : "var(--color-accent-muted-gold)"
                 : value.trim()
                   ? "#2D5016"
                   : "rgba(255,255,255,0.6)",
@@ -102,25 +102,19 @@ export function PromptInput({
           ]
             .filter(Boolean)
             .join(" ")}
-          aria-label="Submit"
+          aria-label={isLoading ? "Waiting for a reply" : "Submit"}
         >
-          {isLoading ? (
-            <Loader2
-              size={17}
-              style={{ animation: "spin 0.8s linear infinite" }}
-            />
-          ) : (
-            <Image
-              src="/images/icons/chakancha-mark-white.svg"
-              alt="Chakancha logo"
-              width={10}
-              height={10}
-              style={{
-                transform: value.trim() ? "translateX(1px)" : "none",
-                transition: "transform 150ms ease",
-              }}
-            />
-          )}
+          <Image
+            src="/images/icons/chakancha-mark-white.svg"
+            alt="Chakancha logo"
+            width={10}
+            height={10}
+            style={{
+              transform: value.trim() && !isLoading ? "translateX(1px)" : "none",
+              transition: "transform 150ms ease",
+              animation: isLoading ? "pulse 1.2s ease-in-out infinite" : "none",
+            }}
+          />
         </button>
       </div>
 
@@ -130,8 +124,6 @@ export function PromptInput({
           Ask about our teas, origin story, brewing tips, or anything else
         </p>
       )} */}
-
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </form>
   );
 }

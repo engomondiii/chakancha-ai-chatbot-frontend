@@ -6,7 +6,9 @@
  *    instead of useFeaturedProducts() hook for suggestion cards
  *  - SuggestionCards receives both backend productCards and followUps
  *  - Error display improved to show ClaudeError codes from backend
- *  - Everything else (scroll, clear, empty state) unchanged
+ *  - The waiting animation is rendered by MessageBubble itself
+ *  - Streaming replies are followed with instant scroll jumps, and only while
+ *    the reader is at the bottom
  */
 
 "use client";
@@ -17,13 +19,14 @@ import Image from "next/image";
 import { RotateCcw, Trash2, ChevronDown } from "lucide-react";
 import { useAI } from "@/lib/hooks/useAI";
 import { MessageBubble } from "./MessageBubble";
-import { TypingIndicator } from "./TypingIndicator";
 import { SuggestionCards } from "./SuggestionCards";
 import { PromptInput } from "@/components/hero/PromptInput";
-import { shouldShowProductSuggestions } from "@/lib/ai/intentDetection";
 import styles from "./ConversationView.module.css";
 
 const CHAKANCHA_MARK = "/images/icons/chakancha-mark-white.svg";
+
+// How close to the bottom (px) still counts as "reading the latest message".
+const STICK_THRESHOLD = 80;
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
 
@@ -123,9 +126,10 @@ export function ConversationView() {
     showProductSuggestions,
   } = useAI();
 
-  const messagesEndRef = useRef(null);
   const messagesAreaRef = useRef(null);
   const hasInitialised = useRef(false);
+  const stickToBottom = useRef(true);
+  const lastMessageCount = useRef(0);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
 
@@ -139,21 +143,33 @@ export function ConversationView() {
 
   // ── Auto-scroll ────────────────────────────────────────────────────────────
   const scrollToBottom = useCallback((smooth = true) => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: smooth ? "smooth" : "instant",
-    });
+    const el = messagesAreaRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: smooth ? "smooth" : "auto" });
   }, []);
 
+  // A new message always brings the view down. While a reply streams in, keep
+  // following it unless the reader has scrolled up. Jump instantly: starting
+  // a fresh smooth scroll on every update is what made the page drag.
   useEffect(() => {
-    if (isStreaming || messages.length > 0) scrollToBottom();
-  }, [messages.length, isStreaming, scrollToBottom]);
+    if (messages.length > lastMessageCount.current) {
+      stickToBottom.current = true;
+    }
+    lastMessageCount.current = messages.length;
 
-  // ── Scroll button visibility ────────────────────────────────────────────────
+    if (messages.length > 0 && stickToBottom.current) {
+      scrollToBottom(false);
+    }
+  }, [messages, scrollToBottom]);
+
+  // ── Scroll position tracking ───────────────────────────────────────────────
   useEffect(() => {
     const el = messagesAreaRef.current;
     if (!el) return;
     const onScroll = () => {
-      setShowScrollBtn(el.scrollHeight - el.scrollTop - el.clientHeight > 200);
+      const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+      stickToBottom.current = distance < STICK_THRESHOLD;
+      setShowScrollBtn(distance > 200);
     };
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => el.removeEventListener("scroll", onScroll);
@@ -231,11 +247,6 @@ export function ConversationView() {
               );
             })}
 
-            {/* Typing indicator — only when waiting for first token */}
-            {isStreaming && messages[messages.length - 1]?.content === "" && (
-              <TypingIndicator />
-            )}
-
             {/* Product + follow-up suggestions */}
             {showSuggestions && (
               <SuggestionCards
@@ -258,8 +269,6 @@ export function ConversationView() {
                 </button>
               </div>
             )}
-
-            <div ref={messagesEndRef} style={{ height: 1 }} />
           </div>
         )}
       </div>
@@ -269,7 +278,6 @@ export function ConversationView() {
         onClick={() => scrollToBottom()}
       />
 
-      {/* Input bar */}
       {/* Input bar */}
       <div className={styles.inputBar}>
         <div

@@ -11,7 +11,7 @@
 
 import { Suspense } from 'react';
 import { ConversationView } from '@/components/ai/ConversationView';
-import { LogoMark } from '@/components/common/Logo';
+import { LogoLoader } from '@/components/ai/LogoLoader';
 
 /* ── Metadata ────────────────────────────────────────────────────────────── */
 export const metadata = {
@@ -30,37 +30,10 @@ function ChatFallback() {
         justifyContent:  'center',
         height:          '100vh',
         paddingTop:      72, // header height
-        backgroundColor: 'var(--color-soft-white)',
+        backgroundColor: 'var(--color-background-main)',
       }}
     >
-      <div
-        style={{
-          display:        'flex',
-          flexDirection:  'column',
-          alignItems:     'center',
-          gap:            16,
-          color:          'var(--color-text-secondary)',
-          fontFamily:     'var(--font-sans)',
-          fontSize:       14,
-        }}
-      >
-        {/* Pulsing tea leaf */}
-        <div
-          style={{
-            width:           40,
-            height:          40,
-            borderRadius:    '50%',
-            backgroundColor: 'var(--color-tea-green)',
-            display:         'flex',
-            alignItems:      'center',
-            justifyContent:  'center',
-            animation:       'pulse 1.5s ease-in-out infinite',
-          }}
-        >
-          <span style={{ fontSize: 18 }}><LogoMark size='sm' variant='dark'/></span>
-        </div>
-        Loading conversation…
-      </div>
+      <LogoLoader size="lg" />
     </div>
   );
 }

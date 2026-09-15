@@ -12,6 +12,7 @@
  *  - onProducts callback fires before onComplete to immediately show cards
  *  - onImage callback stores the generated image URL inline in the message
  *  - sendFeedback action added — calls POST /api/v1/ai/feedback/
+ *  - Streamed tokens are applied at most once per animation frame
  *  - All other actions (clearConversation, retryLastMessage, etc.) unchanged
  */
 
@@ -77,6 +78,40 @@ export const createAISlice = (set, get) => ({
       })),
     };
 
+    // Tokens arrive many times a second. Updating the store for each one
+    // re-renders the conversation constantly and makes the page drag, so
+    // only the latest text is applied, at most once per animation frame.
+    const hasAnimationFrame =
+      typeof window !== 'undefined' &&
+      typeof window.requestAnimationFrame === 'function';
+    let pendingText = null;
+    let frameId     = null;
+
+    const flushTokens = () => {
+      frameId = null;
+      if (pendingText === null) return;
+      const text  = pendingText;
+      pendingText = null;
+      set((s) => ({
+        currentStreamingMessage: text,
+        messages: s.messages.map((m) =>
+          m.id === aiMsg.id ? { ...m, content: text } : m
+        ),
+      }));
+    };
+
+    // Drops any queued update and returns its text so a final state can use it.
+    const takePendingTokens = () => {
+      if (frameId !== null) {
+        if (hasAnimationFrame) window.cancelAnimationFrame(frameId);
+        else clearTimeout(frameId);
+        frameId = null;
+      }
+      const text  = pendingText;
+      pendingText = null;
+      return text;
+    };
+
     try {
       await chat(
         content,
@@ -84,12 +119,12 @@ export const createAISlice = (set, get) => ({
         {
           // ── Token arrives ────────────────────────────────────────────────
           onToken: (delta, accumulated) => {
-            set((s) => ({
-              currentStreamingMessage: accumulated,
-              messages: s.messages.map((m) =>
-                m.id === aiMsg.id ? { ...m, content: accumulated } : m
-              ),
-            }));
+            pendingText = accumulated;
+            if (frameId === null) {
+              frameId = hasAnimationFrame
+                ? window.requestAnimationFrame(flushTokens)
+                : setTimeout(flushTokens, 16);
+            }
           },
 
           // ── Product cards from backend ───────────────────────────────────
@@ -116,6 +151,8 @@ export const createAISlice = (set, get) => ({
             generatedImage,
             message_id: backendMessageId,
           }) => {
+            takePendingTokens();
+
             set((s) => ({
               isStreaming:            false,
               currentStreamingMessage: '',
@@ -150,6 +187,8 @@ export const createAISlice = (set, get) => ({
 
           // ── Stream error ─────────────────────────────────────────────────
           onError: (err) => {
+            const partialText = takePendingTokens();
+
             set((s) => ({
               isStreaming:            false,
               currentStreamingMessage: '',
@@ -160,6 +199,7 @@ export const createAISlice = (set, get) => ({
                       ...m,
                       isStreaming: false,
                       content:
+                        partialText ||
                         m.content ||
                         "I'm having trouble right now. Please try again in a moment.",
                     }
@@ -175,6 +215,7 @@ export const createAISlice = (set, get) => ({
         }
       );
     } catch (err) {
+      takePendingTokens();
       set({
         isStreaming:            false,
         currentStreamingMessage: '',
