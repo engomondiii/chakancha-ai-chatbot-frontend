@@ -1,12 +1,12 @@
 /**
  * StreamingText.jsx
- * Renders AI response text as formatted markdown, with a caret at the end of
- * the text while the reply is still streaming in.
+ * Renders AI response text as formatted markdown, revealed at a steady pace
+ * while the reply streams in, with a caret at the end of the visible text.
  */
 
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import styles from './StreamingText.module.css';
 
 // ─── Block parsing ────────────────────────────────────────────────────────────
@@ -251,6 +251,71 @@ function renderBlocks(blocks, tail) {
   });
 }
 
+// ─── Smooth reveal ────────────────────────────────────────────────────────────
+
+/**
+ * Claude's stream reaches the browser in bursts — a sentence at once, then
+ * nothing for half a second or more — so drawing text as it arrives makes a
+ * reply lurch forward and stall. Reveal it at a steady pace instead, speeding
+ * up as a backlog builds so the visible text never falls far behind.
+ *
+ * Returns how many characters of `text` to show.
+ */
+function useSmoothReveal(text, isStreaming) {
+  const [shown, setShown] = useState(() => (isStreaming ? 0 : text.length));
+  const shownRef    = useRef(isStreaming ? 0 : text.length);
+  const frameRef    = useRef(null);
+  const lastTimeRef = useRef(0);
+  const targetRef   = useRef({ text, isStreaming });
+  targetRef.current = { text, isStreaming };
+
+  useEffect(() => {
+    const reduceMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+    // Shorter text means the reply was replaced (retry); nothing to animate.
+    if (reduceMotion || text.length < shownRef.current) {
+      shownRef.current = text.length;
+      setShown(text.length);
+      return undefined;
+    }
+    if (frameRef.current !== null || shownRef.current >= text.length) return undefined;
+
+    const step = (time) => {
+      const { text: target, isStreaming: streaming } = targetRef.current;
+      const elapsed = lastTimeRef.current ? Math.min(time - lastTimeRef.current, 100) : 16;
+      lastTimeRef.current = time;
+
+      const backlog = target.length - shownRef.current;
+      if (backlog <= 0) {
+        frameRef.current = null;
+        lastTimeRef.current = 0;
+        return;
+      }
+
+      // While streaming, clear about a third of the backlog every 100ms so the
+      // text keeps moving through the gaps between bursts; once the reply is
+      // complete, finish quickly. The floors stop short tails from crawling.
+      const perSecond = streaming ? Math.max(45, backlog * 3) : Math.max(150, backlog * 8);
+      shownRef.current = Math.min(target.length, shownRef.current + (perSecond * elapsed) / 1000);
+      setShown(Math.floor(shownRef.current));
+      frameRef.current = requestAnimationFrame(step);
+    };
+
+    frameRef.current = requestAnimationFrame(step);
+    return undefined;
+  }, [text, isStreaming]);
+
+  useEffect(() => () => {
+    if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+    frameRef.current = null;
+    lastTimeRef.current = 0;
+  }, []);
+
+  return Math.min(shown, text.length);
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 /**
@@ -262,9 +327,14 @@ function renderBlocks(blocks, tail) {
  * @param {string}  className   - Optional CSS class
  */
 export function StreamingText({ content = '', isStreaming = false, className = '' }) {
-  const blocks = useMemo(() => parseBlocks(content || ''), [content]);
+  const text      = content || '';
+  const shown     = useSmoothReveal(text, isStreaming);
+  const visible   = shown >= text.length ? text : text.slice(0, shown);
+  const revealing = isStreaming || shown < text.length;
 
-  const caret = isStreaming
+  const blocks = useMemo(() => parseBlocks(visible), [visible]);
+
+  const caret = revealing
     ? <span className={styles.caret} aria-hidden="true" />
     : null;
 

@@ -127,6 +127,7 @@ export function ConversationView() {
   } = useAI();
 
   const messagesAreaRef = useRef(null);
+  const messagesListRef = useRef(null);
   const hasInitialised = useRef(false);
   const stickToBottom = useRef(true);
   const lastMessageCount = useRef(0);
@@ -161,6 +162,18 @@ export function ConversationView() {
       scrollToBottom(false);
     }
   }, [messages, scrollToBottom]);
+
+  // Replies are revealed gradually between store updates, so also follow the
+  // list's height as it grows.
+  useEffect(() => {
+    const list = messagesListRef.current;
+    if (!list || typeof ResizeObserver === "undefined") return undefined;
+    const observer = new ResizeObserver(() => {
+      if (stickToBottom.current) scrollToBottom(false);
+    });
+    observer.observe(list);
+    return () => observer.disconnect();
+  }, [hasMessages, scrollToBottom]);
 
   // ── Scroll position tracking ───────────────────────────────────────────────
   useEffect(() => {
@@ -233,7 +246,7 @@ export function ConversationView() {
         {!hasMessages ? (
           <EmptyState onChipClick={sendMessage} />
         ) : (
-          <div className={styles.messagesList}>
+          <div className={styles.messagesList} ref={messagesListRef}>
             {messages.map((msg, idx) => {
               const isLast = idx === messages.length - 1;
               return (
