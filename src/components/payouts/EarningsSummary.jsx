@@ -9,7 +9,14 @@
 
 import React from "react";
 import {
-  ArrowRight, Ban, CalendarClock, CheckCircle2, Clock, Coins, TrendingUp, Wallet,
+  ArrowRight,
+  Ban,
+  CalendarClock,
+  CheckCircle2,
+  Clock,
+  Coins,
+  TrendingUp,
+  Wallet,
 } from "lucide-react";
 
 import { Section } from "./Section";
@@ -45,44 +52,68 @@ export function EarningsSummary({ balance }) {
   return (
     <Section id="payout-earnings" icon={TrendingUp} title="Your earnings">
       <div className={styles.figureGrid}>
-        <Figure icon={Coins} label="Total earned" amount={balance.totalEarned}
-                hint="Everything your network has earned you." />
-        <Figure icon={Clock} label="Pending earnings" amount={balance.pending}
-                hint="Commission is held until the order's return and refund window closes." />
-        <Figure primary icon={Wallet} label="Available to withdraw" amount={balance.available}
-                hint="Available to withdraw now." />
-        <Figure icon={CheckCircle2} label="Paid out" amount={balance.paid}
-                hint="Sent to your bank account." />
+        <Figure
+          icon={Coins}
+          label="Total earned"
+          amount={balance.totalEarned}
+          hint="Everything your network has earned you."
+        />
+        <Figure
+          icon={Clock}
+          label="Pending earnings"
+          amount={balance.pending}
+          hint="Commission is held until the order's return and refund window closes."
+        />
+        <Figure
+          primary
+          icon={Wallet}
+          label="Available to withdraw"
+          amount={balance.available}
+          hint="Available to withdraw now."
+        />
+        <Figure
+          icon={CheckCircle2}
+          label="Paid out"
+          amount={balance.paid}
+          hint="Sent to your bank account."
+        />
       </div>
 
       {nextDate && (
         <Strip icon={CalendarClock}>
-          Next earnings available on <span className={styles.emphasis}>{nextDate}</span>.
+          Next earnings available on{" "}
+          <span className={styles.emphasis}>{nextDate}</span>.
         </Strip>
       )}
 
       {belowMinimum && (
         <Strip icon={Wallet}>
           The minimum withdrawal is{" "}
-          <span className={styles.emphasis}>{balance.minimumPayout?.display}</span>. You currently
-          have <span className={styles.emphasis}>{balance.available?.display}</span> available.
-          A transaction fee of about 1% is deducted from each withdrawal; you'll see the
-          exact fee before you confirm.
+          <span className={styles.emphasis}>
+            {balance.minimumPayout?.display}
+          </span>
+          . You currently have{" "}
+          <span className={styles.emphasis}>{balance.available?.display}</span>{" "}
+          available. A transaction fee of about 1% is deducted from each
+          withdrawal. <br />
+          You'll see the exact fee before you confirm.
         </Strip>
       )}
 
       {(balance.reserved?.minor ?? 0) > 0 && (
         <Strip icon={ArrowRight}>
-          <span className={styles.emphasis}>{balance.reserved.display}</span> is held for a
-          withdrawal in progress and is not counted as available.
+          <span className={styles.emphasis}>{balance.reserved.display}</span> is
+          held for a withdrawal in progress and is not counted as available.
         </Strip>
       )}
 
       {(balance.negativeBalance?.minor ?? 0) > 0 && (
         <Strip icon={Ban}>
           A refund reversed more commission than your balance covered.{" "}
-          <span className={styles.emphasis}>{balance.negativeBalance.display}</span> will be
-          offset by future earnings before you can withdraw again.
+          <span className={styles.emphasis}>
+            {balance.negativeBalance.display}
+          </span>{" "}
+          will be offset by future earnings before you can withdraw again.
         </Strip>
       )}
     </Section>
