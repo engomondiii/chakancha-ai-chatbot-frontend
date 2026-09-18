@@ -17,6 +17,7 @@ import {
   Coins,
   TrendingUp,
   Wallet,
+  CircleDashed,
 } from "lucide-react";
 
 import { Section } from "./Section";
@@ -70,6 +71,12 @@ export function EarningsSummary({ balance }) {
           label="Available to withdraw"
           amount={balance.available}
           hint="Available to withdraw now."
+        />
+         <Figure
+          icon={CircleDashed}
+          label="In progress"
+          amount={balance.inProgress}
+          hint="In process of sending to your bank account."
         />
         <Figure
           icon={CheckCircle2}
