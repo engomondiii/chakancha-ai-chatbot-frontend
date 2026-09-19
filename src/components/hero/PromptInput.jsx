@@ -110,6 +110,8 @@ export function PromptInput({
             width={10}
             height={10}
             style={{
+              // Optical centring: the mark's shape sits left inside its image.
+              translate: "10.5% 0",
               transform: value.trim() && !isLoading ? "translateX(1px)" : "none",
               transition: "transform 150ms ease",
               animation: isLoading ? "pulse 1.2s ease-in-out infinite" : "none",

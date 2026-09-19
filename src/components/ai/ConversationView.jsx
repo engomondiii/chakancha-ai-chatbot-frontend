@@ -67,6 +67,8 @@ function EmptyState({ onChipClick }) {
           width={28}
           height={28}
           aria-hidden="true"
+          // Optical centring: the mark's shape sits left inside its image.
+          style={{ translate: "10.5% 0" }}
         />
       </div>
       <h2 className={styles.emptyTitle}>Ask anything about Chakancha</h2>

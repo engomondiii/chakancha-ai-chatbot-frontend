@@ -75,7 +75,7 @@ export function EarningsSummary({ balance }) {
          <Figure
           icon={CircleDashed}
           label="In progress"
-          amount={balance.inProgress}
+          amount={balance.reserved}
           hint="In process of sending to your bank account."
         />
         <Figure
