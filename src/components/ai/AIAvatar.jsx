@@ -35,9 +35,11 @@ export function AIAvatar({ isStreaming = false, size = "md" }) {
           width: `${Math.round(px * 0.5)}px`,
           height: "auto",
           display: "block",
-          // The mark's shape sits left inside its image (2.7% empty on the
-          // left, 23.8% on the right), so nudge it to look centred.
-          translate: "10.5% 0",
+          // Centre the visible mark, not the image box. Measured inside the
+          // SVG, the shape leaves 2.68% empty on the left, 23.96% on the right,
+          // 6.98% at the top and 8.85% at the bottom; these shifts put the
+          // middle of the visible shape on the middle of the circle.
+          translate: "10.64% 0.94%",
         }}
       />
 
