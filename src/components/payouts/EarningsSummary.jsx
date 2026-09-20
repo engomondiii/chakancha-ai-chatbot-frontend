@@ -1,8 +1,13 @@
 /**
  * src/components/payouts/EarningsSummary.jsx
  *
- * Four figures, never one: Total earned · Pending · Available · Paid out.
+ * Where the member's commission is right now: Earned · Available · In progress · Paid out.
  * Every amount is the API's display string; nothing is added or subtracted here.
+ *
+ * There is deliberately no lifetime total here. It read as money of its own
+ * beside the others — a member with one withdrawal under way saw the same
+ * $8.08 twice and thought they had $16.16. The lifetime figure still lives on
+ * the Chakan Tree dashboard.
  */
 
 "use client";
@@ -14,7 +19,6 @@ import {
   CalendarClock,
   CheckCircle2,
   Clock,
-  Coins,
   TrendingUp,
   Wallet,
   CircleDashed,
@@ -54,16 +58,10 @@ export function EarningsSummary({ balance }) {
     <Section id="payout-earnings" icon={TrendingUp} title="Your earnings">
       <div className={styles.figureGrid}>
         <Figure
-          icon={Coins}
-          label="Total earned"
-          amount={balance.totalEarned}
-          hint="Everything your network has earned you."
-        />
-        <Figure
           icon={Clock}
-          label="Pending earnings"
+          label="Earned"
           amount={balance.pending}
-          hint="Commission is held until the order's return and refund window closes."
+          hint="Earned, but not ready to withdraw yet: commission is held until the order's return and refund window closes."
         />
         <Figure
           primary

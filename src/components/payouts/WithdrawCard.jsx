@@ -84,8 +84,8 @@ export function WithdrawCard({
       </p>
       {(ready || checking) && (
         <p className={styles.figureHint}>
-          Withdrawals cover your whole available balance. Earnings still maturing stay in
-          Pending earnings.
+          Withdrawals cover your whole available balance. Earnings still maturing stay
+          under Earned.
         </p>
       )}
 
