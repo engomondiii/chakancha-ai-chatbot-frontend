@@ -61,7 +61,7 @@ export function EarningsSummary({ balance }) {
           icon={Clock}
           label="Earned"
           amount={balance.pending}
-          hint="Earned, but not ready to withdraw yet: commission is held until the order's return and refund window closes."
+          hint="Earned, but not yet available for withdrawal. Held until the return and refund period ends."
         />
         <Figure
           primary
@@ -107,8 +107,7 @@ export function EarningsSummary({ balance }) {
 
       {(balance.reserved?.minor ?? 0) > 0 && (
         <Strip icon={ArrowRight}>
-          <span className={styles.emphasis}>{balance.reserved.display}</span> is
-          held for a withdrawal in progress and is not counted as available.
+          <span className={styles.emphasis}>{balance.reserved.display}</span> Is being held for a pending withdrawal and is not available to use.
         </Strip>
       )}
 
