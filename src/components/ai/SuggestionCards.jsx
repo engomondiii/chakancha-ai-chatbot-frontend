@@ -15,7 +15,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShoppingCart, ExternalLink, ArrowRight } from 'lucide-react';
 import { useStore } from '@/store';
@@ -107,18 +107,69 @@ function ProductSuggestionCard({ product }) {
 
 // ─── Follow-up chips ──────────────────────────────────────────────────────────
 
+// The clicked chip turns charcoal, slides away, and its new question slides in
+// when the reply brings it. The question is still sent on click.
+const CHIP_PRESS_MS   = 160;
+const CHIP_ENTER_MS   = 320;
+const CHIP_RESTORE_MS = 45000; // no new question arrived (reply failed): bring it back
+
 function FollowUpChips({ followUps, onSelect }) {
+  // The clicked chip: phase 'pressed' (charcoal) then 'leaving' (slid away).
+  const [active, setActive]     = useState(null); // { index, text, count, phase }
+  const [entering, setEntering] = useState(null); // slot sliding in with its new question
+  const timers = useRef([]);
+  const later = (fn, ms) => timers.current.push(setTimeout(fn, ms));
+
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+
+  // The reply replaced the clicked question: slide the new one in.
+  useEffect(() => {
+    if (!active || !followUps || followUps[active.index] === active.text) return;
+    const { index, count } = active;
+    setActive(null);
+    // If the chip was dropped instead of replaced, the others simply close up.
+    if (followUps.length === count) {
+      setEntering(index);
+      later(() => setEntering((e) => (e === index ? null : e)), CHIP_ENTER_MS);
+    }
+  }, [followUps, active]);
+
   if (!followUps?.length) return null;
+
+  const handleClick = (text, index) => {
+    if (active) return; // one question at a time
+    const same = (a) => a && a.index === index && a.text === text;
+    setActive({ index, text, count: followUps.length, phase: 'pressed' });
+    onSelect(text);
+    later(() => setActive((a) => (same(a) ? { ...a, phase: 'leaving' } : a)), CHIP_PRESS_MS);
+    later(() => setActive((a) => (same(a) ? null : a)), CHIP_RESTORE_MS);
+  };
+
   return (
     <div className={styles.followUpsRow}>
       <span className={styles.followUpsLabel}>Continue with:</span>
       <div className={styles.chips}>
-        {followUps.map((text, i) => (
-          <button key={i} className={styles.chip} onClick={() => onSelect(text)} type="button">
-            {text}
-            <ArrowRight size={12} className={styles.chipArrow} />
-          </button>
-        ))}
+        {followUps.map((text, i) => {
+          const phase = active && active.index === i ? active.phase : null;
+          const className = [
+            styles.chip,
+            phase === 'pressed' && styles.chipPressed,
+            phase === 'leaving' && styles.chipLeaving,
+            entering === i && styles.chipEntering,
+          ].filter(Boolean).join(' ');
+          return (
+            <button
+              key={i}
+              className={className}
+              onClick={() => handleClick(text, i)}
+              type="button"
+              disabled={phase === 'leaving'}
+            >
+              {text}
+              <ArrowRight size={12} className={styles.chipArrow} />
+            </button>
+          );
+        })}
       </div>
     </div>
   );

@@ -247,6 +247,51 @@
   color:     var(--color-tea-green);
 }
 
+/* Clicked chip: 1) turns charcoal like the user's question bubble,
+   2) slides away to the left, 3) its new question slides in from the right. */
+.chipPressed,
+.chipPressed:hover,
+.chipLeaving,
+.chipLeaving:hover {
+  background-color: var(--color-background-charcoal);
+  border-color:     var(--color-background-charcoal);
+  color:            #ffffff;
+}
+
+.chipPressed .chipArrow,
+.chipPressed:hover .chipArrow,
+.chipLeaving .chipArrow {
+  color: #ffffff;
+}
+
+.chipLeaving {
+  opacity:        0;
+  transform:      translateX(-24px);
+  pointer-events: none;
+  transition:     opacity   260ms var(--ease-out),
+                  transform 260ms var(--ease-out);
+}
+
+.chipEntering {
+  animation: chipSlideIn 320ms var(--ease-out);
+}
+
+@keyframes chipSlideIn {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chipLeaving {
+    transform:  none;
+    transition: opacity 120ms linear;
+  }
+
+  .chipEntering {
+    animation: none;
+  }
+}
+
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 767px) {
   .wrapper {
