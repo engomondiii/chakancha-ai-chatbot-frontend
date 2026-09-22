@@ -27,6 +27,29 @@ import {
 } from '@/lib/ai/conversationManager';
 import { assessChakanTreeReadiness } from '@/lib/ai/intentDetection';
 
+// When a "Continue with" chip is clicked, only that chip is replaced after the
+// reply; the other two stay exactly as they were, so the member isn't pulled
+// away from what they came to ask and the row doesn't reshuffle every turn.
+function normaliseQuestion(q) {
+  return String(q || '').trim().toLowerCase();
+}
+
+function replaceClickedFollowUp(swap, fresh) {
+  if (!swap) return fresh || [];
+  const clicked = normaliseQuestion(swap.previous[swap.index]);
+  const kept = new Set(
+    swap.previous.filter((_, i) => i !== swap.index).map(normaliseQuestion)
+  );
+  const replacement = (fresh || []).find((q) => {
+    const key = normaliseQuestion(q);
+    return key && key !== clicked && !kept.has(key);
+  });
+  const next = [...swap.previous];
+  if (replacement) next[swap.index] = replacement;
+  else next.splice(swap.index, 1); // nothing new to offer: drop the one just asked
+  return next;
+}
+
 export const createAISlice = (set, get) => ({
   // ── State ──────────────────────────────────────────────────────────────────
   messages:               [],
@@ -34,6 +57,7 @@ export const createAISlice = (set, get) => ({
   currentStreamingMessage: '',
   currentIntent:          null,
   suggestedFollowUps:     [],
+  followUpSwap:           null, // set by selectFollowUp, used by the next reply
   conversationId:         null,
   error:                  null,
   // Phase 2 additions
@@ -49,6 +73,9 @@ export const createAISlice = (set, get) => ({
     const state = get();
     if (state.isStreaming || !content?.trim()) return;
 
+    // Set only when this question came from a "Continue with" chip.
+    const followUpSwap = state.followUpSwap;
+
     const conversationId = state.conversationId || generateConversationId();
     const userMsg        = createUserMessage(content);
     const aiMsg          = createAIMessage('', { isStreaming: true });
@@ -60,6 +87,7 @@ export const createAISlice = (set, get) => ({
       currentStreamingMessage: '',
       error:                  null,
       productCards:           [],
+      followUpSwap:           null,
     }));
 
     // Build history for the backend (exclude the empty placeholder AI message)
@@ -153,11 +181,13 @@ export const createAISlice = (set, get) => ({
           }) => {
             takePendingTokens();
 
+            const nextFollowUps = replaceClickedFollowUp(followUpSwap, followUps);
+
             set((s) => ({
               isStreaming:            false,
               currentStreamingMessage: '',
               currentIntent:          intent,
-              suggestedFollowUps:     followUps || [],
+              suggestedFollowUps:     nextFollowUps,
               productCards:           products   || s.productCards,
               messages: s.messages.map((m) =>
                 m.id === aiMsg.id
@@ -166,7 +196,7 @@ export const createAISlice = (set, get) => ({
                       content:         finalContent,
                       isStreaming:     false,
                       intent,
-                      followUps:       followUps || [],
+                      followUps:       nextFollowUps,
                       generatedImage:  generatedImage || m.generatedImage || null,
                       backendId:       backendMessageId || null,
                     }
@@ -235,6 +265,7 @@ export const createAISlice = (set, get) => ({
       currentStreamingMessage: '',
       currentIntent:          null,
       suggestedFollowUps:     [],
+      followUpSwap:           null,
       conversationId:         null,
       error:                  null,
       productCards:           [],
@@ -261,6 +292,11 @@ export const createAISlice = (set, get) => ({
 
   // ── selectFollowUp ────────────────────────────────────────────────────────
   selectFollowUp: (followUpText) => {
+    const { suggestedFollowUps: current, isStreaming } = get();
+    const index = current.indexOf(followUpText);
+    if (!isStreaming && index !== -1) {
+      set({ followUpSwap: { index, previous: [...current] } });
+    }
     get().sendMessage(followUpText);
   },
 
