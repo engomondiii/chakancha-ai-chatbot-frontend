@@ -166,8 +166,8 @@ function FollowUpChips({ followUps, onSelect }) {
                 onClick={() => handleClick(text, i)}
                 type="button"
                 disabled={phase === 'leaving'}
-                // Alternate directions: chips 1 and 3 slide right, chip 2 left.
-                style={{ '--slide-dir': i % 2 === 0 ? 1 : -1 }}
+                // Chip 1 slides right; chips 2 and 3 slide left.
+                style={{ '--slide-dir': i === 0 ? 1 : -1 }}
               >
                 {text}
                 <ArrowRight size={12} className={styles.chipArrow} />
