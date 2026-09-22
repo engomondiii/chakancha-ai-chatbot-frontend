@@ -264,27 +264,43 @@
   color: #ffffff;
 }
 
+/* Each chip sits in a pill-shaped slot that clips it, so the outgoing chip
+   visibly slides out of its own space instead of crossing its neighbours. */
+.chipSlot {
+  display:       inline-flex;
+  overflow:      hidden;
+  border-radius: var(--radius-pill);
+}
+
+.chipSlot .chip:focus-visible {
+  outline-offset: -3px; /* keep the focus ring inside the clipped slot */
+}
+
+/* Slides its full width to the left, staying solid until near the end. */
 .chipLeaving {
-  opacity:        0;
-  transform:      translateX(-24px);
   pointer-events: none;
-  transition:     opacity   260ms var(--ease-out),
-                  transform 260ms var(--ease-out);
+  animation:      chipSlideOut 450ms cubic-bezier(0.45, 0, 0.55, 1) forwards;
+}
+
+@keyframes chipSlideOut {
+  0%   { transform: translateX(0);     opacity: 1; }
+  80%  {                               opacity: 1; }
+  100% { transform: translateX(-105%); opacity: 0; }
 }
 
 .chipEntering {
-  animation: chipSlideIn 320ms var(--ease-out);
+  animation: chipSlideIn 360ms var(--ease-out);
 }
 
 @keyframes chipSlideIn {
-  from { opacity: 0; transform: translateX(24px); }
-  to   { opacity: 1; transform: translateX(0); }
+  from { transform: translateX(105%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .chipLeaving {
-    transform:  none;
-    transition: opacity 120ms linear;
+    animation: none;
+    opacity:   0;
   }
 
   .chipEntering {

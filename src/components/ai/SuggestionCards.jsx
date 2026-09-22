@@ -109,7 +109,7 @@ function ProductSuggestionCard({ product }) {
 
 // The clicked chip turns charcoal, slides away, and its new question slides in
 // when the reply brings it. The question is still sent on click.
-const CHIP_PRESS_MS   = 160;
+const CHIP_PRESS_MS   = 260; // long enough to see the charcoal before it slides
 const CHIP_ENTER_MS   = 320;
 const CHIP_RESTORE_MS = 45000; // no new question arrived (reply failed): bring it back
 
@@ -158,16 +158,19 @@ function FollowUpChips({ followUps, onSelect }) {
             entering === i && styles.chipEntering,
           ].filter(Boolean).join(' ');
           return (
-            <button
-              key={i}
-              className={className}
-              onClick={() => handleClick(text, i)}
-              type="button"
-              disabled={phase === 'leaving'}
-            >
-              {text}
-              <ArrowRight size={12} className={styles.chipArrow} />
-            </button>
+            // The slot clips the chip, so it slides out of its own space
+            // without passing over its neighbours.
+            <span key={i} className={styles.chipSlot}>
+              <button
+                className={className}
+                onClick={() => handleClick(text, i)}
+                type="button"
+                disabled={phase === 'leaving'}
+              >
+                {text}
+                <ArrowRight size={12} className={styles.chipArrow} />
+              </button>
+            </span>
           );
         })}
       </div>
