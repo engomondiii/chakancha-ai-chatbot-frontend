@@ -20,10 +20,12 @@ import { LogoMark } from "@/components/common/Logo";
 import styles from "./ProductCard.module.css";
 
 /**
- * Plays in the card's photo area while the mouse is away; the product photo
- * takes over on hover. The same clip is used for every tea.
+ * Videos per tea, played in the card's photo area while the mouse is away;
+ * the product photo takes over on hover. Teas not listed here keep the photo.
  */
-const PRODUCT_VIDEO = "/videos/tea-prep.mp4";
+const PRODUCT_VIDEOS = {
+  "nandi-gold": "/videos/tea-prep.mp4",
+};
 
 /**
  * Resolve a usable image URL from normalized or raw backend data.
@@ -94,6 +96,7 @@ export function ProductCard({
   const slug = product.slug || "";
   const price = Number.parseFloat(product.price) || 0;
   const image = getProductImage(product);
+  const video = PRODUCT_VIDEOS[slug] || null;
 
   const flavorProfile =
     product.flavorProfile ||
@@ -211,18 +214,18 @@ export function ProductCard({
 
       <Link
         href={productHref}
-        className={styles.imageWrapper}
+        className={`${styles.imageWrapper} ${video ? styles.hasVideo : ""}`}
         aria-label={`View ${name}`}
         onMouseEnter={showPhoto}
         onMouseLeave={showVideo}
         onFocus={showPhoto}
         onBlur={showVideo}
       >
-        {image && (
+        {image && video && (
           <video
             ref={videoRef}
             className={styles.video}
-            src={PRODUCT_VIDEO}
+            src={video}
             poster={image}
             autoPlay
             muted

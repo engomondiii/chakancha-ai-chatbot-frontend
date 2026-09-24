@@ -313,14 +313,20 @@
 
 .image {
   position: relative; /* sits above the video */
+}
 
+/* Only a card with a video hides its photo until hover. */
+.hasVideo .image {
   opacity: 0;
+}
+
+.card:hover .hasVideo .image,
+.hasVideo:focus-visible .image {
+  opacity: 1;
 }
 
 .card:hover .image,
 .imageWrapper:focus-visible .image {
-  opacity: 1;
-
   transform: scale(1.02);
 }
 
@@ -330,7 +336,7 @@
     display: none;
   }
 
-  .image {
+  .hasVideo .image {
     opacity: 1;
   }
 }
@@ -340,7 +346,7 @@
     display: none;
   }
 
-  .image {
+  .hasVideo .image {
     opacity: 1;
   }
 }
