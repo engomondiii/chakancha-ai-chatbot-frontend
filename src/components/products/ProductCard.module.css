@@ -288,8 +288,61 @@
     transform var(--transition-slow) var(--ease-out);
 }
 
-.card:hover .image {
+/*
+ * Photo area: the video plays while the mouse is away, and the product photo
+ * takes over on hover (or keyboard focus).
+ */
+.video {
+  position: absolute;
+  inset: 0;
+
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+
+  opacity: 1;
+
+  transition: opacity var(--transition-standard) var(--ease-out);
+}
+
+.card:hover .video,
+.imageWrapper:focus-visible .video {
+  opacity: 0;
+}
+
+.image {
+  position: relative; /* sits above the video */
+
+  opacity: 0;
+}
+
+.card:hover .image,
+.imageWrapper:focus-visible .image {
+  opacity: 1;
+
   transform: scale(1.02);
+}
+
+/* No hover on touch screens: show the photo, leave the video out of it. */
+@media (hover: none) {
+  .video {
+    display: none;
+  }
+
+  .image {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .video {
+    display: none;
+  }
+
+  .image {
+    opacity: 1;
+  }
 }
 
 /* ── Missing-image treatment ─────────────────────────────────────────────── */

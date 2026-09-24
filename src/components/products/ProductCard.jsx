@@ -10,7 +10,7 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import Link from "next/link";
 import { ShoppingCart, ArrowRight } from "lucide-react";
 
@@ -18,6 +18,12 @@ import { useStore } from "@/store";
 import { LogoMark } from "@/components/common/Logo";
 
 import styles from "./ProductCard.module.css";
+
+/**
+ * Plays in the card's photo area while the mouse is away; the product photo
+ * takes over on hover. The same clip is used for every tea.
+ */
+const PRODUCT_VIDEO = "/videos/tea-prep.mp4";
 
 /**
  * Resolve a usable image URL from normalized or raw backend data.
@@ -61,6 +67,15 @@ export function ProductCard({
   priority = false,
 }) {
   const [adding, setAdding] = useState(false);
+  const videoRef = useRef(null);
+
+  // The photo covers the video on hover, so there is nothing to play then.
+  const showPhoto = () => videoRef.current?.pause();
+  const showVideo = () => {
+    videoRef.current?.play().catch(() => {
+      // Autoplay may be blocked; the poster (the product photo) stays.
+    });
+  };
 
   const addToCart = useStore((state) => state.addToCart);
   const openCart = useStore((state) => state.openCart);
@@ -198,7 +213,27 @@ export function ProductCard({
         href={productHref}
         className={styles.imageWrapper}
         aria-label={`View ${name}`}
+        onMouseEnter={showPhoto}
+        onMouseLeave={showVideo}
+        onFocus={showPhoto}
+        onBlur={showVideo}
       >
+        {image && (
+          <video
+            ref={videoRef}
+            className={styles.video}
+            src={PRODUCT_VIDEO}
+            poster={image}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            aria-hidden="true"
+            tabIndex={-1}
+          />
+        )}
+
         {image ? (
           <img
             src={image}
