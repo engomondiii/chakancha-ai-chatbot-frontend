@@ -276,8 +276,8 @@
   outline-offset: -3px; /* keep the focus ring inside the clipped slot */
 }
 
-/* Slides its full width sideways, staying solid until near the end.
-   --slide-dir (set per chip) is 1 for right, -1 for left. */
+/* Slides its full width to the right, staying solid until near the end.
+   Every chip goes the same way, so the row behaves predictably. */
 .chipLeaving {
   pointer-events: none;
   animation:      chipSlideOut 450ms cubic-bezier(0.45, 0, 0.55, 1) forwards;
@@ -286,7 +286,7 @@
 @keyframes chipSlideOut {
   0%   { transform: translateX(0);     opacity: 1; }
   80%  {                               opacity: 1; }
-  100% { transform: translateX(calc(105% * var(--slide-dir, -1))); opacity: 0; }
+  100% { transform: translateX(105%); opacity: 0; }
 }
 
 .chipEntering {
@@ -294,8 +294,8 @@
 }
 
 @keyframes chipSlideIn {
-  /* the new question comes in from the side opposite to where the old one left */
-  from { transform: translateX(calc(-105% * var(--slide-dir, -1))); opacity: 0; }
+  /* the new question comes in from the left, where the old one left towards the right */
+  from { transform: translateX(-105%); opacity: 0; }
   to   { transform: translateX(0);    opacity: 1; }
 }
 

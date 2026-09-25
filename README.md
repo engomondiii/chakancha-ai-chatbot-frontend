@@ -1193,6 +1193,53 @@ This avoids an unnecessary Hook and keeps the render order stable.
 
 ---
 
+## AI chat: "Continue with" chips
+
+Three follow-up questions sit under the latest reply, written by the backend for
+that conversation. They are rendered by `FollowUpChips` inside
+`src/components/ai/SuggestionCards.jsx`; the list itself lives in the store
+(`suggestedFollowUps` in `src/store/slices/aiSlice.js`).
+
+### Which chips change
+
+- Clicking a chip asks that question immediately and replaces **only that chip**.
+  The other two keep their wording and their positions, so a member is not
+  pulled away from what they came to ask.
+- The store records the clicked slot (`followUpSwap`) and, when the reply
+  arrives, puts the first genuinely new suggestion in that slot, skipping any
+  that repeat the chips still on screen. If nothing new is offered, the clicked
+  chip is dropped rather than shown again.
+- A question typed into the input refreshes all three, as before.
+
+### Animation
+
+Every chip animates the same way, left to right, for uniformity:
+
+1. **Pressed** (`CHIP_PRESS_MS`, 260ms): the chip turns
+   `--color-background-charcoal` with white text — the colour of the member's
+   own question bubble.
+2. **Leaving** (`chipSlideOut`, 450ms): it slides its full width to the
+   **right**, staying opaque until the last fifth. Every chip slides right; do
+   not reintroduce per-chip directions.
+3. **Entering** (`chipSlideIn`, 360ms): the replacement question slides in from
+   the **left**, into the same slot.
+
+### Rules
+
+- Each chip sits in `.chipSlot`, a pill-shaped box with `overflow: hidden`, so a
+  chip slides out of its own space instead of crossing its neighbours. Keep the
+  focus ring inset (`outline-offset: -3px`) or the slot clips it.
+- The question is sent on click, never after the animation, so the AI is not
+  delayed by it.
+- If no replacement arrives (a failed reply), the chip returns after
+  `CHIP_RESTORE_MS` (45s) rather than disappearing for good.
+- Reduced-motion visitors get a plain fade; no sliding.
+- Chips only appear when the reply's intent is discovery, products or order, or
+  once the member has asked two questions — see `shouldShowProductSuggestions()`
+  in `src/lib/ai/intentDetection.js`.
+
+---
+
 ## Conventions checklist
 
 Before opening a pull request:
