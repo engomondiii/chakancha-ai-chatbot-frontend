@@ -311,13 +311,13 @@
     transform 460ms cubic-bezier(0.4, 0, 0.2, 1) 140ms;
 }
 
-/* Leaving: slides out to the left, staying visible most of the way, and the
+/* Leaving: slides out to the right, staying visible most of the way, and the
    photo follows it in. */
 .card:hover .video,
 .imageWrapper:focus-visible .video {
   opacity: 0;
 
-  transform: translateX(-100%);
+  transform: translateX(100%);
 
   transition:
     opacity   240ms cubic-bezier(0.4, 0, 0.2, 1) 220ms,
