@@ -11,6 +11,8 @@
 /* ── Card ────────────────────────────────────────────────────────────────── */
 
 .card {
+  position: relative; /* the photo panel of a video card is placed over it */
+
   display: grid;
   grid-template-columns: minmax(0, 1fr) 180px;
 
@@ -303,44 +305,80 @@
 
   opacity: 1;
 
-  transition: opacity var(--transition-standard) var(--ease-out);
+  /* Coming back: waits for the photo to fade out first. */
+  transition:
+    opacity   260ms cubic-bezier(0.4, 0, 0.2, 1) 140ms,
+    transform 460ms cubic-bezier(0.4, 0, 0.2, 1) 140ms;
 }
 
+/* Leaving: slides out to the left, staying visible most of the way, and the
+   photo follows it in. */
 .card:hover .video,
 .imageWrapper:focus-visible .video {
   opacity: 0;
+
+  transform: translateX(-100%);
+
+  transition:
+    opacity   240ms cubic-bezier(0.4, 0, 0.2, 1) 220ms,
+    transform 460ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .image {
   position: relative; /* sits above the video */
 }
 
-/* Only a card with a video hides its photo until hover. */
+/* Only a card with a video hides its photo until hover; it fades in once the
+   video has slid away. */
 .hasVideo .image {
   opacity: 0;
+
+  transition: opacity 200ms var(--ease-out);
+}
+
+.card:hover .hasVideo .image,
+.hasVideo:focus-visible .image {
+  opacity: 1;
+
+  transition: opacity 320ms cubic-bezier(0.4, 0, 0.2, 1) 340ms;
 }
 
 /*
- * Hovering a card that has a video gives the photo the whole card: the text
- * column steps aside and the photo is centred across the full width.
+ * A video card's photo panel is laid over the right-hand column, so on hover it
+ * can slide across the whole card instead of the layout snapping. The photo
+ * keeps its own height: letting it grow to the card's height stretched the card
+ * to three times its size.
  */
-.cardWithVideo:hover {
-  grid-template-columns: minmax(0, 1fr);
+.hasVideo {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: calc(100% - 180px);
+
+  transition:
+    left              520ms cubic-bezier(0.4, 0, 0.2, 1),
+    border-left-color 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    background-color  var(--transition-fast) var(--ease-out);
+}
+
+.cardWithVideo:hover .hasVideo {
+  left: 0;
+
+  border-left-color: transparent;
+}
+
+/* The text steps aside as the panel arrives. */
+.cardWithVideo .content {
+  transition: opacity 280ms cubic-bezier(0.4, 0, 0.2, 1) 180ms;
 }
 
 .cardWithVideo:hover .content {
-  display: none;
-}
+  opacity: 0;
+  pointer-events: none;
 
-.cardWithVideo:hover .imageWrapper {
-  border-left: none;
+  transition: opacity 260ms cubic-bezier(0.4, 0, 0.2, 1);
 }
-
-/*
- * The photo keeps its own height (a tall bag in a wide card): it simply
- * spreads across the full width and sits in the middle. Letting it grow to the
- * card's height instead stretched the card to three times its size.
- */
 
 .card:hover .hasVideo .image,
 .hasVideo:focus-visible .image {
@@ -434,6 +472,10 @@
     padding: var(--space-2);
   }
 
+  .hasVideo {
+    left: calc(100% - 160px);
+  }
+
   .image {
     max-height: 250px;
   }
@@ -452,6 +494,10 @@
 
   .imageWrapper {
     min-height: 280px;
+  }
+
+  .hasVideo {
+    left: calc(100% - 150px);
   }
 
   .name {
@@ -478,6 +524,10 @@
     min-height: 250px;
 
     padding: var(--space-1);
+  }
+
+  .hasVideo {
+    left: calc(100% - 120px);
   }
 
   .image {
