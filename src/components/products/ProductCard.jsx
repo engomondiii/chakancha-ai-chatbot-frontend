@@ -143,7 +143,7 @@ export function ProductCard({
   };
 
   return (
-    <article className={styles.card}>
+    <article className={`${styles.card} ${video ? styles.cardWithVideo : ""}`}>
       <div className={styles.content}>
         {displayNumber && (
           <span className={styles.productNumber}>

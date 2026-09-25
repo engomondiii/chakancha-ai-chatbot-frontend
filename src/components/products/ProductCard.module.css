@@ -320,6 +320,28 @@
   opacity: 0;
 }
 
+/*
+ * Hovering a card that has a video gives the photo the whole card: the text
+ * column steps aside and the photo is centred across the full width.
+ */
+.cardWithVideo:hover {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.cardWithVideo:hover .content {
+  display: none;
+}
+
+.cardWithVideo:hover .imageWrapper {
+  border-left: none;
+}
+
+/*
+ * The photo keeps its own height (a tall bag in a wide card): it simply
+ * spreads across the full width and sits in the middle. Letting it grow to the
+ * card's height instead stretched the card to three times its size.
+ */
+
 .card:hover .hasVideo .image,
 .hasVideo:focus-visible .image {
   opacity: 1;
