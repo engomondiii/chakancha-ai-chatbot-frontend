@@ -67,6 +67,8 @@ export function ProductCard({
   product,
   productNumber,
   priority = false,
+  // TEMPORARY: splits the card 50/50 between the video and the text.
+  halfAndHalf = false,
 }) {
   const [adding, setAdding] = useState(false);
   const videoRef = useRef(null);
@@ -143,7 +145,11 @@ export function ProductCard({
   };
 
   return (
-    <article className={`${styles.card} ${video ? styles.cardWithVideo : ""}`}>
+    <article
+      className={`${styles.card} ${video ? styles.cardWithVideo : ""} ${
+        halfAndHalf ? styles.cardHalf : ""
+      }`}
+    >
       <div className={styles.content}>
         {displayNumber && (
           <span className={styles.productNumber}>

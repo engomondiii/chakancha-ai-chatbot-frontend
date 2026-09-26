@@ -189,13 +189,38 @@ export function ProductGrid({
     return <EmptyProductGrid />;
   }
 
+  /*
+   * TEMPORARY: the second card shows Nandi Gold's content, video included,
+   * in place of Nandi Black, and splits its container 50/50 between the video
+   * and the text.
+   *
+   * To bring Nandi Black back: delete this block and the `halfAndHalf` prop
+   * below, and map over `orderedProducts` again (see the commented line).
+   */
+  const nandiGold = orderedProducts.find(
+    (product) => product?.slug === "nandi-gold",
+  );
+
+  const displayProducts = nandiGold
+    ? orderedProducts.map((product) =>
+        product?.slug === "nandi-black-tea"
+          ? {
+              ...nandiGold,
+              id: `${nandiGold.id}-stand-in`,
+              halfAndHalf: true,
+            }
+          : product,
+      )
+    : orderedProducts;
+
   return (
     <div className={styles.wrapper}>
       <div
         className={styles.grid}
         aria-label="Chakancha tea products"
       >
-        {orderedProducts.map((product, index) => (
+        {/* {orderedProducts.map((product, index) => ( ... ))} — original list */}
+        {displayProducts.map((product, index) => (
           <ProductCard
             key={
               product?.id ??
@@ -205,6 +230,7 @@ export function ProductGrid({
             product={product}
             productNumber={index + 1}
             priority={index < 2}
+            halfAndHalf={product?.halfAndHalf}
           />
         ))}
       </div>
