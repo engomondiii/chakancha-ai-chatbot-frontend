@@ -110,8 +110,9 @@ export function PromptInput({
             width={10}
             height={10}
             style={{
-              // Optical centring: the mark's shape sits left inside its image.
-              translate: "10.5% 0",
+              // Optical centring: the mark's shape sits left and slightly
+              // high inside its image (see AIAvatar for the measurements).
+              translate: "10.65% 0.91%",
               transform: value.trim() && !isLoading ? "translateX(1px)" : "none",
               transition: "transform 150ms ease",
               animation: isLoading ? "pulse 1.2s ease-in-out infinite" : "none",
