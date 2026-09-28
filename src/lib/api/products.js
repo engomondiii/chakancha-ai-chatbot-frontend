@@ -146,6 +146,10 @@ export function normalizeProduct(raw) {
 
     weight: raw.weight || "",
 
+    videoUrl: raw.video_url || raw.videoUrl || "",
+
+    video_url: raw.video_url || raw.videoUrl || "",
+
     description: raw.description || "",
 
     brewingTemp: raw.brewing_temp || raw.brewingTemp || "",

@@ -354,7 +354,7 @@
   top: 0;
   right: 0;
   bottom: 0;
-  left: calc(100% - 180px);
+  left: 70%;
 
   transition:
     left              520ms cubic-bezier(0.4, 0, 0.2, 1),
@@ -368,13 +368,12 @@
   border-left-color: transparent;
 }
 
-/* TEMPORARY: a 50/50 card — half video, half text — at every width. */
-.card.cardHalf {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-}
-
-.cardHalf .hasVideo {
-  left: 50%;
+/*
+ * A card with a video gives seven parts to the text and three to the video —
+ * the same split on every tea that has one, at every width.
+ */
+.card.cardWithVideo {
+  grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
 }
 
 /* The text steps aside as the panel arrives. */

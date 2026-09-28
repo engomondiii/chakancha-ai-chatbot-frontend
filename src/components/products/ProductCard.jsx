@@ -21,11 +21,31 @@ import styles from "./ProductCard.module.css";
 
 /**
  * Videos per tea, played in the card's photo area while the mouse is away;
- * the product photo takes over on hover. Teas not listed here keep the photo.
+ * the product photo takes over on hover.
+ *
+ * These are only a fallback: the video is a field on the product now, so staff
+ * set it per tea in the admin (Products → a tea → Card video). A tea with no
+ * video, here or in the admin, simply keeps its photo.
  */
 const PRODUCT_VIDEOS = {
   "nandi-gold": "/videos/tea-prep.mp4",
+  "nandi-black-tea": "/videos/tea-prep.mp4",
 };
+
+/**
+ * The video set on the product in the admin, if there is one.
+ */
+function getProductVideo(product) {
+  const value =
+    product.videoUrl ||
+    product.video_url ||
+    product.video ||
+    "";
+
+  return typeof value === "string" && value.trim()
+    ? value.trim()
+    : null;
+}
 
 /**
  * Resolve a usable image URL from normalized or raw backend data.
@@ -67,8 +87,6 @@ export function ProductCard({
   product,
   productNumber,
   priority = false,
-  // TEMPORARY: splits the card 50/50 between the video and the text.
-  halfAndHalf = false,
 }) {
   const [adding, setAdding] = useState(false);
   const videoRef = useRef(null);
@@ -98,7 +116,7 @@ export function ProductCard({
   const slug = product.slug || "";
   const price = Number.parseFloat(product.price) || 0;
   const image = getProductImage(product);
-  const video = PRODUCT_VIDEOS[slug] || null;
+  const video = getProductVideo(product) || PRODUCT_VIDEOS[slug] || null;
 
   const flavorProfile =
     product.flavorProfile ||
@@ -146,9 +164,7 @@ export function ProductCard({
 
   return (
     <article
-      className={`${styles.card} ${video ? styles.cardWithVideo : ""} ${
-        halfAndHalf ? styles.cardHalf : ""
-      }`}
+      className={`${styles.card} ${video ? styles.cardWithVideo : ""}`}
     >
       <div className={styles.content}>
         {displayNumber && (

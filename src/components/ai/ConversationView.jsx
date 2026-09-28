@@ -212,9 +212,18 @@ export function ConversationView() {
   const lastAIMessage = [...messages]
     .reverse()
     .find((m) => m.type === "ai" && !m.isStreaming);
-  // Phase 2: show if backend sent product cards OR intent warrants it
+  /*
+   * Show if the backend sent product cards, or the intent warrants it, or
+   * there are "Continue with" questions to offer. The last one matters from
+   * the very first reply: the backend returns three questions every time, but
+   * shouldShowProductSuggestions only turns true on a product intent or the
+   * second message, so the chips used to be missing at the start of the chat.
+   */
   const showSuggestions =
-    lastAIMessage && (productCards.length > 0 || showProductSuggestions);
+    lastAIMessage &&
+    (productCards.length > 0 ||
+      showProductSuggestions ||
+      suggestedFollowUps.length > 0);
 
   return (
     <div className={styles.container}>
