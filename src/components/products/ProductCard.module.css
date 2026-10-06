@@ -364,6 +364,35 @@
 }
 
 /*
+ * Hovering the panel gives the photo the whole card, the way it always has.
+ * The trigger is the panel itself, not the card: a pointer resting on the
+ * text — on its way to "Add to cart" — leaves everything where it is, so the
+ * button never slides out from under it.
+ *
+ * Once the panel has grown it is under the pointer, so the state holds until
+ * the pointer leaves the card.
+ */
+.cardWithVideo .hasVideo:hover {
+  left: 0;
+
+  border-left-color: transparent;
+}
+
+/* The text steps aside as the panel arrives. :has() keeps it tied to the
+   panel's own hover rather than the card's; without :has() support the text
+   simply sits behind the photo, which covers it anyway. */
+.cardWithVideo .content {
+  transition: opacity 280ms cubic-bezier(0.4, 0, 0.2, 1) 180ms;
+}
+
+.cardWithVideo:has(.hasVideo:hover) .content {
+  opacity: 0;
+  pointer-events: none;
+
+  transition: opacity 260ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/*
  * A card with a video gives seven parts to the text and three to the video —
  * the same split on every tea that has one, at every width.
  */

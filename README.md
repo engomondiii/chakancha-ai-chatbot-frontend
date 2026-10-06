@@ -1244,29 +1244,34 @@ Every chip animates the same way, left to right, for uniformity:
 
 A tea whose product record carries a card video (Products → the tea → Card
 video in the admin) plays it in the right-hand panel of its card while the
-mouse is away. Hovering **that panel** slides the video out to the right and
-fades the product photo in; moving off brings the video back. Both teas behave
-the same way — nothing is special-cased per tea.
+mouse is away. Hovering **that panel** slides the video out to the right, fades
+the product photo in, and grows the panel across the whole card so the photo
+fills it, with the text fading out of the way. Moving off the card brings the
+video and the text back. Both teas behave the same way — nothing is
+special-cased per tea.
 
-Hovering the **text** side changes nothing at all. That is deliberate: the
-panel used to expand across the whole card on any hover and fade the text out,
-which put the card's own "Add to cart" button under a sliding photo and made it
-awkward to click. The hover now belongs to the panel alone
-(`.hasVideo:hover` rather than `.card:hover` in
-`src/components/products/ProductCard.module.css`), so:
+Hovering the **text** side does none of that. The animation used to be driven
+by the card (`.card:hover`), so a pointer on its way to "Add to cart" made the
+photo slide over the button. It is driven by the panel now
+(`.cardWithVideo .hasVideo:hover` in
+`src/components/products/ProductCard.module.css`, with
+`:has(.hasVideo:hover)` fading the text), which means:
 
-- the photo and the video only swap when the pointer is over the panel;
-- the text column keeps full opacity and stays clickable throughout;
-- the panel keeps its 3/10 of the card instead of sliding across it.
+- arriving anywhere on the text leaves the card exactly as it was, and the
+  button can be clicked straight away;
+- arriving on the video gives the photo the whole card, as before;
+- once the panel has grown it is under the pointer, so the photo stays until
+  the pointer leaves the card — moving left across the expanded photo does not
+  reveal the button again, which is the trade for a full-width photo.
 
-Keyboard focus on the panel does the same as hovering it
-(`.hasVideo:focus-visible`), so the photo is reachable without a mouse.
+Keyboard focus on the panel swaps the video for the photo
+(`.hasVideo:focus-visible`) without the takeover, so the photo is reachable
+without a mouse.
 
-Measured in a browser on a card with a video: at rest the video is at opacity 1
-and the photo at 0; with the pointer over the panel that reverses and the text
-stays at opacity 1; with the pointer over the button the video is back, the
-button is the topmost element at its own centre, and a dispatched click reaches
-it.
+Measured in a browser, each journey started with the pointer off the card:
+off the card — video 1, photo 0, text 1, button clickable; arriving on the
+button — unchanged, button still clickable; arriving on the video — panel 100%
+of the card, photo 1, video 0, text 0.
 
 ### Where the video comes from
 
