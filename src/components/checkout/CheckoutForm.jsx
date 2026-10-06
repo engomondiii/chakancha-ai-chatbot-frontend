@@ -293,6 +293,22 @@ export function CheckoutForm() {
         window.location.href = paypalInit.approval_url;
         return; // Do not call setSubmitting(false) — page is navigating away
 
+
+      // ── Wise transfer ─────────────────────────────────────────────────────
+      //
+      // No gateway to talk to: the order is placed pending and the customer is
+      // sent to the page that tells them where to send the money.
+      } else if (paymentMethod === 'wise') {
+        const order = await createOrder({
+          shipping:       shippingPayload,
+          payment_method: 'wise',
+          coupon_code:    appliedCoupon?.code || '',
+          country:        shipping.country || 'US',
+        });
+
+        clearCart();
+        router.push(`/checkout/wise?orderId=${order.id}`);
+        return; // the page is navigating away
       }
 
     } catch (err) {

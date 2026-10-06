@@ -35,6 +35,7 @@ export function PaymentForm({ data, onChange, errors = {} }) {
         {[
           { id: 'card',   label: '💳 Card (Visa / MC / Amex)' },
           { id: 'paypal', label: '🅿️ PayPal'                  },
+          { id: 'wise',   label: '🏦 Wise transfer'            },
         ].map((m) => (
           <button
             key={m.id}
@@ -156,12 +157,35 @@ export function PaymentForm({ data, onChange, errors = {} }) {
         </div>
       )}
 
+      {/* ── Wise transfer ─────────────────────────────────────────────────── */}
+      {method === 'wise' && (
+        <div
+          style={{
+            padding:         'var(--spacing-lg)',
+            backgroundColor: 'var(--color-warm-cream)',
+            border:          '1px solid var(--color-border)',
+            borderRadius:    'var(--radius-md)',
+            fontFamily:      'var(--font-sans)',
+            fontSize:        14,
+            color:           'var(--color-text-secondary)',
+            lineHeight:      1.6,
+          }}
+        >
+          Place the order and we will show you our Wise account details and a
+          reference to quote. Send the transfer from your bank or your own Wise
+          account; we confirm it and your order moves to paid. Transfers inside
+          Wise usually arrive in minutes, a bank transfer can take a day or two.
+        </div>
+      )}
+
       {/* ── Security note ─────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <Lock size={13} color="var(--color-muted-olive)" />
         <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'var(--color-text-secondary)' }}>
           {method === 'paypal'
             ? "You will be redirected to PayPal's secure checkout. We never see your PayPal credentials."
+            : method === 'wise'
+            ? 'You pay from your own bank or Wise account — we never see your login or card details.'
             : 'Your card details are encrypted by Stripe and never stored on our servers.'}
         </span>
       </div>

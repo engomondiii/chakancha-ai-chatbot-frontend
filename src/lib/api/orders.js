@@ -349,3 +349,15 @@ export async function initPayPalPayment(subtotal, country = 'US', couponCode = '
 }
 
 export default { createOrder, getOrders, getOrder, cancelOrder, trackOrder, initStripePayment, initPayPalPayment };
+
+/**
+ * Where to send the bank transfer for a Wise order, and what to quote on it.
+ *
+ * Returns { order_id, reference, amount, currency, payment_status, configured,
+ * account: { account_holder, email, currency, details[], notes } }.
+ * `configured` is false when the shop has not set its receiving account yet,
+ * which the page says out loud rather than showing empty fields.
+ */
+export async function getWiseInstructions(orderId) {
+  return api.get(ENDPOINTS.ORDERS.WISE_INSTRUCTIONS(orderId));
+}

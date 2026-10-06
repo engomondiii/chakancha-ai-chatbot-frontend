@@ -81,6 +81,8 @@ export const ENDPOINTS = {
     DETAIL: (id) => `/orders/${id}/`,
     CANCEL: (id) => `/orders/${id}/cancel/`,
     TRACK:  (id) => `/orders/${id}/track/`,
+    // Where to send a Wise transfer for this order, and the reference to quote.
+    WISE_INSTRUCTIONS: (id) => `/orders/${id}/wise-instructions/`,
   },
 
   // ── Subscriptions (/api/v1/subscriptions/) ────────────────────────────────
