@@ -25,7 +25,7 @@ About Chakancha Global:
 - Three product lines: Nandi Gold/Light (straight tea), Nandi Black/Strong (for milk tea)
 - Transparent value chain: tea pickers receive a living wage, 10% of revenue goes back to pickers, 5% to the regional community
 - Specialty quality: food-safe, orthodox processing, traceable to the estate
-- DTC global commerce with DHL shipping; KG Inicis payment for the Korean market
+- DTC global commerce with DHL shipping; card and PayPal payment
 - Subscription ships on the 2nd of each month
 - Company: Chakancha Global Ltd, Nandi Hills, Rift Valley, Kenya
 - Email: info@chakancha.com

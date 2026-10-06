@@ -13,7 +13,7 @@
  *    through stripe.confirmCardPayment())
  *  - ReviewStep shows "Stripe-secured card" for card method since we no
  *    longer store the card number in local state
- *  - PayPal and KG Inicis flows unchanged
+ *  - PayPal flow unchanged
  */
 
 import React, { useState }                      from 'react';
@@ -69,7 +69,6 @@ function ReviewStep({ shipping, payment }) {
   const methodLabels = {
     card:     'Stripe-secured card payment',
     paypal:   'PayPal',
-    kginicis: 'KG Inicis — redirected at payment step',
   };
 
   return (
@@ -128,9 +127,6 @@ function validateShipping(data) {
 function validatePayment(data) {
   // PayPal — no local fields to validate (handled by PayPal's own UI)
   if (data.method === 'paypal')   return {};
-  // KG Inicis — redirect flow, no local fields
-  if (data.method === 'kginicis') return {};
-
   // Card — Stripe CardElement validates number/expiry/CVV internally.
   // We only validate the name on card which we collect locally.
   const errs = {};
@@ -297,18 +293,6 @@ export function CheckoutForm() {
         window.location.href = paypalInit.approval_url;
         return; // Do not call setSubmitting(false) — page is navigating away
 
-      // ── KG Inicis flow ────────────────────────────────────────────────────
-      } else if (paymentMethod === 'kginicis') {
-        const order = await createOrder({
-          shipping:       shippingPayload,
-          payment_method: 'kginicis',
-          coupon_code:    appliedCoupon?.code || '',
-          country:        shipping.country || 'US',
-        });
-
-        clearCart();
-        showSuccess('Order placed! You will be redirected to KG Inicis.');
-        router.push(`/checkout/success?orderId=${order.id}`);
       }
 
     } catch (err) {

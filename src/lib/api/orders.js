@@ -29,7 +29,7 @@ import { ENDPOINTS } from './endpoints';
  * {
  *   shipping:       { first_name, last_name, email, phone, address1, address2,
  *                     city, state, postal_code, country, notes }
- *   payment_method: 'card' | 'kginicis'
+ *   payment_method: 'card' | 'paypal'
  *   coupon_code:    string (optional)
  *   country:        'US' | 'KE' | ...  (used for shipping/tax calc)
  * }

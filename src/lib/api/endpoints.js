@@ -65,7 +65,7 @@ export const ENDPOINTS = {
     INITIALIZE:         '/checkout/initialize/',
     CALCULATE_SHIPPING: '/checkout/shipping/',
     APPLY_COUPON:       '/checkout/coupon/',
-    // Unified payment initialisation endpoint — handles Stripe + PayPal + KG Inicis
+    // Unified payment initialisation endpoint — handles Stripe and PayPal
     // POST { payment_method, subtotal, currency, order_id }
     // Returns: { client_secret } for Stripe, { approval_url } for PayPal
     PROCESS_PAYMENT:    '/checkout/payment/',

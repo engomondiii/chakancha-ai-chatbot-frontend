@@ -11,7 +11,7 @@
  *    (Stripe's CardElement validates the card number / expiry / CVV internally
  *    and returns errors through stripe.confirmCardPayment()).
  *  - cardFocused state added for the Stripe CardElement focus ring.
- *  - PayPal and KG Inicis sections unchanged.
+ *  - PayPal section unchanged.
  *  - Apostrophe syntax error in security note fixed (double-quoted string).
  */
 
@@ -33,9 +33,8 @@ export function PaymentForm({ data, onChange, errors = {} }) {
       {/* ── Method selector ───────────────────────────────────────────────── */}
       <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
         {[
-          { id: 'card',     label: '💳 Card (Visa / MC / Amex)' },
-          { id: 'paypal',   label: '🅿️ PayPal'                  },
-          { id: 'kginicis', label: 'KG Inicis (Korean)'         },
+          { id: 'card',   label: '💳 Card (Visa / MC / Amex)' },
+          { id: 'paypal', label: '🅿️ PayPal'                  },
         ].map((m) => (
           <button
             key={m.id}
@@ -154,25 +153,6 @@ export function PaymentForm({ data, onChange, errors = {} }) {
               </span>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* ── KG Inicis ─────────────────────────────────────────────────────── */}
-      {method === 'kginicis' && (
-        <div
-          style={{
-            padding:         'var(--spacing-lg)',
-            backgroundColor: 'var(--color-warm-cream)',
-            border:          '1px solid var(--color-border)',
-            borderRadius:    'var(--radius-md)',
-            fontFamily:      'var(--font-sans)',
-            fontSize:        14,
-            color:           'var(--color-text-secondary)',
-            lineHeight:      1.6,
-          }}
-        >
-          You will be redirected to the KG Inicis secure payment gateway after
-          reviewing your order. All major Korean payment methods are supported.
         </div>
       )}
 
