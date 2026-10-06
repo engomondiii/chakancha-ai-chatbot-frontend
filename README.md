@@ -1240,6 +1240,40 @@ Every chip animates the same way, left to right, for uniformity:
 
 ---
 
+## Product cards: video, photo and the buy button
+
+A tea whose product record carries a card video (Products → the tea → Card
+video in the admin) plays it in the right-hand panel of its card while the
+mouse is away. Hovering **that panel** slides the video out to the right and
+fades the product photo in; moving off brings the video back. Both teas behave
+the same way — nothing is special-cased per tea.
+
+Hovering the **text** side changes nothing at all. That is deliberate: the
+panel used to expand across the whole card on any hover and fade the text out,
+which put the card's own "Add to cart" button under a sliding photo and made it
+awkward to click. The hover now belongs to the panel alone
+(`.hasVideo:hover` rather than `.card:hover` in
+`src/components/products/ProductCard.module.css`), so:
+
+- the photo and the video only swap when the pointer is over the panel;
+- the text column keeps full opacity and stays clickable throughout;
+- the panel keeps its 3/10 of the card instead of sliding across it.
+
+Keyboard focus on the panel does the same as hovering it
+(`.hasVideo:focus-visible`), so the photo is reachable without a mouse.
+
+Measured in a browser on a card with a video: at rest the video is at opacity 1
+and the photo at 0; with the pointer over the panel that reverses and the text
+stays at opacity 1; with the pointer over the button the video is back, the
+button is the topmost element at its own centre, and a dispatched click reaches
+it.
+
+### Where the video comes from
+
+`getProductVideo()` in `ProductCard.jsx` reads `video_url` from the API
+(the admin's uploaded file). `PRODUCT_VIDEOS` in the same file is only a
+fallback for a tea with nothing uploaded yet.
+
 ## Conventions checklist
 
 Before opening a pull request:
