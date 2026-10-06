@@ -1273,11 +1273,19 @@ off the card — video 1, photo 0, text 1, button clickable; arriving on the
 button — unchanged, button still clickable; arriving on the video — panel 100%
 of the card, photo 1, video 0, text 0.
 
-### Where the video comes from
+### Where the video comes from, and what happens when it goes missing
 
-`getProductVideo()` in `ProductCard.jsx` reads `video_url` from the API
-(the admin's uploaded file). `PRODUCT_VIDEOS` in the same file is only a
-fallback for a tea with nothing uploaded yet.
+`getProductVideo()` in `ProductCard.jsx` reads `video_url` from the API —
+the file uploaded in the admin. `PRODUCT_VIDEOS` in the same file is the
+video shipped with the site, used for a tea with nothing uploaded.
+
+An uploaded video can disappear: it lives on the server's disk, and a deploy
+replaces that disk unless a volume is mounted (`UPLOADS_DIR` on the backend).
+When the file 404s the browser raises an error on the `<video>` element, so
+the card steps down a list — the uploaded file, then the shipped video, then no
+video at all, which leaves the product photo on show as an ordinary card. Each
+failure is remembered in `deadVideos` so the same dead source is not retried
+on every render.
 
 ## Conventions checklist
 

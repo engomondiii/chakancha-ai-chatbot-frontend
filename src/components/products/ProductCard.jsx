@@ -91,6 +91,15 @@ export function ProductCard({
   const [adding, setAdding] = useState(false);
   const videoRef = useRef(null);
 
+  /*
+   * A video can go missing — the admin's upload lives on the server's disk,
+   * and a deploy replaces that disk unless a volume is mounted. When the file
+   * 404s the browser raises an error on the element and the panel would sit
+   * there empty, so the card steps down: first to the video shipped with the
+   * site, then to the product photo on its own.
+   */
+  const [deadVideos, setDeadVideos] = useState([]);
+
   // The photo covers the video on hover, so there is nothing to play then.
   const showPhoto = () => videoRef.current?.pause();
   const showVideo = () => {
@@ -116,7 +125,10 @@ export function ProductCard({
   const slug = product.slug || "";
   const price = Number.parseFloat(product.price) || 0;
   const image = getProductImage(product);
-  const video = getProductVideo(product) || PRODUCT_VIDEOS[slug] || null;
+  const video =
+    [getProductVideo(product), PRODUCT_VIDEOS[slug]].find(
+      (candidate) => candidate && !deadVideos.includes(candidate),
+    ) || null;
 
   const flavorProfile =
     product.flavorProfile ||
@@ -248,6 +260,11 @@ export function ProductCard({
             ref={videoRef}
             className={styles.video}
             src={video}
+            onError={() =>
+              setDeadVideos((dead) =>
+                dead.includes(video) ? dead : [...dead, video],
+              )
+            }
             poster={image}
             autoPlay
             muted
