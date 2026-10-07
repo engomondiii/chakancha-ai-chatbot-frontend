@@ -539,3 +539,19 @@ const payoutsApi = {
 };
 
 export default payoutsApi;
+
+// ─── Store credit ────────────────────────────────────────────────────────────
+
+/**
+ * What the member can put towards an order from their Chakancha earnings.
+ *
+ * Deliberately NOT behind the payouts feature flag on the server: store credit
+ * exists for members Wise cannot pay, so it keeps working when withdrawals are
+ * closed.
+ *
+ * @returns {Promise<object>} { is_member, wallet, redeemable, available,
+ *                              currency, movements[] }
+ */
+export async function getStoreCredit() {
+  return api.get(ENDPOINTS.PAYOUTS.STORE_CREDIT);
+}

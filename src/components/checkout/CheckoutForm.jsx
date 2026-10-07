@@ -25,6 +25,7 @@ import { PaymentForm }        from './PaymentForm';
 import { ShippingCalculator } from './ShippingCalculator';
 import { createOrder, initStripePayment, initPayPalPayment } from '@/lib/api/orders';
 import { syncCartToServer }   from '@/lib/api/cart';
+import { CreditOption }      from './CreditOption';
 import { useStore }           from '@/store';
 import styles                 from './CheckoutForm.module.css';
 
@@ -136,7 +137,8 @@ function validatePayment(data) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function CheckoutForm() {
+export function CheckoutForm({ quote = null, applyCredit = false,
+                               onApplyCreditChange = () => {} }) {
   const router   = useRouter();
   const stripe   = useStripe();    // from @stripe/react-stripe-js
   const elements = useElements();  // from @stripe/react-stripe-js
@@ -217,8 +219,51 @@ export function CheckoutForm() {
           throw new Error('Stripe has not loaded yet. Please refresh the page and try again.');
         }
 
-        // Step 1: Backend creates a PaymentIntent and returns client_secret
-        const stripeInit = await initStripePayment(cartTotal);
+        //
+        // Step 0: push the local cart to the authenticated Django cart.
+        //
+        // The card flow did not do this — only PayPal did — and got away with
+        // it because the checkout page syncs once on load. It cannot be left to
+        // that now: the backend derives the amount to charge from the server
+        // cart, so a stale server cart would mean charging the wrong figure
+        // and then having the order refused for not matching. Syncing here is
+        // idempotent and removes the dependency on page-load timing.
+        //
+        try {
+          await syncCartToServer(cartItems);
+        } catch (syncErr) {
+          throw new Error(
+            syncErr.message || 'Could not prepare your cart for checkout. Please try again.'
+          );
+        }
+
+        // Step 1: Backend prices the cart and creates a PaymentIntent for the
+        //         part the card is paying — the total, less any credit applied.
+        const stripeInit = await initStripePayment(cartTotal, 'USD', {
+          country:     shipping.country || 'US',
+          couponCode:  appliedCoupon?.code || '',
+          applyCredit,
+        });
+
+        //
+        // Credit covered the whole order, so there is no card payment to make.
+        // Stripe refuses a zero PaymentIntent, so the backend says so instead
+        // of creating one and the order is placed straight away.
+        //
+        if (stripeInit.card_not_required) {
+          const order = await createOrder({
+            shipping:       shippingPayload,
+            payment_method: 'card',
+            coupon_code:    appliedCoupon?.code || '',
+            country:        shipping.country || 'US',
+            apply_credit:   true,
+          });
+
+          clearCart();
+          showSuccess('Order placed — paid with your Chakancha earnings.');
+          router.push(`/checkout/success?orderId=${order.id}`);
+          return;
+        }
 
         // Step 2: Confirm card using Stripe's hosted CardElement
         // The card details stay inside Stripe's iframe — never in our JS
@@ -250,6 +295,7 @@ export function CheckoutForm() {
           coupon_code:              appliedCoupon?.code || '',
           country:                  shipping.country || 'US',
           stripe_payment_intent_id: paymentIntent.id,
+          apply_credit:             applyCredit,
         });
 
         clearCart();
@@ -281,12 +327,17 @@ export function CheckoutForm() {
           cartTotal,
           shippingPayload.country || 'US',
           appliedCoupon?.code || '',
+          'USD',
+          applyCredit,
         );
 
         // Step 2: Save checkout data so /checkout/paypal/success can complete the order
         if (typeof window !== 'undefined') {
           sessionStorage.setItem('chakancha_checkout_shipping', JSON.stringify(shippingPayload));
           sessionStorage.setItem('chakancha_checkout_coupon', appliedCoupon?.code || '');
+          // The order is created on the return page, which must apply the same
+          // credit the PayPal charge was reduced by, or the amounts disagree.
+          sessionStorage.setItem('chakancha_checkout_credit', applyCredit ? '1' : '');
         }
 
         // Step 3: Redirect buyer to PayPal — they return to /checkout/paypal/success
@@ -304,6 +355,7 @@ export function CheckoutForm() {
           payment_method: 'wise',
           coupon_code:    appliedCoupon?.code || '',
           country:        shipping.country || 'US',
+          apply_credit:   applyCredit,
         });
 
         clearCart();
@@ -346,7 +398,21 @@ export function CheckoutForm() {
         )}
 
         {step === 'payment' && (
-          <PaymentForm data={payment} onChange={setPayment} errors={errors} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
+            <PaymentForm data={payment} onChange={setPayment} errors={errors} />
+            {/*
+              Offered after the method, not before it: the credit is settled
+              the same way whichever rail pays the remainder, so it reads as
+              "and also use my earnings" rather than as a fourth payment
+              method competing with the other three.
+            */}
+            <CreditOption
+              quote={quote}
+              applyCredit={applyCredit}
+              onChange={onApplyCreditChange}
+              disabled={submitting}
+            />
+          </div>
         )}
 
         {step === 'review' && (

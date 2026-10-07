@@ -39,6 +39,14 @@ function PayPalSuccessContent() {
         // Retrieve checkout data saved before redirecting to PayPal
         const rawShipping = sessionStorage.getItem('chakancha_checkout_shipping');
         const couponCode  = sessionStorage.getItem('chakancha_checkout_coupon') || '';
+        //
+        // The same credit election the PayPal charge was reduced by. It has to
+        // be repeated here because the order is created on this page, and the
+        // backend checks the captured amount against the total less credit —
+        // omitting it would make the capture look like an underpayment and the
+        // order would be refused after the buyer had already paid.
+        //
+        const applyCredit = sessionStorage.getItem('chakancha_checkout_credit') === '1';
 
         if (!rawShipping) {
           throw new Error('Checkout session expired. Please try again.');
@@ -53,11 +61,13 @@ function PayPalSuccessContent() {
           coupon_code:    couponCode,
           country:        shippingPayload.country || 'US',
           paypal_order_id: token,
+          apply_credit:    applyCredit,
         });
 
         // Clean up sessionStorage
         sessionStorage.removeItem('chakancha_checkout_shipping');
         sessionStorage.removeItem('chakancha_checkout_coupon');
+        sessionStorage.removeItem('chakancha_checkout_credit');
 
         clearCart();
         setStatus('success');

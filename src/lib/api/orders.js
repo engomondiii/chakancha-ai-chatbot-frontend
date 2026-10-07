@@ -216,13 +216,31 @@ function getMockOrders() {
  * @param {number} subtotal  - Cart subtotal in USD
  * @param {string} currency  - ISO 4217 (default 'USD')
  */
-export async function initStripePayment(subtotal, currency = 'USD') {
+export async function initStripePayment(
+  subtotal, currency = 'USD', { country = 'US', couponCode = '', applyCredit = false } = {},
+) {
+  // ── LEGACY: browser-supplied amount — DISABLED ────────────────────────────
+  // `subtotal` was sent as the amount to charge and the backend used it as the
+  // PaymentIntent amount verbatim, so the browser named its own price. It is
+  // now ignored server-side, exactly as the PayPal branch already ignored it,
+  // and the charge is computed from the server-side cart. The argument stays
+  // in the signature so older callers keep working.
+  //
+  // `country` and `coupon_code` DO change the amount — shipping zone, tax rate
+  // and discount — so they must match what createOrder() later sends, or the
+  // charge and the Order will disagree and the order will be refused.
+  // ── END LEGACY ────────────────────────────────────────────────────────────
   const data = await api.post(ENDPOINTS.CHECKOUT.PROCESS_PAYMENT, {
     payment_method: 'card',
-    subtotal:       parseFloat(subtotal.toFixed(2)),
     currency,
+    country,
+    coupon_code:    couponCode,
+    apply_credit:   applyCredit,
   });
-  return data; // { client_secret, payment_intent_id, amount, currency }
+  // { client_secret, payment_intent_id, amount, currency, total,
+  //   credit_applied, credit_held_back }
+  // or, when credit covers the whole order: { card_not_required: true, ... }
+  return data;
 }
 
 // ─── PayPal payment initialisation ───────────────────────────────────────────
@@ -328,7 +346,9 @@ export async function fetchCheckoutQuote(country = 'US', couponCode = '') {
 }
 
 
-export async function initPayPalPayment(subtotal, country = 'US', couponCode = '', currency = 'USD') {
+export async function initPayPalPayment(
+  subtotal, country = 'US', couponCode = '', currency = 'USD', applyCredit = false,
+) {
   // ── LEGACY payload — DISABLED DURING PHASE A ──────────────────────────────
   // Sent only subtotal + currency, so the backend fell back to country='US'
   // and no coupon, producing a PayPal amount that disagreed with Order.total.
@@ -344,8 +364,9 @@ export async function initPayPalPayment(subtotal, country = 'US', couponCode = '
     currency,
     country,
     coupon_code:    couponCode,
+    apply_credit:   applyCredit,
   });
-  return data; // { paypal_order_id, approval_url, status }
+  return data; // { paypal_order_id, approval_url, status, total, credit_applied }
 }
 
 export default { createOrder, getOrders, getOrder, cancelOrder, trackOrder, initStripePayment, initPayPalPayment };
@@ -360,4 +381,18 @@ export default { createOrder, getOrders, getOrder, cancelOrder, trackOrder, init
  */
 export async function getWiseInstructions(orderId) {
   return api.get(ENDPOINTS.ORDERS.WISE_INSTRUCTIONS(orderId));
+}
+
+/**
+ * Tell us the customer says they have sent their transfer.
+ *
+ * A CLAIM, NOT A PAYMENT. It does not mark the order paid and it does not earn
+ * anyone commission — only money actually seen in the Wise account does that.
+ * What it does is put the order at the front of the queue staff work through,
+ * and let the customer feel their message landed somewhere.
+ *
+ * Returns { message, payment_status, declared_at }.
+ */
+export async function declareWiseSent(orderId) {
+  return api.post(ENDPOINTS.ORDERS.WISE_SENT(orderId), {});
 }

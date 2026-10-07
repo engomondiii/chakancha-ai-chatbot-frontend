@@ -24,7 +24,7 @@ function formatDeliveryEstimate(minDays, maxDays) {
   return `${from.toLocaleDateString('en-US', opts)} – ${to.toLocaleDateString('en-US', opts)}`;
 }
 
-export function OrderSummary({ shippingCountry, quote = null }) {
+export function OrderSummary({ shippingCountry, quote = null, applyCredit = false }) {
   const cartItems     = useStore((s) => s.cartItems);
   const cartSubtotal  = useStore((s) => s.cartSubtotal);
   const cartShipping  = useStore((s) => s.cartShipping);
@@ -124,6 +124,23 @@ export function OrderSummary({ shippingCountry, quote = null }) {
         <div style={{ height: 1, backgroundColor: 'var(--color-border)', margin: '4px 0' }} />
         <Row label="Total"
              value={fmt(quote ? Number(quote.total) : cartTotal)} bold />
+
+        {/*
+          Credit is shown BELOW the total, not as a discount above it. It does
+          not change what the tea cost — it changes who pays for it — and
+          folding it into the total would misstate the order's value, which the
+          commission and the accounts are both based on.
+        */}
+        {applyCredit && quote && Number(quote.credit_applicable) > 0 && (
+          <>
+            <Row label="Chakancha earnings"
+                 value={`−${fmt(Number(quote.credit_applicable))}`}
+                 green />
+            <Row label={Number(quote.card_amount) <= 0 ? 'Left to pay' : 'Card to pay'}
+                 value={fmt(Number(quote.card_amount))}
+                 bold />
+          </>
+        )}
       </div>
 
       {/* Estimated delivery */}

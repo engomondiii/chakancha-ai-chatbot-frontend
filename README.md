@@ -1287,6 +1287,73 @@ video at all, which leaves the product photo on show as an ordinary card. Each
 failure is remembered in `deadVideos` so the same dead source is not retried
 on every render.
 
+## Paying with Chakancha earnings
+
+A member can put their referral earnings towards an order and pay the remainder
+by card. It exists because Wise — the payout rail — cannot hold money for
+members in several of the countries Chakancha sells into, so some members have
+earnings they cannot withdraw. Withdrawal is unchanged; this is a second door.
+
+**The browser never works out how much credit applies.** It asks the backend,
+shows the answer, and sends yes or no. `apply_credit` is a boolean on the
+request and nothing else — a client that computed its own credit would be a
+client that could choose its own price.
+
+| file | part |
+|---|---|
+| `components/checkout/CreditOption.jsx` | the opt-in, the balance, the explanation |
+| `components/checkout/OrderSummary.jsx` | the credit and card-to-pay lines |
+| `components/checkout/CheckoutForm.jsx` | threads the election through all three rails |
+| `app/checkout/page.jsx` | owns `applyCredit`, since form and summary both need it |
+| `lib/api/payouts.js` → `getStoreCredit()` | `GET /payouts/store-credit/` |
+
+Three details worth knowing before changing any of it:
+
+1. **Credit is shown *below* the total, not as a discount above it.** It does
+   not change what the tea cost — it changes who pays for it — and folding it
+   into the total would misstate the order's value, which commission and the
+   accounts are both based on.
+
+2. **Earnings can cover the order completely.** Stripe refuses a zero
+   PaymentIntent, so the backend answers `{ card_not_required: true }` and the
+   form places the order without touching Stripe at all. Removing that branch
+   makes a fully-covered order fail at the card step.
+
+3. **A card payment has to be at least $0.50.** If the member's credit comes
+   within fifty cents of the total, the backend holds a little of it back so
+   the card charge is chargeable, and sets `credit_held_back`. `CreditOption`
+   explains that, because a customer who elected to spend their credit and saw
+   a few cents left behind would otherwise write in and ask why.
+
+The card flow now **syncs the cart to the server before initialising payment**.
+It previously relied on the checkout page having synced on load, which was
+survivable when the browser sent the amount; it is not now that the backend
+derives the amount from the server-side cart.
+
+`initStripePayment(subtotal, …)` still takes `subtotal` for older callers. It
+is ignored by the backend. `country` and `couponCode` are **not** ignored —
+they change shipping, tax and discount, so they must match what `createOrder()`
+later sends or the charge and the order will disagree and the order will be
+refused.
+
+The PayPal flow creates its order on the return page, so the credit election is
+carried across in `sessionStorage` under `chakancha_checkout_credit`. Without
+it the capture looks like an underpayment and the order is refused after the
+buyer has already paid.
+
+## Wise transfer page
+
+`app/checkout/wise/page.jsx`. Wise has no merchant checkout, so this is an
+instruction sheet, not a payment form: the amount owed, the reference (the
+order id) and the account to send to, each copyable. The account details come
+from the backend, which reads them from Wise itself.
+
+The amount shown is the total **less any credit applied**, not the total — a
+member part-paying with earnings must not be asked for the whole sum.
+
+"I have sent it" posts to `/orders/{id}/wise-sent/`. That is a *claim*: it does
+not mark the order paid. Only money seen in the Wise account does that.
+
 ## Conventions checklist
 
 Before opening a pull request:

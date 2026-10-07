@@ -74,6 +74,13 @@ export default function CheckoutPage() {
   const appliedCoupon   = useStore((s) => s.appliedCoupon);
   const shippingCountry = useStore((s) => s.shippingCountry);
   const [quote, setQuote] = useState(null);
+  //
+  // Whether the member is putting their Chakancha earnings towards this
+  // order. It lives here because both the form (which sends it) and the
+  // summary (which shows it) need the same answer. Only ever yes or no —
+  // the amount is the server's to decide.
+  //
+  const [applyCredit, setApplyCredit] = useState(false);
 
   // Redirect to cart if empty
   useEffect(() => {
@@ -161,12 +168,16 @@ export default function CheckoutPage() {
             without Stripe — card payment will fail gracefully with an error message.
           */}
           <Elements stripe={stripePromise} options={ELEMENTS_OPTIONS}>
-            <CheckoutForm />
+            <CheckoutForm
+              quote={quote}
+              applyCredit={applyCredit}
+              onApplyCreditChange={setApplyCredit}
+            />
           </Elements>
         </div>
 
         {/* Right: summary — shows the authoritative backend quote */}
-        <OrderSummary quote={quote} />
+        <OrderSummary quote={quote} applyCredit={applyCredit} />
       </div>
 
       <style>{`

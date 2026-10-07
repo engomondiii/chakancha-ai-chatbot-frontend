@@ -15,7 +15,7 @@ import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Building2, Copy, Check, ArrowRight, Clock } from 'lucide-react';
 import { LogoMark } from '@/components/common/Logo';
-import { getWiseInstructions } from '@/lib/api/orders';
+import { getWiseInstructions, declareWiseSent } from '@/lib/api/orders';
 
 /** One line of the account, with a button that copies just that value. */
 function DetailRow({ label, value }) {
@@ -80,6 +80,8 @@ function WiseContent() {
   const [instructions, setInstructions] = useState(null);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [declared, setDeclared] = useState(false);
+  const [declaring, setDeclaring] = useState(false);
 
   useEffect(() => {
     if (!orderId) {
@@ -87,7 +89,11 @@ function WiseContent() {
       return;
     }
     getWiseInstructions(orderId)
-      .then(setInstructions)
+      .then((data) => {
+        setInstructions(data);
+        // They told us on an earlier visit; do not ask again.
+        setDeclared(Boolean(data?.declared_at) || data?.payment_status === 'paid');
+      })
       .catch((err) =>
         setError(
           err?.message ||
@@ -166,6 +172,19 @@ function WiseContent() {
               </strong>
             </div>
 
+            {/*
+              The amount above is the total LESS any earnings applied, so a
+              member part-paying with credit is never asked for the whole sum.
+              Showing the arithmetic stops that looking like a pricing error.
+            */}
+            {Number(instructions.credit_applied) > 0 && (
+              <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--color-text-muted)' }}>
+                Order total {instructions.currency} {instructions.total}, less{' '}
+                {instructions.currency} {instructions.credit_applied} of your
+                Chakancha earnings.
+              </p>
+            )}
+
             <DetailRow label="Reference (must be quoted)" value={instructions.reference} />
 
             {!instructions.configured ? (
@@ -216,21 +235,39 @@ function WiseContent() {
       <div style={{ display: 'flex', gap: 'var(--spacing-md)', marginTop: 'var(--spacing-xl)' }}>
         <button
           type="button"
-          onClick={() => router.push(`/checkout/success?orderId=${orderId}`)}
+          disabled={declaring || declared}
+          onClick={async () => {
+            //
+            // Telling us is a courtesy, not a payment, so a failure here must
+            // not look like a failed order: the transfer is already on its way
+            // and we will find it in the statement regardless. Worst case the
+            // customer moves on without the acknowledgement.
+            //
+            setDeclaring(true);
+            try {
+              await declareWiseSent(orderId);
+            } catch {
+              /* ignored on purpose — see above */
+            }
+            setDeclared(true);
+            setDeclaring(false);
+          }}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
             gap: 8,
             padding: '12px 20px',
-            background: 'var(--color-background-dark)',
-            color: 'var(--color-text-inverse)',
-            border: 'none',
+            background: declared ? 'var(--color-surface-card)' : 'var(--color-background-dark)',
+            color: declared ? 'var(--color-text-secondary)' : 'var(--color-text-inverse)',
+            border: declared ? '1px solid var(--color-border-soft)' : 'none',
             borderRadius: 'var(--radius-button, 999px)',
             fontSize: 15,
-            cursor: 'pointer',
+            cursor: declared ? 'default' : 'pointer',
           }}
         >
-          I have sent it <ArrowRight size={15} />
+          {declared
+            ? <>Thank you — we&apos;re looking for it <Check size={15} /></>
+            : <>I have sent it <ArrowRight size={15} /></>}
         </button>
 
         <button

@@ -83,6 +83,7 @@ export const ENDPOINTS = {
     TRACK:  (id) => `/orders/${id}/track/`,
     // Where to send a Wise transfer for this order, and the reference to quote.
     WISE_INSTRUCTIONS: (id) => `/orders/${id}/wise-instructions/`,
+    WISE_SENT:         (id) => `/orders/${id}/wise-sent/`,
   },
 
   // ── Subscriptions (/api/v1/subscriptions/) ────────────────────────────────
@@ -188,6 +189,9 @@ export const ENDPOINTS = {
     REQUEST_CANCEL: (id) => `/payouts/requests/${id}/cancel/`,
     REQUEST_CONFIRM: (id) => `/payouts/requests/${id}/confirm/`,
     REQUESTS_CLEAR_HISTORY: '/payouts/requests/clear-history/',
+    // Not gated by PAYOUTS_ENABLED: credit must work for the members
+    // Wise cannot pay, which is exactly when withdrawals are closed.
+    STORE_CREDIT:   '/payouts/store-credit/',
   },
 
   // ── Payout admin (/api/v1/admin/payouts/) — staff only ────────────────────
