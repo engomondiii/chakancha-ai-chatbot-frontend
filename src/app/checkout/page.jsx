@@ -85,6 +85,18 @@ export default function CheckoutPage() {
   // Redirect to cart if empty
   useEffect(() => {
     if (cartItems.length === 0) {
+      //
+      // Placing an order clears the cart, which lands here a beat before the
+      // navigation to the confirmation does — so this rule fired first and sent
+      // the customer to an empty basket instead. On a Wise order that meant
+      // never seeing the account to pay into: the order existed, the money was
+      // owed, and the one screen explaining how to pay was skipped entirely.
+      //
+      if (typeof window !== 'undefined'
+          && sessionStorage.getItem('chakancha_order_placed')) {
+        sessionStorage.removeItem('chakancha_order_placed');
+        return;
+      }
       router.replace('/cart');
     }
   }, [cartItems.length, router]);

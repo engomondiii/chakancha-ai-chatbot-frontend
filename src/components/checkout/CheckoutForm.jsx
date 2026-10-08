@@ -252,7 +252,16 @@ export function CheckoutForm({ quote = null, applyCredit = false,
             apply_credit:   true,
           });
 
-          clearCart();
+            //
+          // Clearing the cart lands on the checkout page a beat before the
+          // navigation does, and its "cart is empty" rule would send the
+          // customer to an empty basket instead of their confirmation. This
+          // tells that rule an order was just placed. See checkout/page.jsx.
+          //
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('chakancha_order_placed', '1');
+          }
+        clearCart();
           showSuccess('Order placed — paid with your Chakancha earnings.');
           router.push(`/checkout/success?orderId=${order.id}`);
           return;
@@ -291,6 +300,15 @@ export function CheckoutForm({ quote = null, applyCredit = false,
           apply_credit:             applyCredit,
         });
 
+          //
+          // Clearing the cart lands on the checkout page a beat before the
+          // navigation does, and its "cart is empty" rule would send the
+          // customer to an empty basket instead of their confirmation. This
+          // tells that rule an order was just placed. See checkout/page.jsx.
+          //
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('chakancha_order_placed', '1');
+          }
         clearCart();
         showSuccess('Order placed successfully!');
         router.push(`/checkout/success?orderId=${order.id}`);
@@ -351,6 +369,15 @@ export function CheckoutForm({ quote = null, applyCredit = false,
           apply_credit:   applyCredit,
         });
 
+          //
+          // Clearing the cart lands on the checkout page a beat before the
+          // navigation does, and its "cart is empty" rule would send the
+          // customer to an empty basket instead of their confirmation. This
+          // tells that rule an order was just placed. See checkout/page.jsx.
+          //
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('chakancha_order_placed', '1');
+          }
         clearCart();
         router.push(`/checkout/wise?orderId=${order.id}`);
         return; // the page is navigating away
