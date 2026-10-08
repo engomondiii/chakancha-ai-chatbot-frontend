@@ -20,7 +20,7 @@ import { Lock } from 'lucide-react';
 import { Input }          from '@/components/ui/Input';
 import { StripeCardInput } from './StripeCardInput';
 
-export function PaymentForm({ data, onChange, errors = {} }) {
+export function PaymentForm({ data, onChange, errors = {}, wiseAvailable = false }) {
   const [method,      setMethod]      = useState(data.method || 'card');
   const [cardFocused, setCardFocused] = useState(false);
 
@@ -31,11 +31,21 @@ export function PaymentForm({ data, onChange, errors = {} }) {
       <h3 style={sectionTitle}>Payment</h3>
 
       {/* ── Method selector ───────────────────────────────────────────────── */}
+      {/*
+        Wise appears only when the shop has an account to be paid into.
+        Wise has no merchant checkout, so the option is nothing but a set of
+        details to quote — and with none configured, choosing it would place a
+        real order and then show a page that cannot say where to send the
+        money. An option that dead-ends after the customer has committed is
+        worse than no option.
+      */}
       <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
         {[
           { id: 'card',   label: '💳 Card (Visa / MC / Amex)' },
           { id: 'paypal', label: '🅿️ PayPal'                  },
-          { id: 'wise',   label: '🏦 Wise transfer'            },
+          ...(wiseAvailable
+            ? [{ id: 'wise', label: '🏦 Wise transfer' }]
+            : []),
         ].map((m) => (
           <button
             key={m.id}

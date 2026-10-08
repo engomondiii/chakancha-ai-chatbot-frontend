@@ -151,6 +151,18 @@ export function CheckoutForm({ quote = null, applyCredit = false,
 
   // ── Navigation ─────────────────────────────────────────────────────────────
 
+  //
+  // If Wise is selected and the quote then says it is unavailable — the quote
+  // arrives after the first render, and the shop's configuration can change
+  // between visits — fall back to card rather than letting the customer carry
+  // a dead choice into the review step.
+  //
+  React.useEffect(() => {
+    if (payment.method === 'wise' && quote && !quote.wise_available) {
+      setPayment((p) => ({ ...p, method: 'card' }));
+    }
+  }, [quote, payment.method]);
+
   const goNext = () => {
     if (step === 'shipping') {
       const errs = validateShipping(shipping);
@@ -380,7 +392,12 @@ export function CheckoutForm({ quote = null, applyCredit = false,
 
         {step === 'payment' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)' }}>
-            <PaymentForm data={payment} onChange={setPayment} errors={errors} />
+            <PaymentForm
+              data={payment}
+              onChange={setPayment}
+              errors={errors}
+              wiseAvailable={Boolean(quote?.wise_available)}
+            />
             {/*
               Offered after the method, not before it: the credit is settled
               the same way whichever rail pays the remainder, so it reads as
