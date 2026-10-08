@@ -13,7 +13,7 @@
 
 import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Building2, Copy, Check, ArrowRight, Clock } from 'lucide-react';
+import { Building2, Copy, Check, ArrowRight, Clock, AlertTriangle } from 'lucide-react';
 import { LogoMark } from '@/components/common/Logo';
 import { getWiseInstructions, declareWiseSent } from '@/lib/api/orders';
 
@@ -133,6 +133,34 @@ function WiseContent() {
           Send your transfer
         </h1>
       </div>
+
+      {/*
+        A test account is said out loud. The shop is on the public internet,
+        and someone who sent real money to a sandbox account number would
+        simply lose it — nothing else on this page would tell them otherwise.
+      */}
+      {instructions?.is_test && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 10,
+            margin: 'var(--spacing-md) 0 var(--spacing-lg)',
+            padding: 'var(--spacing-md)',
+            background: '#fff4e0',
+            border: '1.5px solid #e0a33a',
+            borderRadius: 'var(--radius-md)',
+            color: '#7a5200',
+          }}
+        >
+          <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: 1 }} />
+          <span style={{ fontSize: 14, lineHeight: 1.5 }}>
+            <strong>Test mode.</strong> These are sandbox account details for
+            checking that our payment process works. <strong>Do not send real
+            money</strong> — it would not reach us and could not be returned.
+          </span>
+        </div>
+      )}
 
       <p style={{ color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
         Order <strong>{instructions?.order_id || orderId}</strong> is placed and waiting for
