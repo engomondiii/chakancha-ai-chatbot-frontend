@@ -26,6 +26,7 @@ import { ShippingCalculator } from './ShippingCalculator';
 import { createOrder, initStripePayment, initPayPalPayment } from '@/lib/api/orders';
 import { syncCartToServer }   from '@/lib/api/cart';
 import { CreditOption }      from './CreditOption';
+import { validateShipping, validatePayment } from './validation';
 import { useStore }           from '@/store';
 import styles                 from './CheckoutForm.module.css';
 
@@ -70,6 +71,7 @@ function ReviewStep({ shipping, payment }) {
   const methodLabels = {
     card:     'Stripe-secured card payment',
     paypal:   'PayPal',
+    wise:     'Wise transfer — you send it from your bank',
   };
 
   return (
@@ -113,27 +115,6 @@ const reviewText   = { fontFamily: 'var(--font-sans)', fontSize: 14, color: 'var
 
 // ── Validation ────────────────────────────────────────────────────────────────
 
-function validateShipping(data) {
-  const errs = {};
-  if (!data.firstName?.trim())  errs.firstName  = 'Required';
-  if (!data.lastName?.trim())   errs.lastName   = 'Required';
-  if (!data.email?.trim())      errs.email      = 'Required';
-  if (!data.address1?.trim())   errs.address1   = 'Required';
-  if (!data.city?.trim())       errs.city       = 'Required';
-  if (!data.postalCode?.trim()) errs.postalCode = 'Required';
-  if (!data.country?.trim())    errs.country    = 'Required';
-  return errs;
-}
-
-function validatePayment(data) {
-  // PayPal — no local fields to validate (handled by PayPal's own UI)
-  if (data.method === 'paypal')   return {};
-  // Card — Stripe CardElement validates number/expiry/CVV internally.
-  // We only validate the name on card which we collect locally.
-  const errs = {};
-  if (!data.cardName?.trim()) errs.cardName = 'Required';
-  return errs;
-}
 
 // ── Main component ────────────────────────────────────────────────────────────
 

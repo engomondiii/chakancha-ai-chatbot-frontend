@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:payouts": "node --test \"src/lib/payouts/__tests__/*.test.mjs\""
+    "test:payouts": "node --test \"src/lib/payouts/__tests__/*.test.mjs\"",
+    "test:checkout": "node --test \"src/components/checkout/__tests__/*.test.mjs\""
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
