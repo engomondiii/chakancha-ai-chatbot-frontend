@@ -42,6 +42,17 @@ function OrderCard({ order }) {
   const total       = Number(order.total);
   const trackingUrl = order.tracking_url ?? order.trackingUrl;
 
+  //
+  // A transfer order is placed BEFORE the money arrives, so it can sit here
+  // looking "Confirmed" while the customer still owes for it — and with no way
+  // back to the account details they were asked to pay into. That is the one
+  // screen they need again, hours or days later, and it was the one screen
+  // they could not reach.
+  //
+  const paymentStatus = order.payment_status ?? order.paymentStatus;
+  const paymentMethod = order.payment_method ?? order.paymentMethod;
+  const awaitingTransfer = paymentMethod === 'wise' && paymentStatus === 'pending';
+
   return (
     <div style={{ backgroundColor: 'white', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' }}>
@@ -50,7 +61,13 @@ function OrderCard({ order }) {
           <p style={{ fontFamily: 'var(--font-sans)', fontSize: 15, fontWeight: 700, color: 'var(--color-earth-brown)', margin: 0, letterSpacing: '0.03em' }}>{order.id}</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)' }}>
-          <StatusBadge status={order.status} />
+          {awaitingTransfer
+            ? (
+              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#7a5200', backgroundColor: '#fff4e0', border: '1px solid #e0a33a', borderRadius: 'var(--radius-md)', padding: '4px 10px' }}>
+                Awaiting payment
+              </span>
+            )
+            : <StatusBadge status={order.status} />}
           <span style={{ fontFamily: 'var(--font-sans)', fontSize: 16, fontWeight: 700, color: 'var(--color-tea-green)' }}>
             ${Number.isFinite(total) ? total.toFixed(2) : '0.00'}
           </span>
@@ -81,6 +98,15 @@ function OrderCard({ order }) {
           <a href={trackingUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, fontFamily: 'var(--font-sans)', fontWeight: 500, color: 'var(--color-tea-green)', textDecoration: 'none', backgroundColor: 'rgba(45,80,22,0.06)', border: '1px solid rgba(45,80,22,0.15)', borderRadius: 'var(--radius-md)', padding: '6px 12px' }}>
             <ExternalLink size={12} /> Track order
           </a>
+        )}
+        {awaitingTransfer && (
+          <button
+            type="button"
+            onClick={() => router.push(`/checkout/wise?orderId=${order.id}`)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, fontFamily: 'var(--font-sans)', fontWeight: 600, color: '#7a5200', backgroundColor: '#fff4e0', border: '1px solid #e0a33a', borderRadius: 'var(--radius-md)', padding: '6px 12px', cursor: 'pointer' }}
+          >
+            How to pay
+          </button>
         )}
         <button type="button" onClick={() => router.push(`/account/orders/${order.id}`)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, fontFamily: 'var(--font-sans)', fontWeight: 500, color: 'var(--color-text-secondary)', backgroundColor: 'var(--color-warm-cream)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '6px 12px', cursor: 'pointer' }}>
           View details
