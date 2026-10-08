@@ -15,6 +15,7 @@ import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Building2, Copy, Check, ArrowRight, Clock, AlertTriangle } from 'lucide-react';
 import { LogoMark } from '@/components/common/Logo';
+import { WiseMark } from '@/components/common/WiseMark';
 import { getWiseInstructions, declareWiseSent } from '@/lib/api/orders';
 
 /** One line of the account, with a button that copies just that value. */
@@ -128,10 +129,12 @@ function WiseContent() {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 'var(--spacing-sm)' }}>
-        <Building2 size={20} color="var(--color-accent-muted-gold)" />
         <h1 style={{ fontFamily: 'var(--font-family-display)', fontSize: 30, margin: 0 }}>
           Send your transfer
         </h1>
+        {/* Wise's own mark, so the customer can see at a glance whose
+            instructions these are before they open their banking app. */}
+        <WiseMark height={17} brand style={{ marginLeft: 2 }} />
       </div>
 
       {/*

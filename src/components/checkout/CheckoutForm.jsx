@@ -151,18 +151,6 @@ export function CheckoutForm({ quote = null, applyCredit = false,
 
   // ── Navigation ─────────────────────────────────────────────────────────────
 
-  //
-  // If Wise is selected and the quote then says it is unavailable — the quote
-  // arrives after the first render, and the shop's configuration can change
-  // between visits — fall back to card rather than letting the customer carry
-  // a dead choice into the review step.
-  //
-  React.useEffect(() => {
-    if (payment.method === 'wise' && quote && !quote.wise_available) {
-      setPayment((p) => ({ ...p, method: 'card' }));
-    }
-  }, [quote, payment.method]);
-
   const goNext = () => {
     if (step === 'shipping') {
       const errs = validateShipping(shipping);

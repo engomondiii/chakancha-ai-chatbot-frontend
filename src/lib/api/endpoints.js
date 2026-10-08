@@ -62,6 +62,9 @@ export const ENDPOINTS = {
   // ── Checkout (/api/v1/checkout/) ─────────────────────────────────────────
   // Matches orders/checkout_urls.py
   CHECKOUT: {
+    // Which rails the shop can take. Independent of the cart and the
+    // quote on purpose: a failed quote must not remove a payment option.
+    PAYMENT_METHODS: '/checkout/payment-methods/',
     INITIALIZE:         '/checkout/initialize/',
     CALCULATE_SHIPPING: '/checkout/shipping/',
     APPLY_COUPON:       '/checkout/coupon/',

@@ -15,14 +15,59 @@
  *  - Apostrophe syntax error in security note fixed (double-quoted string).
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Lock } from 'lucide-react';
 import { Input }          from '@/components/ui/Input';
 import { StripeCardInput } from './StripeCardInput';
+import { WiseMark } from '@/components/common/WiseMark';
+import api from '@/lib/api/client';
+import { ENDPOINTS } from '@/lib/api/endpoints';
 
 export function PaymentForm({ data, onChange, errors = {}, wiseAvailable = false }) {
   const [method,      setMethod]      = useState(data.method || 'card');
   const [cardFocused, setCardFocused] = useState(false);
+
+  //
+  // Ask the shop directly which rails it can take.
+  //
+  // This used to ride on the price quote, which tied it to the cart, the
+  // country, the coupon and an authenticated request — so a quote that failed
+  // for any reason took a payment method down with it, silently. Whether the
+  // shop has a Wise account to be paid into has nothing to do with what is in
+  // anybody's basket.
+  //
+  // The quote's answer is still honoured when it arrives, so a shop that only
+  // runs the older backend keeps working.
+  //
+  const [wiseFromServer, setWiseFromServer] = useState(null);
+
+  useEffect(() => {
+    let alive = true;
+    api.get(ENDPOINTS.CHECKOUT.PAYMENT_METHODS)
+      .then((data) => {
+        if (!alive) return;
+        const wise = (data?.methods || []).find((m) => m.id === 'wise');
+        setWiseFromServer(Boolean(wise?.available));
+      })
+      .catch(() => { /* fall back to the quote's answer */ });
+    return () => { alive = false; };
+  }, []);
+
+  const canUseWise = wiseFromServer ?? wiseAvailable;
+
+  //
+  // Selected something the shop cannot take? Fall back to card. Reachable when
+  // the answer arrives after first render, or when the shop's configuration
+  // changed between visits — a dead selection would otherwise be carried into
+  // the review step and refused at the end, after the customer had committed.
+  //
+  useEffect(() => {
+    if (method === 'wise' && wiseFromServer === false) {
+      setMethod('card');
+      onChange({ ...data, method: 'card' });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wiseFromServer, method]);
 
   const update = (key, val) => onChange({ ...data, method, [key]: val });
 
@@ -43,8 +88,22 @@ export function PaymentForm({ data, onChange, errors = {}, wiseAvailable = false
         {[
           { id: 'card',   label: '💳 Card (Visa / MC / Amex)' },
           { id: 'paypal', label: '🅿️ PayPal'                  },
-          ...(wiseAvailable
-            ? [{ id: 'wise', label: '🏦 Wise transfer' }]
+          //
+          // Wise's own wordmark rather than a bank emoji: this names a
+          // specific company a customer is choosing to pay through, and a
+          // generic icon makes it look like a category rather than a brand
+          // they can recognise.
+          //
+          ...(canUseWise
+            ? [{
+                id: 'wise',
+                label: (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <WiseMark height={13} />
+                    transfer
+                  </span>
+                ),
+              }]
             : []),
         ].map((m) => (
           <button
