@@ -1,4 +1,56 @@
 # Changelog
+### Four Trees on the Chakan Tree
+
+The participant dashboard now has a **Tree** picker above the referral tree —
+tea, acacia, baobab or cherry blossom. The choice is remembered per browser.
+
+```text
+Tea      Camellia sinensis    the tree of the Chakancha mural
+Acacia   Vachellia tortilis   the flat-topped thorn of the Kenyan savanna
+Baobab   Adansonia digitata   enormous trunk, stubby limbs, a thin crown
+Cherry   Prunus serrulata     dark bark under pale blossom — Korea
+```
+
+**Only the drawing changes.** The layout, the data, the per-generation
+downline badges, the name shortening and the `root` prop are identical in all
+four. A participant's tree says exactly the same thing whichever one is
+showing, so this is a view preference and nothing more.
+
+#### A species is not a palette swap
+
+Each sets its own trunk mass and how fast it sheds it, how quickly limbs
+taper, how dense and how flat its crown is, and what shape a single leaf is.
+Three things do most of the recognising:
+
+- **`taper`** — the exponent on how fast the trunk gives up its width, now a
+  parameter of `buildTrunk`. It is the whole difference between a cone and a
+  bottle, and it is what makes the baobab a baobab.
+- **`squash`** — how flat a clump of foliage is. The acacia's are about a
+  third of their height and spread half again as wide, and that alone reads
+  as the umbrella.
+- **The leaf shape** — a toothed blade, a blunt leaflet, a five-fingered
+  digitate leaf, or five petals. At any zoom where individual leaves are
+  visible, one outline for all four gives the game away.
+
+The density differences are real: at seventeen participants the baobab draws
+about 1,350 paths and the acacia about 6,410.
+
+#### Contrast
+
+Three pairs have to stay apart in every species — bark against sky, foliage
+against sky, and the name plaque against the crown. The third is solved once:
+the plaques are ivory in all four and never compete with the foliage behind
+them. The other two are why the barks are darker than life and no generation
+ramp runs to near-white at its pale end.
+
+#### Storage
+
+The chosen tree is kept in `localStorage`, read **after mount** rather than
+during render — this page is server-rendered, and reading storage up front
+would make the first client paint disagree with the server's markup. Every
+read and write is wrapped, so a private window or blocked storage simply
+starts on tea.
+
 ### Chakan Tree Drawn as a Tea Tree
 
 The referral tree on the participant dashboard is now drawn as an actual tea

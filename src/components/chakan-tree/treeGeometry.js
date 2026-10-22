@@ -80,7 +80,7 @@ export function limbPath({ from, to, w0, w1, bow }) {
  * is perturbed independently and the base widens hard over the last fifth.
  */
 export function buildTrunk({ baseX, baseY, topX, topY, baseWidth, topWidth,
-                             flare = 2.1, rand }) {
+                             flare = 2.1, taper = 0.72, rand }) {
   const STEPS = 16;
   const left = [];
   const right = [];
@@ -90,7 +90,12 @@ export function buildTrunk({ baseX, baseY, topX, topY, baseWidth, topWidth,
     const y = baseY + (topY - baseY) * t;
     const x = baseX + (topX - baseX) * t;
 
-    let w = baseWidth + (topWidth - baseWidth) * Math.pow(t, 0.72);
+    /*
+     * The exponent is the difference between a cone and a bottle. A tea trunk
+     * sheds its width steadily; a baobab holds nearly all of it until just
+     * under the crown, which is the thing anyone recognises it by.
+     */
+    let w = baseWidth + (topWidth - baseWidth) * Math.pow(t, taper);
     if (t < 0.22) {
       const f = (0.22 - t) / 0.22;
       w *= 1 + (flare - 1) * f * f;
@@ -138,11 +143,82 @@ export function buildTrunk({ baseX, baseY, topX, topY, baseWidth, topWidth,
 /* ── leaves ──────────────────────────────────────────────────────────────── */
 
 /**
- * A tea leaf: lanceolate, widest about a third along, and finely SERRATED.
- * The toothed margin is the most recognisable thing about Camellia sinensis,
- * and a smooth almond outline reads as generic foliage.
+ * The shape of one leaf in the crown.
+ *
+ * This does more work than it looks. Crown density, colour and silhouette get
+ * a viewer most of the way to recognising a species, but a tea leaf and an
+ * acacia leaflet are different OBJECTS — one is a toothed blade, the other a
+ * scatter of specks — and at any zoom where individual leaves are visible,
+ * one outline for all four gives the game away.
  */
-export function foliageLeafPath(length, width) {
+export function foliageLeafPath(length, width, shape) {
+  switch (shape) {
+    case "leaflet": return leafletPath(length, width);
+    case "palmate": return palmatePath(length, width);
+    case "blossom": return blossomPath(length);
+    default:        return toothedPath(length, width);
+  }
+}
+
+/** Acacia. One leaflet off a pinnate frond: tiny, blunt, smooth-edged. */
+function leafletPath(length, width) {
+  const h = width / 2;
+  return [
+    "M 0 0",
+    `C ${(length * 0.08).toFixed(1)} ${(-h * 1.35).toFixed(1)}`,
+    `  ${(length * 0.92).toFixed(1)} ${(-h * 1.2).toFixed(1)}`,
+    `  ${length.toFixed(1)} 0`,
+    `C ${(length * 0.92).toFixed(1)} ${(h * 1.2).toFixed(1)}`,
+    `  ${(length * 0.08).toFixed(1)} ${(h * 1.35).toFixed(1)}`,
+    "  0 0 Z",
+  ].join(" ");
+}
+
+/** Baobab. Digitate — five broad leaflets radiating from one point. */
+function palmatePath(length, width) {
+  const SPAN = [0.76, 0.92, 1, 0.92, 0.76];
+  const parts = [];
+  for (let i = 0; i < 5; i += 1) {
+    const a = toRad(-52 + i * 26);
+    const len = length * SPAN[i];
+    const tx = Math.cos(a) * len;
+    const ty = Math.sin(a) * len;
+    // Broad: a baobab leaflet is a fat teardrop. Narrow ones turn the whole
+    // crown into pine needles.
+    const hw = width * 0.36;
+    const nx = -Math.sin(a) * hw;
+    const ny = Math.cos(a) * hw;
+    parts.push(
+      `M 0 0 Q ${(tx * 0.45 + nx).toFixed(1)} ${(ty * 0.45 + ny).toFixed(1)} ` +
+      `${tx.toFixed(1)} ${ty.toFixed(1)} ` +
+      `Q ${(tx * 0.45 - nx).toFixed(1)} ${(ty * 0.45 - ny).toFixed(1)} 0 0 Z`);
+  }
+  return parts.join(" ");
+}
+
+/** Cherry. Five rounded petals — what you actually see on the tree. */
+function blossomPath(size) {
+  const r = size * 0.27;
+  const ring = size * 0.26;
+  const parts = [];
+  for (let i = 0; i < 5; i += 1) {
+    const a = toRad(i * 72 - 90);
+    const cx = Math.cos(a) * ring;
+    const cy = Math.sin(a) * ring;
+    parts.push(
+      `M ${(cx - r).toFixed(1)} ${cy.toFixed(1)} ` +
+      `a ${r.toFixed(1)} ${r.toFixed(1)} 0 1 0 ${(r * 2).toFixed(1)} 0 ` +
+      `a ${r.toFixed(1)} ${r.toFixed(1)} 0 1 0 ${(-r * 2).toFixed(1)} 0 Z`);
+  }
+  return parts.join(" ");
+}
+
+/**
+ * Tea. Lanceolate, widest about a third along, and finely SERRATED. The
+ * toothed margin is the most recognisable thing about Camellia sinensis, and
+ * a smooth almond outline reads as generic foliage.
+ */
+function toothedPath(length, width) {
   const TEETH = 11;
   const TOOTH = 0.92;
   const half = (t) => (width / 2) * Math.sin(Math.PI * Math.pow(t, 0.78));

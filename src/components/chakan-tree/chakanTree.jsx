@@ -25,7 +25,7 @@
    must not make the picture twitch.
    ========================================================================= */
 
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 import styles from "./chakanTree.module.css";
 import {
@@ -37,6 +37,12 @@ import {
   nameLeafPath,
   toRad,
 } from "./treeGeometry";
+import {
+  DEFAULT_SPECIES,
+  TREE_SPECIES,
+  mix,
+  speciesById,
+} from "./treeSpecies";
 
 /* =========================================================
    TREE DIMENSIONS
@@ -51,20 +57,11 @@ const TOP_PADDING = 118;
 const TRUNK_HEIGHT = 152;
 const BOTTOM_PADDING = 34;
 
-/* Bark, lit from the upper left. */
-const BARK = "#8A5A3E";
-const BARK_DARK = "#3C210F";
-const BARK_LIGHT = "#C79069";
-
 /*
- * Foliage by generation: deep forest green at the root through to the
- * yellow-green of new growth at the outermost level, which is what a real tea
- * bush does towards its tips. Six steps with real distance between them —
- * near-identical greens tell a reader nothing.
+ * Which tree remembered per viewer. A convenience, not state anyone else
+ * depends on, so a browser that refuses storage simply starts on tea.
  */
-const LEAF_RAMP = [
-  "#1C4A29", "#2E6B33", "#468C3E", "#6BA748", "#9AC55C", "#C7D857",
-];
+const SPECIES_KEY = "chakancha.tree.species";
 
 /* =========================================================
    TREE HELPERS  (unchanged from v1)
@@ -218,7 +215,7 @@ function fullNameOf(node) {
    about the drawing is.
 ========================================================= */
 
-function growTree(root) {
+function growTree(root, species) {
   if (!root) {
     return null;
   }
@@ -303,8 +300,10 @@ function growTree(root) {
     baseY: height - BOTTOM_PADDING,
     topX: rootRecord.x,
     topY: rootY + rootRecord.height / 2,
-    baseWidth: 132,
-    topWidth: 52,
+    baseWidth: species.trunk.baseWidth,
+    topWidth: species.trunk.topWidth,
+    flare: species.trunk.flare,
+    taper: species.trunk.taper,
     rand,
   });
 
@@ -313,8 +312,8 @@ function growTree(root) {
   const twigs = [];
   const clusters = [];
 
-  const LIMB_WIDTH = 34;
-  const WIDTH_DECAY = 0.78;
+  const LIMB_WIDTH = species.limb.width;
+  const WIDTH_DECAY = species.limb.decay;
 
   nodes.forEach((record) => {
     if (!record.parentRecord) {
@@ -354,7 +353,7 @@ function growTree(root) {
     // skeleton; these are what the crown sits on.
     const dxLimb = to.x - from.x;
     const dyLimb = to.y - from.y;
-    for (let i = 0; i < 5; i += 1) {
+    for (let i = 0; i < species.crown.twigs; i += 1) {
       const t = rand(0.18, 0.92);
       const origin = { x: from.x + dxLimb * t, y: from.y + dyLimb * t };
       const side = rng() > 0.5 ? 1 : -1;
@@ -371,7 +370,11 @@ function growTree(root) {
         w1: 1,
         bow: side * rand(0.08, 0.28),
       });
-      clusters.push({ at: end, radius: rand(30, 48), level: record.level });
+      clusters.push({
+        at: end,
+        radius: rand(species.crown.radius[0] * 0.8, species.crown.radius[1] * 0.8),
+        level: record.level,
+      });
     }
   });
 
@@ -380,13 +383,13 @@ function growTree(root) {
   // one, which is where a real tree puts its new growth.
   nodes.forEach((record) => {
     const isTip = getChildren(record.node).length === 0;
-    for (let i = 0; i < (isTip ? 4 : 3); i += 1) {
+    for (let i = 0; i < species.crown.clumps + (isTip ? 1 : 0); i += 1) {
       clusters.push({
         at: {
           x: record.x + rand(-record.width * 0.4, record.width * 0.4),
           y: record.y - rand(4, 34),
         },
-        radius: rand(36, 60),
+        radius: rand(species.crown.radius[0], species.crown.radius[1]),
         level: record.level,
         density: isTip ? 1.2 : 0.9,
       });
@@ -396,7 +399,7 @@ function growTree(root) {
   /* ── 4. clumps become leaves ─────────────────────────────────────────── */
   const foliage = [];
   clusters.forEach((cluster, index) => {
-    const count = Math.round(22 * (cluster.density ?? 1));
+    const count = Math.round(species.crown.perClump * (cluster.density ?? 1));
     for (let i = 0; i < count; i += 1) {
       // Samples pulled towards the centre, so a clump has a ragged edge rather
       // than the hard rim of a disc.
@@ -405,8 +408,8 @@ function growTree(root) {
       foliage.push({
         key: `${index}-${i}`,
         x: cluster.at.x + Math.cos(a) * r,
-        y: cluster.at.y + Math.sin(a) * r * 0.86,
-        size: rand(18, 33),
+        y: cluster.at.y + Math.sin(a) * r * species.crown.squash,
+        size: rand(species.crown.size[0], species.crown.size[1]),
         angle: rand(0, 360),
         layer: rng() < 0.4 ? 0 : 1,
         level: cluster.level,
@@ -421,18 +424,23 @@ function growTree(root) {
 
 /* ── colour helpers ───────────────────────────────────────────────────── */
 
-function mix(hex, towards, t) {
-  const a = [1, 3, 5].map((i) => parseInt(hex.substr(i, 2), 16));
-  const b = [1, 3, 5].map((i) => parseInt(towards.substr(i, 2), 16));
-  return `#${a
-    .map((v, i) => Math.round(v + (b[i] - v) * t).toString(16).padStart(2, "0"))
-    .join("")}`;
+function shadeOf(ramp, level) {
+  return ramp[Math.min(level, ramp.length - 1)];
 }
 
-function leafColour(level, layer, tint) {
-  const base = LEAF_RAMP[Math.min(level, LEAF_RAMP.length - 1)];
-  const lit = layer === 0 ? mix(base, "#14301C", 0.42) : mix(base, "#E4F3B8", 0.16);
-  return mix(lit, tint > 0.5 ? "#FFFFFF" : "#16331D", Math.abs(tint - 0.5) * 0.24);
+/*
+ * Leaves at the back sit in shadow, leaves at the front catch the light, and
+ * every one is nudged off that by its own tint — a field of one colour reads
+ * as plastic however good the shapes are. The shadow and highlight are mixed
+ * from the species' OWN deepest and palest tones, so an acacia greys off and
+ * a cherry does not.
+ */
+function leafColour(ramp, level, layer, tint) {
+  const base = shadeOf(ramp, level);
+  const deep = mix(ramp[0], "#000000", 0.45);
+  const pale = ramp[ramp.length - 1];
+  const lit = layer === 0 ? mix(base, deep, 0.42) : mix(base, pale, 0.2);
+  return mix(lit, tint > 0.5 ? "#FFFFFF" : deep, Math.abs(tint - 0.5) * 0.24);
 }
 
 /* =========================================================
@@ -446,9 +454,9 @@ function leafColour(level, layer, tint) {
    being said twice and the name being lost once.
 ========================================================= */
 
-function MemberLeaf({ record }) {
+function MemberLeaf({ record, ramp }) {
   const { x, y, width, height, tilt, isRoot, level, badges } = record;
-  const vein = mix(LEAF_RAMP[Math.min(level, LEAF_RAMP.length - 1)], "#000000", 0.52);
+  const vein = mix(shadeOf(ramp, level), "#000000", 0.52);
 
   const badgeRowWidth = badges.length * (BADGE_RADIUS * 2 + BADGE_GAP) - BADGE_GAP;
   const badgeY = -height / 2 - BADGE_RADIUS - 7;
@@ -540,7 +548,32 @@ function MemberLeaf({ record }) {
 ========================================================= */
 
 function ReferralTree({ root }) {
-  const tree = useMemo(() => growTree(root), [root]);
+  const [species, setSpecies] = useState(DEFAULT_SPECIES);
+
+  //
+  // Read the remembered choice after mount, never during render: this page is
+  // server-rendered too, and reading localStorage up front makes the first
+  // client paint disagree with the server's markup.
+  //
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(SPECIES_KEY);
+      if (saved) setSpecies(speciesById(saved));
+    } catch {
+      /* private window, blocked storage — tea is a fine default */
+    }
+  }, []);
+
+  function choose(id) {
+    setSpecies(speciesById(id));
+    try {
+      window.localStorage.setItem(SPECIES_KEY, id);
+    } catch {
+      /* nothing to do: the choice still applies for this visit */
+    }
+  }
+
+  const tree = useMemo(() => growTree(root, species), [root, species]);
 
   if (!root || !tree) {
     return (
@@ -548,8 +581,38 @@ function ReferralTree({ root }) {
     );
   }
 
+  const BARK = species.bark.mid;
+  const BARK_DARK = species.bark.dark;
+  const BARK_LIGHT = species.bark.light;
+
   return (
-    <div className={styles.viewport}>
+    <div className={styles.viewport} style={{ "--tree-canvas": species.canvas }}>
+      {/*
+        Which tree. The arrangement, the badges and the data are identical in
+        all four — only the drawing changes — so this is a view preference and
+        nothing more.
+      */}
+      <div className={styles.speciesBar}>
+        <label className={styles.speciesLabel} htmlFor="chakan-species">
+          Tree
+        </label>
+        <select
+          id="chakan-species"
+          className={styles.speciesSelect}
+          value={species.id}
+          onChange={(event) => choose(event.target.value)}
+        >
+          {TREE_SPECIES.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.name}
+            </option>
+          ))}
+        </select>
+        <span className={styles.speciesNote}>
+          <em>{species.latin}</em> — {species.note}
+        </span>
+      </div>
+
       <div
         className={styles.canvas}
         style={{ width: `${tree.width}px`, height: `${tree.height}px` }}
@@ -640,8 +703,8 @@ function ReferralTree({ root }) {
             {tree.foliage.filter((f) => f.layer === 0).map((f) => (
               <path
                 key={`b-${f.key}`}
-                d={foliageLeafPath(f.size, f.size * 0.4)}
-                fill={leafColour(f.level, 0, f.tint)}
+                d={foliageLeafPath(f.size, f.size * 0.4, species.leaf)}
+                fill={leafColour(species.ramp, f.level, 0, f.tint)}
                 transform={`translate(${f.x.toFixed(1)} ${f.y.toFixed(1)}) rotate(${f.angle.toFixed(0)})`}
               />
             ))}
@@ -683,9 +746,9 @@ function ReferralTree({ root }) {
             {tree.foliage.filter((f) => f.layer === 1).map((f) => (
               <path
                 key={`f-${f.key}`}
-                d={foliageLeafPath(f.size, f.size * 0.4)}
-                fill={leafColour(f.level, 1, f.tint)}
-                stroke={mix(LEAF_RAMP[Math.min(f.level, LEAF_RAMP.length - 1)], "#000000", 0.5)}
+                d={foliageLeafPath(f.size, f.size * 0.4, species.leaf)}
+                fill={leafColour(species.ramp, f.level, 1, f.tint)}
+                stroke={mix(shadeOf(species.ramp, f.level), "#000000", 0.5)}
                 strokeWidth="0.4"
                 transform={`translate(${f.x.toFixed(1)} ${f.y.toFixed(1)}) rotate(${f.angle.toFixed(0)})`}
               />
@@ -695,7 +758,7 @@ function ReferralTree({ root }) {
           {/* Named leaves last, on top of everything. */}
           <g filter="url(#chakanLeafShadow)">
             {tree.nodes.map((record) => (
-              <MemberLeaf key={record.path} record={record} />
+              <MemberLeaf key={record.path} record={record} ramp={species.ramp} />
             ))}
           </g>
         </svg>
