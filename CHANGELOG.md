@@ -1,4 +1,59 @@
 # Changelog
+### Chakan Tree Drawn as a Tea Tree
+
+The referral tree on the participant dashboard is now drawn as an actual tea
+tree — the one from the Chakancha mural — instead of an org chart.
+
+**This is a change of drawing only.** `ReferralTree` keeps the same export, the
+same single `root` prop and the same data. No API call, no referral rule, no
+reward figure and no other part of the dashboard moved.
+
+#### What changed
+
+```text
+root at the top, generations descending  →  root on the trunk, generations climbing
+circle + Chakancha logo mark per member  →  a named leaf per member
+branch: vertical then curve to the child →  a tapered limb, bowed out of the parent
+(nothing)                                →  trunk with bark, twigs, layered foliage
+```
+
+Position still carries the meaning, exactly as before: one row per generation,
+each parent centred over the people they introduced. `LEVEL_HEIGHT` is
+unchanged at 165.
+
+#### What was deliberately preserved
+
+- **Per-generation downline badges** — same counts from the same
+  `countDescendantsByLevel`, same five `LEVEL_SHADES` greens, same
+  `Level N · X participants` tooltips. They moved from an arc around the
+  circle to a row above the leaf.
+- **Name shortening** — `formatDisplayName` is untouched, and the full name is
+  still available on hover (now an SVG `<title>`).
+- **The empty state** — "Your Chakan Tree will appear here."
+
+#### Determinism
+
+The bark's wander, each limb's bow and the scatter of the foliage are seeded
+from the tree itself, so the same network always grows the same tree. A
+participant refreshing their dashboard does not find their branches
+rearranged, and React re-rendering does not make the picture twitch.
+
+#### Keeping the old one
+
+The previous visualisation is kept verbatim in
+`archive/chakan-tree-v1-orgchart/` (from commit `1266e3f`) with restore
+instructions. Both versions honour the same `<ReferralTree root={…} />`
+contract, so swapping back is a file copy and nothing else. The v1 CSS classes
+are still in `chakanTree.module.css` alongside the new ones for that reason.
+
+#### One bug found while doing it
+
+`.canvas` carries `min-width: 100%`, so on a wide panel it is wider than the
+tree. Giving the SVG `width: 100%` then stretched it to fill, and because the
+viewBox preserves aspect ratio the whole drawing scaled up with it — a 900px
+tree rendered at roughly twice its size and ran off the bottom of the
+viewport. `.treeLayer` is pinned to its natural size and centred instead.
+
 ### Kenya Shipping Zone and PayPal Amount Inputs
 
 #### Kenya shipping zone

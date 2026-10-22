@@ -425,3 +425,75 @@
     transform: none;
   }
 }
+
+/* =========================================================
+   v2 — THE TEA TREE VISUALISATION
+
+   Appended rather than replacing the classes above, so that
+   restoring archive/chakan-tree-v1-orgchart/chakanTree.jsx
+   needs no CSS change at all: both versions' styles live
+   here side by side.
+========================================================= */
+
+.treeLayer {
+  /*
+   * Natural size, centred — deliberately NOT width:100%.
+   *
+   * `.canvas` carries `min-width: 100%`, so on a wide screen it is wider than
+   * the tree. A percentage width then stretches the SVG to fill it, and
+   * because the viewBox preserves aspect ratio the whole drawing scales up
+   * with it: on a 1900px panel a 900px tree rendered at twice its size and
+   * ran off the bottom of the viewport.
+   */
+  display: block;
+
+  margin: 0 auto;
+
+  overflow: visible;
+}
+
+.leafGroup {
+  cursor: default;
+}
+
+.blade {
+  transition: stroke-width 0.14s ease;
+}
+
+.leafGroup:hover .blade {
+  stroke-width: 4.5;
+}
+
+.leafName {
+  font-family: var(--font-family-display, Garamond, Georgia, serif);
+
+  font-size: 15px;
+
+  font-weight: 600;
+
+  letter-spacing: 0.005em;
+
+  /* The name is the point of the leaf — it must never intercept a hover
+     meant for the blade underneath it. */
+  pointer-events: none;
+}
+
+.rootLeafName {
+  font-family: var(--font-family-display, Garamond, Georgia, serif);
+
+  font-size: 16.5px;
+
+  font-weight: 700;
+
+  pointer-events: none;
+}
+
+.badgeText {
+  font-family: var(--font-family-primary, "Segoe UI", system-ui, sans-serif);
+
+  font-size: 10.5px;
+
+  font-weight: 700;
+
+  pointer-events: none;
+}
