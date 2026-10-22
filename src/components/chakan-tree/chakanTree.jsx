@@ -303,8 +303,8 @@ function growTree(root) {
     baseY: height - BOTTOM_PADDING,
     topX: rootRecord.x,
     topY: rootY + rootRecord.height / 2,
-    baseWidth: 112,
-    topWidth: 46,
+    baseWidth: 132,
+    topWidth: 52,
     rand,
   });
 
@@ -354,8 +354,8 @@ function growTree(root) {
     // skeleton; these are what the crown sits on.
     const dxLimb = to.x - from.x;
     const dyLimb = to.y - from.y;
-    for (let i = 0; i < 3; i += 1) {
-      const t = rand(0.2, 0.9);
+    for (let i = 0; i < 5; i += 1) {
+      const t = rand(0.18, 0.92);
       const origin = { x: from.x + dxLimb * t, y: from.y + dyLimb * t };
       const side = rng() > 0.5 ? 1 : -1;
       const angle = toRad(90 + side * rand(32, 78));
@@ -371,7 +371,7 @@ function growTree(root) {
         w1: 1,
         bow: side * rand(0.08, 0.28),
       });
-      clusters.push({ at: end, radius: rand(26, 42), level: record.level });
+      clusters.push({ at: end, radius: rand(30, 48), level: record.level });
     }
   });
 
@@ -380,13 +380,13 @@ function growTree(root) {
   // one, which is where a real tree puts its new growth.
   nodes.forEach((record) => {
     const isTip = getChildren(record.node).length === 0;
-    for (let i = 0; i < (isTip ? 3 : 2); i += 1) {
+    for (let i = 0; i < (isTip ? 4 : 3); i += 1) {
       clusters.push({
         at: {
           x: record.x + rand(-record.width * 0.4, record.width * 0.4),
           y: record.y - rand(4, 34),
         },
-        radius: rand(32, 54),
+        radius: rand(36, 60),
         level: record.level,
         density: isTip ? 1.2 : 0.9,
       });
@@ -396,7 +396,7 @@ function growTree(root) {
   /* ── 4. clumps become leaves ─────────────────────────────────────────── */
   const foliage = [];
   clusters.forEach((cluster, index) => {
-    const count = Math.round(16 * (cluster.density ?? 1));
+    const count = Math.round(22 * (cluster.density ?? 1));
     for (let i = 0; i < count; i += 1) {
       // Samples pulled towards the centre, so a clump has a ragged edge rather
       // than the hard rim of a disc.
@@ -406,7 +406,7 @@ function growTree(root) {
         key: `${index}-${i}`,
         x: cluster.at.x + Math.cos(a) * r,
         y: cluster.at.y + Math.sin(a) * r * 0.86,
-        size: rand(17, 31),
+        size: rand(18, 33),
         angle: rand(0, 360),
         layer: rng() < 0.4 ? 0 : 1,
         level: cluster.level,
