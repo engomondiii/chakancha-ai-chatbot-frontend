@@ -1,4 +1,25 @@
 # Changelog
+### Downline Badges Follow the Chosen Tree
+
+The per-generation downline badges were five fixed greens. That was right
+while there was one tree and wrong the moment there were four: green chips
+scattered over cherry blossom read as something stuck on the picture rather
+than part of it.
+
+They are now derived from each species' own ramp — green on the tea tree,
+plum through pale pink on the cherry, and so on. The meaning is unchanged:
+level 1 is still the deepest tone and each deeper generation still fades
+lighter, with the same counts and the same `Level N · X participants`
+tooltips.
+
+The text colour is picked from each chip's luminance rather than fixed, so a
+pale pink chip gets dark ink and a deep plum one gets light. No combination
+ends up unreadable, in any species, without anyone having to hand-check
+twenty colour pairs.
+
+The badge sets are computed once per species at module load, not per render —
+the dashboard redraws this tree on any state change.
+
 ### Four Trees on the Chakan Tree
 
 The participant dashboard now has a **Tree** picker above the referral tree —

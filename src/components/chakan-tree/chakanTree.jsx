@@ -104,8 +104,11 @@ function getDepth(node) {
    ...
    level 5 → deepest MGM generation shown
 
-   Level 1 uses the deepest green and every deeper level
-   fades lighter.
+   Level 1 uses the species' deepest tone and every deeper
+   level fades lighter — green on the tea tree, plum through
+   to pale pink on the cherry. The counts, the ordering and
+   the tooltips are identical in every species; only the
+   colour follows the tree.
 
    Example:
 
@@ -119,14 +122,6 @@ function getDepth(node) {
 ========================================================= */
 
 const MAX_BADGE_LEVELS = 5;
-
-const LEVEL_SHADES = [
-  { bg: "#3C5E2B", fg: "#FFFFFF" }, /* level 1 — deepest green   */
-  { bg: "#5C9440", fg: "#FFFFFF" }, /* level 2                   */
-  { bg: "#86A96F", fg: "#FFFFFF" }, /* level 3                   */
-  { bg: "#B2CBA3", fg: "#2F4A1E" }, /* level 4                   */
-  { bg: "#DCEFD2", fg: "#4A7C2C" }, /* level 5 — lightest        */
-];
 
 const BADGE_RADIUS = 9.5;
 const BADGE_GAP = 4;
@@ -454,7 +449,7 @@ function leafColour(ramp, level, layer, tint) {
    being said twice and the name being lost once.
 ========================================================= */
 
-function MemberLeaf({ record, ramp }) {
+function MemberLeaf({ record, ramp, badgeShades }) {
   const { x, y, width, height, tilt, isRoot, level, badges } = record;
   const vein = mix(shadeOf(ramp, level), "#000000", 0.52);
 
@@ -512,7 +507,7 @@ function MemberLeaf({ record, ramp }) {
           and the same tooltips as v1, moved from an arc around the circle to
           a row above the leaf. */}
       {badges.map((entry, index) => {
-        const shade = LEVEL_SHADES[entry.level - 1];
+        const shade = badgeShades[entry.level - 1];
         const cx =
           -badgeRowWidth / 2 + BADGE_RADIUS +
           index * (BADGE_RADIUS * 2 + BADGE_GAP);
@@ -758,7 +753,12 @@ function ReferralTree({ root }) {
           {/* Named leaves last, on top of everything. */}
           <g filter="url(#chakanLeafShadow)">
             {tree.nodes.map((record) => (
-              <MemberLeaf key={record.path} record={record} ramp={species.ramp} />
+              <MemberLeaf
+                key={record.path}
+                record={record}
+                ramp={species.ramp}
+                badgeShades={species.badges}
+              />
             ))}
           </g>
         </svg>

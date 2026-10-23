@@ -33,6 +33,32 @@ function mix(hex, towards, t) {
     .join("")}`;
 }
 
+function luminance(hex) {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.substr(i, 2), 16) / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/**
+ * The five downline badges, taken from the species' own ramp.
+ *
+ * These used to be a fixed set of five greens. That was right while there was
+ * only one tree, and wrong the moment there were four: green chips scattered
+ * over cherry blossom read as something stuck on the picture rather than part
+ * of it.
+ *
+ * Deriving them keeps the meaning identical — level 1 is still the deepest
+ * tone and each deeper generation still fades lighter — while letting every
+ * species carry its own. The text colour is picked from the chip's luminance
+ * rather than fixed, so a pale pink chip gets dark ink and a deep plum one
+ * gets light, and no combination ends up unreadable.
+ */
+function badgesFrom(ramp) {
+  return ramp.slice(0, 5).map((bg) => ({
+    bg,
+    fg: luminance(bg) > 0.55 ? "#2A2118" : "#FFFFFF",
+  }));
+}
+
 /**
  * Six generation colours between two endpoints.
  *
@@ -46,7 +72,7 @@ function ramp(deep, light) {
   return out;
 }
 
-export const TREE_SPECIES = [
+const SPECIES = [
   {
     id: "tea",
     name: "Tea",
@@ -106,6 +132,15 @@ export const TREE_SPECIES = [
     crown: { twigs: 7, clumps: 4, perClump: 26, radius: [38, 62], size: [13, 25], squash: 0.9 },
   },
 ];
+
+/*
+ * Each species carries its own badge set, derived once rather than on every
+ * render — the dashboard redraws this tree on any state change.
+ */
+export const TREE_SPECIES = SPECIES.map((species) => ({
+  ...species,
+  badges: badgesFrom(species.ramp),
+}));
 
 export const DEFAULT_SPECIES = TREE_SPECIES[0];
 
