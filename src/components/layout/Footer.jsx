@@ -111,6 +111,10 @@ export function Footer() {
     support: [
       { name: "Account", href: "/account" },
       { name: "Orders", href: "/account/orders" },
+      // Public on purpose: the person chasing a parcel often has the number
+      // and no account — a gift, an office delivery, somebody reading the
+      // card on the box.
+      { name: "Track a parcel", href: "/track" },
       { name: "Shipping", href: "/help/shipping" },
       {
         name: "contact@chakancha.com",

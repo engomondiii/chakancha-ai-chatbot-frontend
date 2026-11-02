@@ -89,6 +89,19 @@ export const ENDPOINTS = {
     WISE_SENT:         (id) => `/orders/${id}/wise-sent/`,
   },
 
+  // ── Shipping (/api/v1/shipping/) ──────────────────────────────────────────
+  //
+  // NOT BUILT YET. The DHL Express account is still being opened, so nothing
+  // answers this path today and `trackParcel` fails cleanly against it. It is
+  // written down here because the interface is being built first and the
+  // backend will be built to fit it: a public GET that takes
+  // `?tracking_number=` and proxies DHL's Shipment Tracking API server-side,
+  // so the DHL key never reaches a browser.
+  //
+  SHIPPING: {
+    TRACK: '/shipping/track/',
+  },
+
   // ── Subscriptions (/api/v1/subscriptions/) ────────────────────────────────
   // Matches subscriptions/urls.py
   SUBSCRIPTIONS: {
