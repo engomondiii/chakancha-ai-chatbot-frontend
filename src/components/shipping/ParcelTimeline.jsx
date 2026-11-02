@@ -14,7 +14,7 @@
 import React, { useState } from 'react';
 import { MapPin } from 'lucide-react';
 
-const VISIBLE_BY_DEFAULT = 4;
+const VISIBLE_BY_DEFAULT = 5;
 
 function formatWhen(value) {
   if (!value) return '';
@@ -84,6 +84,18 @@ export default function ParcelTimeline({ checkpoints = [] }) {
                   </span>
                 )}
               </p>
+              {/* DHL attaches a remark to the checkpoints that need one —
+                  what customs is waiting for, why a delivery was missed. It
+                  is the carrier writing about this parcel, so it is shown
+                  rather than summarised. */}
+              {checkpoint.remark && (
+                <p style={{
+                  margin: '4px 0 0', fontFamily: 'var(--font-sans)', fontSize: 12.5,
+                  color: 'var(--color-text-primary)', opacity: 0.85,
+                }}>
+                  {checkpoint.remark}
+                </p>
+              )}
             </li>
           );
         })}

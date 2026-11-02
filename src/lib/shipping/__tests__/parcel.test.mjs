@@ -1,10 +1,14 @@
 /**
- * parcel.test.mjs — how a tracking response is read.
+ * parcel.test.mjs — how a DHL tracking response is read.
  *
  * WHAT THIS GUARDS. The interface was built before the DHL account existed,
- * against DHL's documented response shape. The risk that carries is that the
- * translation is wrong in a way nobody notices until a real parcel is in the
- * air — and the two mistakes that would matter are both about overstating
+ * against DHL's documented Shipment Tracking — Unified response. The risk
+ * that carries is that the translation is wrong in a way nobody notices until
+ * a real parcel is in the air, so the fixture here is a response body in
+ * DHL's own shape and wording, and every assertion is made through the same
+ * `normaliseParcel` the live API will go through.
+ *
+ * The two mistakes that would matter most are both about overstating
  * progress: drawing a held parcel as one happily in transit, and leaving a
  * delivered one short of the end because DHL's summary lags its own events.
  *
@@ -14,23 +18,13 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import {
-  PARCEL_STATUS, normaliseParcel, stageIndex, trackingUrlFor,
-} from '../parcel.js';
+import { PARCEL_STATUS, normaliseParcel, stageIndex, trackingUrlFor } from '../parcel.js';
+import { dhlTrackingResponse } from '../fixtures.js';
 
-// A trimmed copy of DHL's Shipment Tracking response shape.
-const dhlResponse = (events, status = {}) => ({
-  shipments: [{
-    id: '1234567890',
-    service: 'express',
-    status: { statusCode: 'transit', description: 'In transit', ...status },
-    estimatedTimeOfDelivery: '2026-11-08T17:00:00',
-    origin:      { address: { addressLocality: 'Nairobi, KE' } },
-    destination: { address: { addressLocality: 'Seoul, KR' } },
-    details:     { weight: { value: 0.85, unitText: 'kg' }, totalNumberOfPieces: 1 },
-    events,
-  }],
-});
+const WAYBILL = '1234567893';
+const read = (state) => normaliseParcel(dhlTrackingResponse(WAYBILL, state));
+
+// ─── What the order alone knows, before DHL is connected ─────────────────────
 
 test('an order with no waybill is not booked, and says nothing more', () => {
   const parcel = normaliseParcel({
@@ -62,88 +56,102 @@ test('the order status carries a hand-booked parcel until DHL is connected', () 
   assert.equal(parcel.status, PARCEL_STATUS.IN_TRANSIT);
 });
 
-test("DHL's own response is read whole", () => {
-  const parcel = normaliseParcel(dhlResponse([
-    { timestamp: '2026-11-02T09:10:00', description: 'Shipment picked up',
-      location: { address: { addressLocality: 'Nairobi, KE' } } },
-    { timestamp: '2026-11-03T04:40:00', description: 'Processed at DHL facility',
-      location: { address: { addressLocality: 'Dubai, AE' } } },
-  ]));
+// ─── The real response, read whole ───────────────────────────────────────────
 
-  assert.equal(parcel.status, PARCEL_STATUS.IN_TRANSIT);
-  assert.equal(parcel.trackingNumber, '1234567890');
+test("the shipment's own details are read, not just its status", () => {
+  const parcel = read('in_transit');
+
+  assert.equal(parcel.trackingNumber, WAYBILL);
+  assert.equal(parcel.service, 'express');
+  assert.equal(parcel.productName, 'EXPRESS WORLDWIDE');
+  assert.equal(parcel.pieces.total, 1);
+  assert.deepEqual(parcel.pieces.ids, [`JD${WAYBILL}0001`]);
   assert.equal(parcel.weightKg, 0.85);
-  assert.equal(parcel.pieces, 1);
-  assert.equal(parcel.origin, 'Nairobi, KE');
-  assert.equal(parcel.destination, 'Seoul, KR');
-  assert.equal(parcel.estimatedDelivery, '2026-11-08T17:00:00');
-  assert.equal(parcel.checkpoints.length, 2);
+  assert.deepEqual(parcel.dimensions, { length: 24, width: 16, height: 9, unit: 'cm' });
+  assert.equal(parcel.references[0].number, 'ORD-7K3M2P91');
+});
+
+test('origin and destination keep their country, not just a city', () => {
+  const parcel = read('in_transit');
+
+  assert.equal(parcel.origin.locality, 'NAIROBI - KENYA');
+  assert.equal(parcel.origin.countryCode, 'KE');
+  assert.equal(parcel.destination.locality, 'SEOUL - KOREA, REPUBLIC OF');
+  assert.equal(parcel.destination.countryCode, 'KR');
+});
+
+test("DHL's own tracking link is preferred over one we build", () => {
+  const parcel = read('in_transit');
+  assert.equal(parcel.trackingUrl, dhlTrackingResponse(WAYBILL).shipments[0].serviceUrl);
+});
+
+test('the delivery window is kept, not flattened to a date', () => {
+  const parcel = read('in_transit');
+
+  assert.ok(parcel.estimatedDelivery);
+  assert.ok(parcel.estimatedWindow.from);
+  assert.ok(parcel.estimatedWindow.to);
+  assert.ok(Date.parse(parcel.estimatedWindow.to) > Date.parse(parcel.estimatedWindow.from));
+});
+
+test('On Demand Delivery is offered only when DHL offers it', () => {
+  assert.ok(read('in_transit').rerouteUrl, 'in transit — DHL offers a reroute');
+  assert.equal(read('collected').rerouteUrl, null, 'too early to reroute');
+  assert.equal(read('delivered').rerouteUrl, null, 'too late to reroute');
 });
 
 test('checkpoints come back newest first', () => {
-  const parcel = normaliseParcel(dhlResponse([
-    { timestamp: '2026-11-02T09:10:00', description: 'Shipment picked up' },
-    { timestamp: '2026-11-04T11:00:00', description: 'Arrived at destination' },
-    { timestamp: '2026-11-03T04:40:00', description: 'Processed at DHL facility' },
-  ]));
+  const { checkpoints } = read('in_transit');
 
-  assert.deepEqual(parcel.checkpoints.map((c) => c.description), [
-    'Arrived at destination',
-    'Processed at DHL facility',
-    'Shipment picked up',
-  ]);
+  assert.equal(checkpoints[0].description, 'Processed at SEOUL - KOREA, REPUBLIC OF');
+  assert.equal(checkpoints.at(-1).description, 'Shipment information received');
+  for (let i = 1; i < checkpoints.length; i += 1) {
+    assert.ok(Date.parse(checkpoints[i - 1].at) >= Date.parse(checkpoints[i].at));
+  }
 });
 
-test('a parcel on the van is out for delivery, not merely in transit', () => {
-  const parcel = normaliseParcel(dhlResponse([
-    { timestamp: '2026-11-08T07:30:00', description: 'With delivery courier' },
-  ], { description: 'With delivery courier' }));
+// ─── The readings that would be wrong in a costly way ────────────────────────
+
+test('a parcel on the van is out for delivery even when the summary lags', () => {
+  const parcel = read('out_for_delivery');
 
   assert.equal(parcel.status, PARCEL_STATUS.OUT_FOR_DELIVERY);
   assert.ok(stageIndex(parcel.status) > stageIndex(PARCEL_STATUS.IN_TRANSIT));
 });
 
-test('a parcel on the van is out for delivery even when the summary lags', () => {
-  // The summary is left at its default "In transit" on purpose: that is what
-  // DHL actually sends while the courier is already carrying the box.
-  const parcel = normaliseParcel(dhlResponse([
-    { timestamp: '2026-11-08T07:30:00', description: 'Out for delivery' },
-    { timestamp: '2026-11-07T22:10:00', description: 'Arrived at delivery facility' },
-  ]));
-
-  assert.equal(parcel.status, PARCEL_STATUS.OUT_FOR_DELIVERY);
-});
-
-test('a customs hold is an exception even while DHL still says transit', () => {
+test('a customs hold is an exception, and DHL says why and what follows', () => {
   //
-  // This is the one that matters. DHL keeps the summary statusCode at
+  // This is the one that matters. DHL leaves the summary statusCode at
   // `transit` through a clearance delay, so reading the code alone would draw
   // a stuck parcel as one on its way and the customer would wait in silence.
   //
-  const parcel = normaliseParcel(dhlResponse([
-    { timestamp: '2026-11-06T12:00:00', description: 'Clearance delay' },
-  ]));
+  const parcel = read('exception');
 
   assert.equal(parcel.status, PARCEL_STATUS.EXCEPTION);
+  assert.match(parcel.checkpoints[0].description, /Clearance delay/);
+  assert.match(parcel.statusRemark, /commercial invoice/);
+  assert.match(parcel.nextSteps, /No action is needed from you/);
 });
 
-test('a delivery checkpoint outranks a lagging summary status', () => {
-  const parcel = normaliseParcel(dhlResponse([
-    { timestamp: '2026-11-08T14:02:00', description: 'Delivered - Signed for by: KIM' },
-  ]));
+test('a delivery is read from the checkpoint, with the name that signed', () => {
+  const parcel = read('delivered');
 
   assert.equal(parcel.status, PARCEL_STATUS.DELIVERED);
-  assert.equal(parcel.deliveredAt, '2026-11-08T14:02:00');
+  assert.equal(parcel.signedBy, 'J. KIM');
+  assert.ok(parcel.deliveredAt);
+  assert.match(parcel.proofOfDelivery.documentUrl, /pod\?awb=/);
+  assert.equal(parcel.proofOfDelivery.signed, true);
 });
 
+// ─── Not translating twice, and not inventing ────────────────────────────────
+
 test('an already-normalised parcel is passed through untouched', () => {
-  const once  = normaliseParcel(dhlResponse([
-    { timestamp: '2026-11-02T09:10:00', description: 'Shipment picked up' },
-  ]));
+  const once  = read('in_transit');
   const twice = normaliseParcel(once);
 
   assert.equal(twice.status, once.status);
   assert.equal(twice.trackingNumber, once.trackingNumber);
+  assert.equal(twice.productName, once.productName);
   assert.deepEqual(twice.checkpoints, once.checkpoints);
 });
 
@@ -152,7 +160,11 @@ test('nothing is invented when the response is empty', () => {
 
   assert.equal(parcel.status, PARCEL_STATUS.NOT_BOOKED);
   assert.equal(parcel.estimatedDelivery, null);
+  assert.equal(parcel.estimatedWindow, null);
   assert.equal(parcel.weightKg, null);
+  assert.equal(parcel.dimensions, null);
+  assert.equal(parcel.proofOfDelivery, null);
   assert.equal(parcel.trackingNumber, null);
+  assert.deepEqual(parcel.references, []);
   assert.equal(trackingUrlFor(null), null);
 });

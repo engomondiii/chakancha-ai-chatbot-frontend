@@ -22,6 +22,7 @@ import { ENDPOINTS } from './endpoints';
 // ReferenceError the moment the page hydrates.
 //
 import { normaliseParcel, trackingUrlFor } from '@/lib/shipping/parcel';
+import { dhlTrackingResponse } from '@/lib/shipping/fixtures';
 
 export {
   PARCEL_STAGES, PARCEL_STATUS, stageIndex, normaliseParcel, trackingUrlFor,
@@ -75,31 +76,45 @@ export async function trackParcel(trackingNumber) {
   }
 }
 
-/** A plausible Nairobi → Seoul parcel, for building screens against. */
-function developmentParcel(waybill) {
-  const daysAgo = (days) => new Date(Date.now() - days * 86400000).toISOString();
+//
+// Which parcel the fixture hands back is chosen by the LAST DIGIT of the
+// number typed in, so every state the interface can draw is reachable from
+// the search box without editing code:
+//
+//   …0  nothing booked yet        …4  out for delivery
+//   …1  label made, not collected …5  delivered, with proof of delivery
+//   …2  collected                 …6  held at customs (an exception)
+//   …3  in transit (anything else)
+//
+const DEVELOPMENT_STATES = {
+  0: 'not_booked',
+  1: 'booked',
+  2: 'collected',
+  3: 'in_transit',
+  4: 'out_for_delivery',
+  5: 'delivered',
+  6: 'exception',
+};
 
-  return normaliseParcel({
-    shipments: [{
-      id: waybill,
-      service: 'express',
-      status: { statusCode: 'transit', description: 'In transit' },
-      estimatedTimeOfDelivery: new Date(Date.now() + 2 * 86400000).toISOString(),
-      origin:      { address: { addressLocality: 'Nairobi, KE' } },
-      destination: { address: { addressLocality: 'Seoul, KR' } },
-      details:     { weight: { value: 0.85, unitText: 'kg' }, totalNumberOfPieces: 1 },
-      events: [
-        { timestamp: daysAgo(0.2), description: 'Arrived at Delivery Facility',
-          location: { address: { addressLocality: 'Incheon, KR' } } },
-        { timestamp: daysAgo(1),   description: 'Processed at DHL facility',
-          location: { address: { addressLocality: 'Dubai, AE' } } },
-        { timestamp: daysAgo(2),   description: 'Departed Facility',
-          location: { address: { addressLocality: 'Nairobi, KE' } } },
-        { timestamp: daysAgo(2.4), description: 'Shipment picked up',
-          location: { address: { addressLocality: 'Kapsabet, KE' } } },
-      ],
-    }],
-  });
+/**
+ * A DHL response for `waybill`, run through the same translation the real
+ * API's will be — the fixture is a response body, not a ready-made parcel,
+ * so building against it exercises `normaliseParcel` exactly as production
+ * will.
+ */
+function developmentParcel(waybill) {
+  const lastDigit = Number(String(waybill).replace(/\D/g, '').slice(-1));
+  const wanted    = DEVELOPMENT_STATES[lastDigit] || 'in_transit';
+
+  if (wanted === 'not_booked') {
+    return normaliseParcel({
+      tracking_number: null,
+      message: 'This order has not been dispatched yet. We will email you the '
+             + 'tracking number the moment it is booked.',
+    });
+  }
+
+  return normaliseParcel(dhlTrackingResponse(waybill, wanted));
 }
 
 export default { trackOrderParcel, trackParcel, normaliseParcel, trackingUrlFor };
