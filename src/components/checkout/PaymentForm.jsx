@@ -33,41 +33,71 @@ export function PaymentForm({ data, onChange, errors = {}, wiseAvailable = false
   // This used to ride on the price quote, which tied it to the cart, the
   // country, the coupon and an authenticated request — so a quote that failed
   // for any reason took a payment method down with it, silently. Whether the
-  // shop has a Wise account to be paid into has nothing to do with what is in
-  // anybody's basket.
+  // shop has a Stripe account, a PayPal account or a Wise account has nothing
+  // to do with what is in anybody's basket.
   //
-  // The quote's answer is still honoured when it arrives, so a shop that only
-  // runs the older backend keeps working.
+  // The answer covers every rail, not just Wise. It used to be read for Wise
+  // alone while Card and PayPal were offered unconditionally, so a shop whose
+  // Stripe or PayPal credentials were missing let the customer choose the
+  // method, fill the form, reach the end and collect a 503 — which is the
+  // exact failure the Wise check was added to prevent, two thirds unfixed.
   //
-  const [wiseFromServer, setWiseFromServer] = useState(null);
+  const [serverMethods, setServerMethods] = useState(null);
 
   useEffect(() => {
     let alive = true;
     api.get(ENDPOINTS.CHECKOUT.PAYMENT_METHODS)
-      .then((data) => {
-        if (!alive) return;
-        const wise = (data?.methods || []).find((m) => m.id === 'wise');
-        setWiseFromServer(Boolean(wise?.available));
-      })
-      .catch(() => { /* fall back to the quote's answer */ });
+      .then((payload) => { if (alive) setServerMethods(payload?.methods || []); })
+      .catch(() => { /* leave null; the fallbacks below stand */ });
     return () => { alive = false; };
   }, []);
 
-  const canUseWise = wiseFromServer ?? wiseAvailable;
+  //
+  // Until the answer arrives, card and PayPal are assumed available and Wise
+  // follows the quote. Assuming the common rails are up keeps the selector
+  // from flickering empty on first paint; a shop that cannot take one of them
+  // corrects the assumption a moment later, before anybody has committed.
+  //
+  const availability = (id, fallback) => {
+    if (!serverMethods) return fallback;
+    const found = serverMethods.find((entry) => entry.id === id);
+    return found ? Boolean(found.available) : fallback;
+  };
 
   //
-  // Selected something the shop cannot take? Fall back to card. Reachable when
-  // the answer arrives after first render, or when the shop's configuration
-  // changed between visits — a dead selection would otherwise be carried into
-  // the review step and refused at the end, after the customer had committed.
+  // Stripe needs a key on BOTH sides: the secret one on the server to raise
+  // the PaymentIntent, and the publishable one in the browser for Elements to
+  // confirm the card. The server can only answer for its own half. Without
+  // NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY the card field still renders — it just
+  // can never be confirmed — so the browser's half is checked here.
+  //
+  const browserCanConfirmCards = Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+
+  const canUseCard   = availability('card', true) && browserCanConfirmCards;
+  const canUsePaypal = availability('paypal', true);
+  const canUseWise   = availability('wise', wiseAvailable);
+
+  const offered = [
+    canUseCard   && 'card',
+    canUsePaypal && 'paypal',
+    canUseWise   && 'wise',
+  ].filter(Boolean);
+
+  //
+  // Selected something the shop cannot take? Move to the first rail it can.
+  // Reachable when the answer arrives after first render, or when the shop's
+  // configuration changed between visits — a dead selection would otherwise be
+  // carried into the review step and refused at the end, after the customer
+  // had committed.
   //
   useEffect(() => {
-    if (method === 'wise' && wiseFromServer === false) {
-      setMethod('card');
-      onChange({ ...data, method: 'card' });
+    if (!serverMethods || offered.length === 0) return;
+    if (!offered.includes(method)) {
+      setMethod(offered[0]);
+      onChange({ ...data, method: offered[0] });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wiseFromServer, method]);
+  }, [serverMethods, method, offered.join(',')]);
 
   const update = (key, val) => onChange({ ...data, method, [key]: val });
 
@@ -84,10 +114,22 @@ export function PaymentForm({ data, onChange, errors = {}, wiseAvailable = false
         money. An option that dead-ends after the customer has committed is
         worse than no option.
       */}
+      {offered.length === 0 && serverMethods && (
+        <p style={{
+          fontFamily: 'var(--font-sans)', fontSize: 13.5, margin: 0,
+          color: 'var(--color-text-primary)', backgroundColor: 'rgba(224,163,58,0.1)',
+          border: '1px solid rgba(224,163,58,0.4)', borderRadius: 'var(--radius-md)',
+          padding: 'var(--spacing-md)',
+        }}>
+          We cannot take a payment online just now. Email contact@chakancha.com and
+          we will arrange it with you — your basket is saved.
+        </p>
+      )}
+
       <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
         {[
-          { id: 'card',   label: '💳 Card (Visa / MC / Amex)' },
-          { id: 'paypal', label: '🅿️ PayPal'                  },
+          ...(canUseCard   ? [{ id: 'card',   label: '💳 Card (Visa / MC / Amex)' }] : []),
+          ...(canUsePaypal ? [{ id: 'paypal', label: '🅿️ PayPal'                  }] : []),
           //
           // Wise's own wordmark rather than a bank emoji: this names a
           // specific company a customer is choosing to pay through, and a
