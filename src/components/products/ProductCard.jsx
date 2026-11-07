@@ -10,7 +10,7 @@
 
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ShoppingCart, ArrowRight } from "lucide-react";
 
@@ -20,21 +20,15 @@ import { LogoMark } from "@/components/common/Logo";
 import styles from "./ProductCard.module.css";
 
 /**
- * Videos per tea, played in the card's photo area while the mouse is away;
- * the product photo takes over on hover.
+ * The video set on this tea in the admin, if there is one.
  *
- * These are only a fallback: the video is a field on the product now, so staff
- * set it per tea in the admin (Products → a tea → Card video). A tea with no
- * video, here or in the admin, simply keeps its photo.
+ * There is no list of videos in this file and there should never be one
+ * again. Staff set the clip per tea (Products, a tea, Card video) and it is
+ * stored with the product, so a tea with no video simply shows its photo.
+ * A hardcoded map cannot tell those two cases apart, and the one that used
+ * to live here quietly gave two teas the same clip for weeks.
  */
-const PRODUCT_VIDEOS = {
-  "nandi-gold": "/videos/tea-prep.mp4",
-  "nandi-black-tea": "/videos/tea-prep.mp4",
-};
 
-/**
- * The video set on the product in the admin, if there is one.
- */
 function getProductVideo(product) {
   const value =
     product.videoUrl ||
@@ -95,14 +89,73 @@ export function ProductCard({
    * A video can go missing — the admin's upload lives on the server's disk,
    * and a deploy replaces that disk unless a volume is mounted. When the file
    * 404s the browser raises an error on the element and the panel would sit
-   * there empty, so the card steps down: first to the video shipped with the
-   * site, then to the product photo on its own.
+   * there empty, so the card drops the video and shows the photo, which
+   * is what a tea with no video shows anyway.
    */
   const [deadVideos, setDeadVideos] = useState([]);
 
+  /*
+   * Whether this card has reached the screen.
+   *
+   * Every card used to mount an autoplaying, looping video the moment the
+   * grid rendered, on screen or not. A page of teas therefore held one video
+   * decoding per card, for as long as the page was open, and the decoding was
+   * the expensive half — far more than the download. That is what made the
+   * product section stutter and the tab hang.
+   *
+   * The video is now mounted only once the card nears the viewport, and
+   * paused whenever it leaves. It stays mounted after that, so scrolling back
+   * up resumes rather than downloading again.
+   */
+  const wrapperRef = useRef(null);
+  const [inView, setInView] = useState(false);
+  const inViewRef = useRef(false);
+
+  // Hover reveals the photo, so returning to view must not fight it.
+  const hoveredRef = useRef(false);
+
+  useEffect(() => {
+    const node = wrapperRef.current;
+    if (!node) return undefined;
+
+    // Without the API, behave as before: show everything, play everything.
+    if (typeof IntersectionObserver === "undefined") {
+      inViewRef.current = true;
+      setInView(true);
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        inViewRef.current = entry.isIntersecting;
+        // Once mounted it stays mounted; only playback follows visibility.
+        setInView((seen) => seen || entry.isIntersecting);
+
+        const element = videoRef.current;
+        if (!element) return;
+
+        if (!entry.isIntersecting) {
+          element.pause();
+        } else if (!hoveredRef.current) {
+          element.play().catch(() => {});
+        }
+      },
+      // Begin just before the card arrives rather than as it lands.
+      { rootMargin: "200px 0px", threshold: 0 },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
   // The photo covers the video on hover, so there is nothing to play then.
-  const showPhoto = () => videoRef.current?.pause();
+  const showPhoto = () => {
+    hoveredRef.current = true;
+    videoRef.current?.pause();
+  };
   const showVideo = () => {
+    hoveredRef.current = false;
+    if (!inViewRef.current) return;
     videoRef.current?.play().catch(() => {
       // Autoplay may be blocked; the poster (the product photo) stays.
     });
@@ -125,10 +178,9 @@ export function ProductCard({
   const slug = product.slug || "";
   const price = Number.parseFloat(product.price) || 0;
   const image = getProductImage(product);
+  const uploadedVideo = getProductVideo(product);
   const video =
-    [getProductVideo(product), PRODUCT_VIDEOS[slug]].find(
-      (candidate) => candidate && !deadVideos.includes(candidate),
-    ) || null;
+    uploadedVideo && !deadVideos.includes(uploadedVideo) ? uploadedVideo : null;
 
   const flavorProfile =
     product.flavorProfile ||
@@ -247,6 +299,7 @@ export function ProductCard({
       </div>
 
       <Link
+        ref={wrapperRef}
         href={productHref}
         className={`${styles.imageWrapper} ${video ? styles.hasVideo : ""}`}
         aria-label={`View ${name}`}
@@ -255,7 +308,7 @@ export function ProductCard({
         onFocus={showPhoto}
         onBlur={showVideo}
       >
-        {image && video && (
+        {image && video && inView && (
           <video
             ref={videoRef}
             className={styles.video}
