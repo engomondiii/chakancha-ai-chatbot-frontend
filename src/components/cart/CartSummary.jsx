@@ -30,7 +30,6 @@ export function CartSummary({ onCheckout, compact = false }) {
 
   const cartItems     = useStore((s) => s.cartItems);
   const cartSubtotal  = useStore((s) => s.cartSubtotal);
-  const cartShipping  = useStore((s) => s.cartShipping);
   const cartTax       = useStore((s) => s.cartTax);
   const cartTotal     = useStore((s) => s.cartTotal);
   const cartDiscount  = useStore((s) => s.cartDiscount);
@@ -85,7 +84,6 @@ export function CartSummary({ onCheckout, compact = false }) {
   const num       = (v, fallback) => (v === undefined || v === null ? fallback : Number(v));
   const dSubtotal = quote ? num(quote.subtotal,      cartSubtotal) : cartSubtotal;
   const dDiscount = quote ? num(quote.discount,      cartDiscount) : cartDiscount;
-  const dShipping = quote ? num(quote.shipping_cost, cartShipping) : cartShipping;
   const dTax      = quote ? num(quote.tax,           cartTax)      : cartTax;
   const dTotal    = quote ? num(quote.total,         cartTotal)    : cartTotal;
   const dLabel    = quote ? (quote.discount_label || 'Discount')
@@ -226,23 +224,22 @@ export function CartSummary({ onCheckout, compact = false }) {
 
         {countryKnown ? (
           <>
-            <TotalRow
-              label="Shipping"
-              value={dShipping === 0 ? 'Free' : fmt(dShipping)}
-              valueColor={dShipping === 0 ? 'var(--color-success)' : undefined}
-            />
             <TotalRow label="Tax" value={dTax > 0 ? fmt(dTax) : 'Calculated at checkout'} small />
             <TotalRow label="Total" value={fmt(dTotal)} bold />
+            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12,
+              color: 'var(--color-text-secondary)', margin: '2px 0 0' }}>
+              There is no extra charge beyond your total.
+            </p>
           </>
         ) : (
           <>
-            <TotalRow label="Shipping" value="Calculated at checkout" small />
             <TotalRow label="Tax"      value="Calculated at checkout" small />
             <TotalRow label="Estimated total" value={fmt(dSubtotal - dDiscount)} bold />
             <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12,
               color: 'var(--color-text-secondary)', margin: '2px 0 0' }}>
-              Shipping and tax are calculated at checkout once your delivery
-              country is known. Your final total is shown before payment.
+              Delivery is included in the price, so only tax is still to be
+              worked out — it needs your country. There is no extra charge
+              beyond your total.
             </p>
           </>
         )}

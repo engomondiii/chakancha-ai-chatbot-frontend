@@ -125,9 +125,17 @@ export function ShippingCalculator({ orderSubtotal = 0, onEstimate }) {
                 Shipped via {result.zone?.carrier || 'DHL Express'}
               </p>
             </div>
+            {/*
+              No figure here. Delivery is included in the price, so the only
+              honest number is the one already in the total -- and a price
+              beside a carrier name reads as something to be added to it. The
+              zone, the carrier and how long it takes are all still worth
+              showing: those are not costs, they are what the customer is
+              actually choosing between.
+            */}
             <span style={{ fontFamily: 'var(--font-sans)', fontSize: 15, fontWeight: 700,
-              color: result.cost === 0 ? 'var(--color-success)' : 'var(--color-earth-brown)' }}>
-              {result.cost === 0 ? 'Free' : formatCurrency(result.cost, 'USD')}
+              color: 'var(--color-success)' }}>
+              Included
             </span>
           </div>
         </div>

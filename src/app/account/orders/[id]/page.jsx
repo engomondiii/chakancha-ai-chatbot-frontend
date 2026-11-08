@@ -206,7 +206,17 @@ export default function OrderDetailPage() {
       <Panel title="What it cost">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <Line label="Tea"      value={money(order.subtotal, currency)} />
-          <Line label="Shipping" value={Number(order.shipping_cost) ? money(order.shipping_cost, currency) : 'Free'} />
+          {/*
+            Shown only when this order actually paid for carriage. Orders placed
+            since delivery was included in the price have nothing to show, and a
+            "Free" row on them invites the question of what it would otherwise
+            have cost. Older orders did pay it, so their receipt keeps saying so
+            -- a receipt that disagrees with the card statement is worse than a
+            row nobody needed.
+          */}
+          {Number(order.shipping_cost) > 0 && (
+            <Line label="Shipping" value={money(order.shipping_cost, currency)} />
+          )}
           {Number(order.tax) > 0      && <Line label="Tax"      value={money(order.tax, currency)} />}
           {Number(order.discount) > 0 && <Line label="Discount" value={`−${money(order.discount, currency)}`} />}
           <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 10 }}>

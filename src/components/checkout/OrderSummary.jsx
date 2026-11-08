@@ -27,7 +27,6 @@ function formatDeliveryEstimate(minDays, maxDays) {
 export function OrderSummary({ shippingCountry, quote = null, applyCredit = false }) {
   const cartItems     = useStore((s) => s.cartItems);
   const cartSubtotal  = useStore((s) => s.cartSubtotal);
-  const cartShipping  = useStore((s) => s.cartShipping);
   const cartTax       = useStore((s) => s.cartTax);
   const cartTotal     = useStore((s) => s.cartTotal);
   const cartDiscount  = useStore((s) => s.cartDiscount);
@@ -111,11 +110,6 @@ export function OrderSummary({ shippingCountry, quote = null, applyCredit = fals
             green
           />
         )}
-        <Row label="Shipping"
-             value={(quote ? Number(quote.shipping_cost) : cartShipping) === 0
-               ? 'Free'
-               : fmt(quote ? Number(quote.shipping_cost) : cartShipping)}
-             green={(quote ? Number(quote.shipping_cost) : cartShipping) === 0} />
         <Row label={quote ? 'Tax' : 'Est. Tax'}
              value={(quote ? Number(quote.tax) : cartTax) > 0
                ? fmt(quote ? Number(quote.tax) : cartTax)
@@ -124,6 +118,23 @@ export function OrderSummary({ shippingCountry, quote = null, applyCredit = fals
         <div style={{ height: 1, backgroundColor: 'var(--color-border)', margin: '4px 0' }} />
         <Row label="Total"
              value={fmt(quote ? Number(quote.total) : cartTotal)} bold />
+
+        {/*
+          Shipping is included in the price of the tea, so there is no carriage
+          row to show and nothing is added after this point. The line says so
+          rather than leaving the customer to infer it from an absence --
+          people read a missing shipping row as "not calculated yet", which is
+          the opposite of what is true here.
+        */}
+        <p style={{
+          margin: 0,
+          fontFamily: 'var(--font-sans)',
+          fontSize: 12,
+          lineHeight: 1.4,
+          color: 'var(--color-text-secondary)',
+        }}>
+          There is no extra charge beyond your total.
+        </p>
 
         {/*
           Credit is shown BELOW the total, not as a discount above it. It does
