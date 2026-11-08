@@ -1,0 +1,51 @@
+/*
+ * ShopSection — a titled run of cards below the tea grid.
+ *
+ * Deliberately quieter than the tea grid above it: same card, smaller heading,
+ * more air before it. The teas are what the shop is for; these are what you
+ * notice once you have chosen one.
+ */
+
+.section {
+  margin-top: var(--spacing-3xl);
+}
+
+.heading {
+  margin-bottom: var(--spacing-lg);
+}
+
+.title {
+  margin: 0 0 4px;
+
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--color-earth-brown);
+
+  text-wrap: balance;
+}
+
+.blurb {
+  margin: 0;
+
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+/*
+ * One column on a phone, two above it. The card is wide rather than tall --
+ * text on the left, picture on the right -- so three across would leave the
+ * text column too narrow to read.
+ */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-lg);
+}
+
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

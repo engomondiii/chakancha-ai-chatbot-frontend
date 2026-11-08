@@ -18,24 +18,37 @@ export function CartItem({ item }) {
 
   if (!item) return null;
 
-  const { id, name, price, image, quantity, category } = item;
+  const { id, name, price, image, quantity, category, selections } = item;
   const lineTotal = (price * quantity).toFixed(2);
 
+  //
+  // Every change to this line names the choice as well as the product. Two
+  // bundles can be the same product at the same price and still be different
+  // orders, so passing the id alone would change whichever of them the store
+  // happened to find first.
+  //
   const handleRemove = () => {
     setRemoving(true);
     // Small delay so the animation can play before DOM removal
-    setTimeout(() => removeFromCart(id), 220);
+    setTimeout(() => removeFromCart(id, selections), 220);
   };
 
   const handleQtyDown = () => {
     if (quantity <= 1) { handleRemove(); return; }
-    updateQuantity(id, quantity - 1);
+    updateQuantity(id, quantity - 1, selections);
   };
 
   const handleQtyUp = () => {
     if (quantity >= 10) return;
-    updateQuantity(id, quantity + 1);
+    updateQuantity(id, quantity + 1, selections);
   };
+
+  //
+  // What is in this bundle, shown under its name. Without it the cart holds
+  // two identical-looking $100 lines and the customer has no way to tell which
+  // is which -- or to notice they picked the same thing twice.
+  //
+  const chosenTeas = Array.isArray(selections?.teas) ? selections.teas : [];
 
   return (
     <div
@@ -114,6 +127,18 @@ export function CartItem({ item }) {
         >
           {name}
         </p>
+
+        {chosenTeas.length > 0 && (
+          <p style={{
+            fontFamily: 'var(--font-sans)',
+            fontSize: 12,
+            lineHeight: 1.4,
+            color: 'var(--color-text-secondary)',
+            margin: '0 0 6px',
+          }}>
+            {chosenTeas.join(' + ')}
+          </p>
+        )}
 
         {/* Quantity + price row */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>

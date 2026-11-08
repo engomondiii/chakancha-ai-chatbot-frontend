@@ -589,3 +589,70 @@
     font-size: var(--font-size-small);
   }
 }
+/*
+ * ── Bundle picker ───────────────────────────────────────────────────────────
+ *
+ * Sits between the description and the price, where the customer reads it
+ * before deciding rather than after. Quiet on purpose: it is a choice about
+ * the product, not another thing competing with "Add to cart".
+ */
+.bundlePicker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  margin-bottom: var(--spacing-md);
+}
+
+.bundleLabel {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.bundleSlot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  /* Long tea names must shrink the select rather than widen the card. */
+  min-width: 0;
+}
+
+.bundleSlotNumber {
+  flex: none;
+
+  width: 18px;
+
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
+
+.bundleSelect {
+  flex: 1;
+  min-width: 0;
+
+  padding: 7px 10px;
+
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--color-text-primary);
+
+  background-color: var(--color-surface, #fff);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+
+  cursor: pointer;
+
+  transition: border-color var(--transition-fast) var(--ease-out);
+}
+
+.bundleSelect:hover,
+.bundleSelect:focus-visible {
+  border-color: var(--color-sunrise-gold);
+}

@@ -110,6 +110,11 @@ export function ProductCard({
   const wrapperRef = useRef(null);
   const [inView, setInView] = useState(false);
 
+  //
+  // One slug per slot in the bundle. Empty for anything that is not one.
+  //
+  const [picks, setPicks] = useState([]);
+
   // Genuinely on screen, as opposed to merely close to it. Playback follows
   // this; mounting follows inView.
   const visibleRef = useRef(false);
@@ -245,6 +250,28 @@ export function ProductCard({
       ? product.inStock
       : product.in_stock !== false;
 
+  //
+  // A bundle is one product at one price whose contents the customer chooses.
+  // bundleSize is how many they pick; options is what they may pick from,
+  // resolved by the backend per request so a tea that sells out leaves the
+  // list without anybody editing the bundle.
+  //
+  const isBundle = (product.kind || "tea") === "bundle";
+  const bundleSize = Number(product.bundleSize ?? product.bundle_size) || 0;
+  const bundleOptions = Array.isArray(product.bundleOptions)
+    ? product.bundleOptions
+    : Array.isArray(product.bundle_options)
+      ? product.bundle_options
+      : [];
+
+  //
+  // Default every slot to the first tea on offer, so the bundle can be added
+  // in one click. An empty slot would make the customer choose before they
+  // know what the choice is worth, and the commonest basket is two of the
+  // same thing anyway.
+  //
+  const firstOption = bundleOptions[0]?.slug || "";
+
   const productHref = slug
     ? `/products/${slug}`
     : "/products";
@@ -263,9 +290,26 @@ export function ProductCard({
 
     setAdding(true);
 
-    addToCart(product, 1);
+    //
+    // A slot the customer never touched still has to carry a tea, or the
+    // backend refuses the bundle for having the wrong number. Defaulting to
+    // the first on offer matches what the pickers are already showing them.
+    //
+    const selections = isBundle
+      ? {
+          teas: Array.from({ length: bundleSize }, (_, slot) =>
+            picks[slot] || firstOption,
+          ).filter(Boolean),
+        }
+      : null;
+
+    addToCart(product, 1, selections);
     openCart();
-    showSuccess(`${name} added to cart`);
+    showSuccess(
+      selections?.teas?.length
+        ? `${name} (${selections.teas.join(" + ")}) added to cart`
+        : `${name} added to cart`,
+    );
 
     window.setTimeout(() => {
       setAdding(false);
@@ -295,6 +339,43 @@ export function ProductCard({
           <p className={styles.summary}>
             {shortDescription}
           </p>
+        )}
+
+        {/*
+          The pickers, one per slot. Shown only on a bundle that actually has
+          teas to offer: a bundle whose every tea is out of stock has nothing
+          to ask about, and an empty dropdown is worse than none.
+        */}
+        {isBundle && bundleOptions.length > 0 && (
+          <div className={styles.bundlePicker}>
+            <span className={styles.bundleLabel}>
+              Choose your {bundleSize} teas
+            </span>
+
+            {Array.from({ length: bundleSize }, (_, slot) => (
+              <label key={slot} className={styles.bundleSlot}>
+                <span className={styles.bundleSlotNumber}>{slot + 1}</span>
+                <select
+                  className={styles.bundleSelect}
+                  value={picks[slot] || firstOption}
+                  onChange={(event) => {
+                    const chosen = event.target.value;
+                    setPicks((current) => {
+                      const next = [...current];
+                      next[slot] = chosen;
+                      return next;
+                    });
+                  }}
+                >
+                  {bundleOptions.map((option) => (
+                    <option key={option.slug} value={option.slug}>
+                      {option.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ))}
+          </div>
         )}
 
         <div className={styles.productActions}>

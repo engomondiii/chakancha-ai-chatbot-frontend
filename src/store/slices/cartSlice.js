@@ -62,6 +62,26 @@ function round(v) { return Math.round(v * 100) / 100; }
 
 // ─── Slice ────────────────────────────────────────────────────────────────────
 
+/**
+ * The identity of a cart line.
+ *
+ * A product id alone is not enough once a bundle exists: two Nandi Gold and
+ * one-of-each are the same product at the same price and different orders, and
+ * keying on the id would merge them into one line that ships the wrong tea.
+ *
+ * Sorted, so picking Gold-then-Black and Black-then-Gold is one line rather
+ * than two -- the customer chose the same two teas and would not expect the
+ * order they clicked in to matter. This mirrors CartItem.key_for on the
+ * backend; the two must agree or a cart will look different after it syncs.
+ */
+function lineKey(productId, selections) {
+  const teas = selections?.teas;
+  if (!Array.isArray(teas) || teas.length === 0) {
+    return String(productId);
+  }
+  return `${productId}::${[...teas].map(String).sort().join(',')}`;
+}
+
 export const createCartSlice = (set, get) => ({
   cartItems:     [],
   appliedCoupon: null,
@@ -84,14 +104,15 @@ export const createCartSlice = (set, get) => ({
 
   setShippingCountry: (country) => set({ shippingCountry: country || '' }),
 
-  addToCart: (product, quantity = 1) => {
+  addToCart: (product, quantity = 1, selections = null) => {
     const MAX_QTY = 10;
+    const key = lineKey(product.id, selections);
     set((s) => {
-      const existing = s.cartItems.find((i) => i.id === product.id);
+      const existing = s.cartItems.find((i) => lineKey(i.id, i.selections) === key);
       let cartItems;
       if (existing) {
         cartItems = s.cartItems.map((i) =>
-          i.id === product.id
+          lineKey(i.id, i.selections) === key
             ? { ...i, quantity: Math.min(i.quantity + quantity, MAX_QTY) }
             : i
         );
@@ -108,6 +129,8 @@ export const createCartSlice = (set, get) => ({
             category: product.category?.name || product.category || '',
             quantity: Math.min(quantity, MAX_QTY),
             inStock:  product.inStock !== false && product.in_stock !== false,
+            // What was chosen inside this line, for a bundle. Null otherwise.
+            selections: selections || null,
           },
         ];
       }
@@ -115,21 +138,33 @@ export const createCartSlice = (set, get) => ({
     });
   },
 
-  removeFromCart: (productId) => {
+  //
+  // These take the line's selections as well as its product id. An ordinary
+  // tea passes nothing and behaves exactly as before, because lineKey(id, null)
+  // is just the id. A bundle must pass them, or removing "two Gold" would also
+  // remove "one of each" -- same product, same price, different order.
+  //
+  removeFromCart: (productId, selections = null) => {
+    const key = lineKey(productId, selections);
     set((s) => {
-      const cartItems = s.cartItems.filter((i) => i.id !== productId);
+      const cartItems = s.cartItems.filter(
+        (i) => lineKey(i.id, i.selections) !== key);
       return { cartItems, ...computeTotals(cartItems, s.appliedCoupon) };
     });
   },
 
-  updateQuantity: (productId, quantity) => {
+  updateQuantity: (productId, quantity, selections = null) => {
+    const key = lineKey(productId, selections);
     set((s) => {
       let cartItems;
       if (quantity <= 0) {
-        cartItems = s.cartItems.filter((i) => i.id !== productId);
+        cartItems = s.cartItems.filter(
+          (i) => lineKey(i.id, i.selections) !== key);
       } else {
         cartItems = s.cartItems.map((i) =>
-          i.id === productId ? { ...i, quantity: Math.min(quantity, 10) } : i
+          lineKey(i.id, i.selections) === key
+            ? { ...i, quantity: Math.min(quantity, 10) }
+            : i
         );
       }
       return { cartItems, ...computeTotals(cartItems, s.appliedCoupon) };
@@ -152,8 +187,16 @@ export const createCartSlice = (set, get) => ({
   closeCart:  () => set({ isCartOpen: false }),
   toggleCart: () => set((s) => ({ isCartOpen: !s.isCartOpen })),
 
-  getCartItem: (productId) => get().cartItems.find((i) => i.id === productId) || null,
+  getCartItem: (productId, selections = null) => {
+    const key = lineKey(productId, selections);
+    return get().cartItems.find((i) => lineKey(i.id, i.selections) === key) || null;
+  },
 
+  //
+  // Deliberately the product, not the line: the button on a bundle card asks
+  // "is this bundle in the cart", and answering "only with those exact two
+  // teas" would show Add to cart beside a bundle already sitting in it.
+  //
   isInCart: (productId) => get().cartItems.some((i) => i.id === productId),
 
   getCartSummary: () => {

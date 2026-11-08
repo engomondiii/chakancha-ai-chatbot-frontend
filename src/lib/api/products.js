@@ -150,6 +150,24 @@ export function normalizeProduct(raw) {
 
     video_url: raw.video_url || raw.videoUrl || "",
 
+    //
+    // What kind of thing this is, and -- for a bundle -- how many teas the
+    // customer picks and which ones are on offer.
+    //
+    // "tea" when the backend does not say. Everything in the shop was a tea
+    // before kinds existed, so an older API should fill the tea section rather
+    // than leave every section empty.
+    //
+    kind: raw.kind || "tea",
+
+    bundleSize: Number(raw.bundle_size ?? raw.bundleSize) || 0,
+
+    bundle_size: Number(raw.bundle_size ?? raw.bundleSize) || 0,
+
+    bundleOptions: Array.isArray(raw.bundle_options) ? raw.bundle_options : [],
+
+    bundle_options: Array.isArray(raw.bundle_options) ? raw.bundle_options : [],
+
     description: raw.description || "",
 
     brewingTemp: raw.brewing_temp || raw.brewingTemp || "",

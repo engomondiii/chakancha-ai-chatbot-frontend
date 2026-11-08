@@ -18,6 +18,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { Truck, Heart, Star, ShieldCheck } from "lucide-react";
 import { ProductGrid } from "@/components/products/ProductGrid";
+import { ShopSection } from "@/components/products/ShopSection";
 import { useProducts, useProductCategories } from "@/lib/hooks/useProducts";
 import { LogoMark } from "@/components/common/Logo";
 
@@ -29,6 +30,19 @@ function ProductCatalog() {
     category: categoryParam,
   });
   const categories = useProductCategories();
+
+  //
+  // The shop sells three kinds of thing and shows each in its own section.
+  // A product with no kind is treated as a tea: that is what everything in
+  // the shop was before kinds existed, and an older backend that does not
+  // send the field should still fill the tea section rather than empty it.
+  //
+  const everything = Array.isArray(products) ? products : [];
+  const ofKind = (kind) => everything.filter((p) => (p?.kind || "tea") === kind);
+
+  const teas        = ofKind("tea");
+  const bundles     = ofKind("bundle");
+  const accessories = ofKind("accessory");
 
   return (
     <div
@@ -211,7 +225,7 @@ function ProductCatalog() {
           >
             {isLoading
               ? "Loading teas…"
-              : `${products?.length || 0} teas available — order by noon for same-day dispatch`}
+              : `${teas.length} teas available — order by noon for same-day dispatch`}
           </p>
         </div>
 
@@ -245,13 +259,37 @@ function ProductCatalog() {
         </div>
       </div>
 
-      {/* ── Product grid ─────────────────────────────────────────────────── */}
+      {/* ── The teas ─────────────────────────────────────────────────────── */}
+      {/*
+        Only the teas carry the category filters. A filter row above two
+        accessories would offer to narrow a list that is already as narrow as
+        it goes, and the categories it lists are tea categories.
+      */}
       <ProductGrid
-        products={products}
+        products={teas}
         isLoading={isLoading}
         error={error}
         showFilters
         categories={categories}
+      />
+
+      {/* ── Bundles and accessories ──────────────────────────────────────── */}
+      {/*
+        Each kind gets its own section rather than sitting among the teas,
+        because a $100 bundle beside a $70 tea reads as the more expensive tea
+        until you notice it is two of them.
+      */}
+      <ShopSection
+        title="Bundles"
+        blurb="Two teas together, at less than two teas."
+        products={bundles}
+        isLoading={isLoading}
+      />
+      <ShopSection
+        title="Keep it fresh"
+        blurb="Somewhere dark and airtight for the leaves to live."
+        products={accessories}
+        isLoading={isLoading}
       />
 
       {/* ── Bottom AI nudge ───────────────────────────────────────────────── */}
