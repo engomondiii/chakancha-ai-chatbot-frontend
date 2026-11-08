@@ -21,8 +21,8 @@ import {
 /*
  * Update these paths to the actual assets in /public.
  */
-const HERO_IMAGE = "/images/about/ckc-team-field.png";
-const TEAM_IMAGE = "/images/about/ckc-team.png";
+const HERO_IMAGE = "/images/about/ckc-team-field.webp";
+const TEAM_IMAGE = "/images/about/ckc-team.webp";
 
 const PILLARS = [
   {

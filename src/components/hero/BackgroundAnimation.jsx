@@ -6,8 +6,13 @@ const VIDEO_SRC = "/images/backgrounds/herovideo2.mp4";
 
 /*
  * Poster shown while the video loads.
+ *
+ * It is the video's own first frame, so there is no visual jump when playback
+ * starts. The previous poster was heroBg.svg — a Figma export that wrapped a
+ * base64 photo in SVG and weighed 2.6 MB, more than a third of the compressed
+ * video it was standing in for.
  */
-const POSTER_SRC = "/images/backgrounds/heroBg.svg";
+const POSTER_SRC = "/images/backgrounds/hero-poster.jpg";
 
 /*
  * Crossfade between the two video copies.

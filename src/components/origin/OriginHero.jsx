@@ -6,7 +6,7 @@ import { MapPin } from "lucide-react";
 import styles from "./OriginHero.module.css";
 
 export function OriginHero() {
-  const bgImage = "/images/backgrounds/beautiful-tea-fields.jpg";
+  const bgImage = "/images/backgrounds/beautiful-tea-fields.webp";
 
   return (
     <section className={styles.hero}>
