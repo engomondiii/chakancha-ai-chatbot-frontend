@@ -127,8 +127,22 @@ export function ProductCard({
    */
   const playIfWanted = () => {
     if (!visibleRef.current || hoveredRef.current) return;
-    videoRef.current?.play().catch(() => {
-      // Autoplay refused; the poster (the product photo) stays. Nothing breaks.
+
+    const element = videoRef.current;
+    if (!element) return;
+
+    //
+    // Set muted on the element rather than trusting the JSX attribute. React
+    // does not reliably apply `muted` to a video it creates on the client, and
+    // an unmuted video is one a browser will not autoplay at all -- it rejects
+    // play() with NotAllowedError and the card keeps showing its poster, which
+    // is the product photo, so it looks like no video was ever there.
+    //
+    element.muted = true;
+    element.playsInline = true;
+
+    element.play().catch(() => {
+      // Still refused; the poster stays. Nothing breaks, nothing is hidden.
     });
   };
 
