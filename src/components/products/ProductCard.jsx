@@ -109,10 +109,28 @@ export function ProductCard({
    */
   const wrapperRef = useRef(null);
   const [inView, setInView] = useState(false);
-  const inViewRef = useRef(false);
+
+  // Genuinely on screen, as opposed to merely close to it. Playback follows
+  // this; mounting follows inView.
+  const visibleRef = useRef(false);
 
   // Hover reveals the photo, so returning to view must not fight it.
   const hoveredRef = useRef(false);
+
+  /**
+   * Try to play, unless there is a reason not to.
+   *
+   * Called from several places because the element and its visibility arrive
+   * in either order: the observer can report the card visible before the video
+   * exists, and the video can finish loading after the observer has stopped
+   * firing. Whichever happens last starts it.
+   */
+  const playIfWanted = () => {
+    if (!visibleRef.current || hoveredRef.current) return;
+    videoRef.current?.play().catch(() => {
+      // Autoplay refused; the poster (the product photo) stays. Nothing breaks.
+    });
+  };
 
   useEffect(() => {
     const node = wrapperRef.current;
@@ -120,32 +138,49 @@ export function ProductCard({
 
     // Without the API, behave as before: show everything, play everything.
     if (typeof IntersectionObserver === "undefined") {
-      inViewRef.current = true;
+      visibleRef.current = true;
       setInView(true);
       return undefined;
     }
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        inViewRef.current = entry.isIntersecting;
-        // Once mounted it stays mounted; only playback follows visibility.
-        setInView((seen) => seen || entry.isIntersecting);
-
-        const element = videoRef.current;
-        if (!element) return;
-
-        if (!entry.isIntersecting) {
-          element.pause();
-        } else if (!hoveredRef.current) {
-          element.play().catch(() => {});
-        }
-      },
-      // Begin just before the card arrives rather than as it lands.
+    //
+    // Mount a little before the card arrives, so the first frame is decoded by
+    // the time it is on screen. Once mounted it stays mounted, and scrolling
+    // back up resumes instead of downloading again.
+    //
+    const preload = new IntersectionObserver(
+      ([entry]) => setInView((seen) => seen || entry.isIntersecting),
       { rootMargin: "200px 0px", threshold: 0 },
     );
 
-    observer.observe(node);
-    return () => observer.disconnect();
+    //
+    // Play only while the card is really on screen -- a second observer with no
+    // margin, deliberately. A browser will not start a video that is still off
+    // screen, so asking at the 200px mark is refused, and a single observer has
+    // already crossed its only threshold by then and never fires again. That is
+    // how every card ended up sitting on its poster: video downloaded, playing
+    // never started, and a poster is the product photo, so it looked like no
+    // video at all.
+    //
+    const playback = new IntersectionObserver(
+      ([entry]) => {
+        visibleRef.current = entry.isIntersecting;
+        if (!entry.isIntersecting) {
+          videoRef.current?.pause();
+        } else {
+          playIfWanted();
+        }
+      },
+      { threshold: 0 },
+    );
+
+    preload.observe(node);
+    playback.observe(node);
+
+    return () => {
+      preload.disconnect();
+      playback.disconnect();
+    };
   }, []);
 
   // The photo covers the video on hover, so there is nothing to play then.
@@ -155,10 +190,7 @@ export function ProductCard({
   };
   const showVideo = () => {
     hoveredRef.current = false;
-    if (!inViewRef.current) return;
-    videoRef.current?.play().catch(() => {
-      // Autoplay may be blocked; the poster (the product photo) stays.
-    });
+    playIfWanted();
   };
 
   const addToCart = useStore((state) => state.addToCart);
@@ -318,6 +350,7 @@ export function ProductCard({
                 dead.includes(video) ? dead : [...dead, video],
               )
             }
+            onLoadedData={playIfWanted}
             poster={image}
             autoPlay
             muted
