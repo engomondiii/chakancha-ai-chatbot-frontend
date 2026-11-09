@@ -1,0 +1,179 @@
+/* ── A bundle's panel: the teas that are actually in it ──────────────────── */
+
+/*
+ * The packs overlap and stand at different depths rather than sitting side by
+ * side in a row. Two teas in a bundle are one thing you buy, and a row of two
+ * pictures reads as two things you are choosing between -- which is exactly
+ * the misunderstanding a bundle has to avoid.
+ *
+ * Each pack carries --pack-depth (0 at the front) and --pack-spread (its
+ * distance from the middle of the stack, negative to the left). All the
+ * arithmetic is here, so three or four packs need no new rules.
+ */
+.bundlePacks {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  height: 100%;
+
+  /* No gap: the packs overlap, and `gap` cannot go negative -- a negative
+     value makes the whole declaration invalid and the browser drops it. */
+}
+
+/*
+ * The overlap itself, as a pull on every pack after the first. --pack-overlap
+ * is declared on the container above and inherits down, so the three screen
+ * sizes below only have to restate that one number.
+ */
+.bundlePacks > * + * {
+  margin-left: calc(-1 * var(--pack-overlap, 44px));
+}
+
+.bundlePack {
+  --pack-depth: 0;
+  --pack-spread: 0;
+
+  display: block;
+
+  /* Wider than half, which is what makes them overlap at all. */
+  flex: 0 1 58%;
+  min-width: 0;
+
+  max-height: 268px;
+
+  object-fit: contain;
+
+  /* Front pack first. Without this the later ones paint on top and the stack
+     reads backwards. */
+  z-index: calc(10 - var(--pack-depth));
+
+  /* Each step back: a little higher, a little smaller. A drop-shadow rather
+     than a box-shadow, so it follows the pack's own silhouette instead of
+     drawing a rectangle around a transparent PNG. */
+  transform:
+    translate(
+      calc(var(--pack-spread) * 10px),
+      calc(var(--pack-depth) * -14px)
+    )
+    scale(calc(1 - var(--pack-depth) * 0.08));
+
+  filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.16));
+
+  animation: bundlePackIn 420ms var(--ease-out) both;
+
+  transition:
+    transform 420ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    filter    320ms var(--ease-out);
+}
+
+/*
+ * Hovering opens the stack: the packs slide apart and level off, so both are
+ * fully visible and the customer can see exactly what they picked. This is
+ * also what the panel does instead of the single-product card's video/photo
+ * swap -- a bundle has no one photo to swap to.
+ */
+.bundlePacks:hover .bundlePack,
+.bundlePacks:focus-within .bundlePack {
+  transform:
+    translate(calc(var(--pack-spread) * 26px), 0)
+    scale(1);
+
+  filter: drop-shadow(0 18px 24px rgba(0, 0, 0, 0.2));
+}
+
+/* A newly chosen tea arrives rather than appearing. */
+@keyframes bundlePackIn {
+  from {
+    opacity: 0;
+    transform:
+      translate(
+        calc(var(--pack-spread) * 10px),
+        calc(var(--pack-depth) * -14px + 10px)
+      )
+      scale(calc(0.94 - var(--pack-depth) * 0.08));
+  }
+}
+
+/* Past two the overlap has to tighten, or the stack walks off the panel. */
+.bundlePacks[data-count="3"] {
+  --pack-overlap: 56px;
+}
+
+.bundlePacks[data-count="4"] {
+  --pack-overlap: 64px;
+}
+
+.bundlePacks[data-count="3"] .bundlePack,
+.bundlePacks[data-count="4"] .bundlePack {
+  max-height: 210px;
+}
+
+/*
+ * A chosen tea with neither photograph nor clip. It still holds its slot, so
+ * the row keeps saying how many teas are in the bundle.
+ */
+.bundlePackName {
+  --pack-depth: 0;
+  --pack-spread: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex: 0 1 58%;
+  min-width: 0;
+
+  height: 70%;
+  max-height: 268px;
+
+  padding: var(--space-1);
+
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-small);
+  line-height: 1.3;
+  text-align: center;
+  color: var(--color-text-secondary);
+
+  background-color: var(--color-background-muted);
+  border-radius: var(--radius-sm);
+
+  z-index: calc(10 - var(--pack-depth));
+}
+
+/* Narrow cards cannot afford the spread; the stack stays closed. */
+@media (max-width: 480px) {
+  .bundlePacks {
+    --pack-overlap: 52px;
+  }
+
+  .imageWrapper:hover .bundlePack,
+  .imageWrapper:focus-visible .bundlePack {
+    transform:
+      translate(
+        calc(var(--pack-spread) * 10px),
+        calc(var(--pack-depth) * -14px)
+      )
+      scale(calc(1 - var(--pack-depth) * 0.08));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bundlePack {
+    animation: none;
+    transition: none;
+  }
+
+  .imageWrapper:hover .bundlePack,
+  .imageWrapper:focus-visible .bundlePack {
+    transform:
+      translate(
+        calc(var(--pack-spread) * 10px),
+        calc(var(--pack-depth) * -14px)
+      )
+      scale(calc(1 - var(--pack-depth) * 0.08));
+  }
+}

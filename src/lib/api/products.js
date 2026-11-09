@@ -166,6 +166,12 @@ export function normalizeProduct(raw) {
 
     bundleOptions: Array.isArray(raw.bundle_options) ? raw.bundle_options : [],
 
+    // Accessories this page may offer beside the tea. Detail only -- the grid
+    // has no room to ask, and the rule is that the offer appears at the moment
+    // of buying tea.
+    addOns:  Array.isArray(raw.add_ons) ? raw.add_ons : [],
+    add_ons: Array.isArray(raw.add_ons) ? raw.add_ons : [],
+
     bundle_options: Array.isArray(raw.bundle_options) ? raw.bundle_options : [],
 
     description: raw.description || "",

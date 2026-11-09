@@ -16,6 +16,7 @@ import { ShoppingCart, ArrowRight } from "lucide-react";
 
 import { useStore } from "@/store";
 import { LogoMark } from "@/components/common/Logo";
+import { CombinationPreview } from "./CombinationPreview";
 
 import styles from "./ProductCard.module.css";
 
@@ -110,6 +111,12 @@ export function ProductCard({
   const wrapperRef = useRef(null);
   const [inView, setInView] = useState(false);
 
+  // Genuinely on screen, as state rather than only as the ref below, because
+  // a bundle's packs are separate components that have to re-render when it
+  // changes. The ref stays: it is read inside callbacks that must not close
+  // over a stale value.
+  const [onScreen, setOnScreen] = useState(false);
+
   //
   // One slug per slot in the bundle. Empty for anything that is not one.
   //
@@ -184,6 +191,7 @@ export function ProductCard({
     const playback = new IntersectionObserver(
       ([entry]) => {
         visibleRef.current = entry.isIntersecting;
+        setOnScreen(entry.isIntersecting);
         if (!entry.isIntersecting) {
           videoRef.current?.pause();
         } else {
@@ -222,6 +230,17 @@ export function ProductCard({
     state.isInCart(productId)
   );
 
+  //
+  // A container is sold with tea, never instead of it. The rule is the
+  // backend's (products/models.py, Product.is_accessory; the binding check is
+  // in orders/services.py) -- this is only the part that stops the customer
+  // walking into it, by refusing the click rather than letting them find out
+  // at checkout.
+  //
+  const cartHasTea = useStore((state) =>
+    state.cartItems.some((item) => (item?.kind || "tea") !== "accessory"),
+  );
+
   if (!product) return null;
 
   // Support both camelCase and snake_case field names.
@@ -230,8 +249,20 @@ export function ProductCard({
   const price = Number.parseFloat(product.price) || 0;
   const image = getProductImage(product);
   const uploadedVideo = getProductVideo(product);
+
+  //
+  // A bundle never plays a video, whatever is set on it. Its panel is busy
+  // saying which teas were picked, and a clip laid over that would hide the
+  // one thing the panel exists to show. Deciding it here rather than at the
+  // element keeps `hasVideo` -- which also widens the card's layout -- from
+  // being set on a card that has no video in it.
+  //
   const video =
-    uploadedVideo && !deadVideos.includes(uploadedVideo) ? uploadedVideo : null;
+    product.kind === "bundle" ||
+    !uploadedVideo ||
+    deadVideos.includes(uploadedVideo)
+      ? null
+      : uploadedVideo;
 
   const flavorProfile =
     product.flavorProfile ||
@@ -256,7 +287,12 @@ export function ProductCard({
   // resolved by the backend per request so a tea that sells out leaves the
   // list without anybody editing the bundle.
   //
-  const isBundle = (product.kind || "tea") === "bundle";
+  const kind = product.kind || "tea";
+  const isBundle = kind === "bundle";
+  const isAccessory = kind === "accessory";
+
+  // Addable only once there is tea to keep in it.
+  const needsTeaFirst = isAccessory && !cartHasTea;
   const bundleSize = Number(product.bundleSize ?? product.bundle_size) || 0;
   const bundleOptions = Array.isArray(product.bundleOptions)
     ? product.bundleOptions
@@ -272,6 +308,32 @@ export function ProductCard({
   //
   const firstOption = bundleOptions[0]?.slug || "";
 
+  //
+  // The teas currently chosen, one per slot, in slot order.
+  //
+  // The panel draws these instead of the bundle's own photo, because a bundle
+  // is whatever is in it: two Gold, two Black and one of each are three
+  // different baskets at the same price, and before checkout this panel is the
+  // only place that difference can be seen. A single fixed photo of one pack
+  // contradicts whatever the dropdowns say.
+  //
+  // There is always one tile per slot, even for a tea with no photograph of
+  // its own -- that tile falls back to the tea's name. A missing picture must
+  // not cost a slot, because a row of one tile under a picker that says two is
+  // a straight contradiction of the thing being sold.
+  //
+  const slotPacks = isBundle
+    ? Array.from({ length: bundleSize }, (_, slot) => {
+        const wanted = picks[slot] || firstOption;
+        return bundleOptions.find((option) => option.slug === wanted) || null;
+      })
+    : [];
+
+  // A slot that resolves to nothing at all means the pickers and the options
+  // have come apart; show the bundle's own photo rather than guess.
+  const chosenPacks =
+    slotPacks.length > 0 && slotPacks.every(Boolean) ? slotPacks : [];
+
   const productHref = slug
     ? `/products/${slug}`
     : "/products";
@@ -286,7 +348,7 @@ export function ProductCard({
     event.preventDefault();
     event.stopPropagation();
 
-    if (!inStock || adding) return;
+    if (!inStock || adding || needsTeaFirst) return;
 
     setAdding(true);
 
@@ -401,13 +463,15 @@ export function ProductCard({
             isInCart ? styles.cartBtnInCart : ""
           }`}
           onClick={handleAddToCart}
-          disabled={!inStock || adding}
+          disabled={!inStock || adding || needsTeaFirst}
           aria-label={
             !inStock
               ? `${name} is out of stock`
-              : isInCart
-                ? `${name} is already in the cart`
-                : `Add ${name} to cart`
+              : needsTeaFirst
+                ? `${name} is sold with tea; add a tea first`
+                : isInCart
+                  ? `${name} is already in the cart`
+                  : `Add ${name} to cart`
           }
         >
           <ShoppingCart
@@ -417,11 +481,13 @@ export function ProductCard({
 
           {!inStock
             ? "Out of stock"
-            : adding
-              ? "Adding…"
-              : isInCart
-                ? "In cart"
-                : "Add to cart"}
+            : needsTeaFirst
+              ? "Add a tea first"
+              : adding
+                ? "Adding…"
+                : isInCart
+                  ? "In cart"
+                  : "Add to cart"}
         </button>
       </div>
 
@@ -457,7 +523,15 @@ export function ProductCard({
           />
         )}
 
-        {image ? (
+        {chosenPacks.length > 0 ? (
+          <CombinationPreview
+            items={chosenPacks}
+            playing={onScreen}
+            label={`${name}: ${chosenPacks
+              .map((pack) => pack.name)
+              .join(" and ")}`}
+          />
+        ) : image ? (
           <img
             src={image}
             alt={`${name} tea package`}

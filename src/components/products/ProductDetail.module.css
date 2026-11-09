@@ -526,3 +526,155 @@
     min-width: 0;
   }
 }
+/* ── Choosing what goes in a bundle ──────────────────────────────────────── */
+
+.bundlePicker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+
+  margin-bottom: var(--spacing-lg);
+}
+
+.bundleLabel {
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-small);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+/* Wraps rather than squeezing: a bundle of four must not shrink its dropdowns
+   to the point the tea names are unreadable. */
+.bundleSlots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.bundleSlot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  min-width: 0;
+}
+
+.bundleSlotNumber {
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  color: var(--color-text-muted, var(--color-text-secondary));
+}
+
+.bundleSelect {
+  min-width: 0;
+  max-width: 100%;
+
+  padding: 9px 12px;
+
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--color-text-primary);
+
+  background-color: var(--color-surface, #fff);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+
+  cursor: pointer;
+
+  transition: border-color var(--transition-fast) var(--ease-out);
+}
+
+.bundleSelect:hover,
+.bundleSelect:focus-visible {
+  border-color: var(--color-sunrise-gold);
+}
+
+/* ── The live combination preview, where a bundle's gallery would be ─────── */
+
+.combinationPreview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  min-height: 420px;
+
+  padding: var(--spacing-lg);
+
+  background-color: var(--color-background-soft);
+  border: 1px solid var(--color-divider-soft);
+  border-radius: var(--radius-md);
+
+  overflow: hidden;
+}
+
+/* ── Add a container ─────────────────────────────────────────────────────── */
+
+.addOns {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+
+  margin-bottom: var(--spacing-lg);
+}
+
+.addOn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+
+  padding: 10px 14px;
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+
+  cursor: pointer;
+
+  transition:
+    border-color var(--transition-fast) var(--ease-out),
+    background-color var(--transition-fast) var(--ease-out);
+}
+
+.addOn:hover,
+.addOn:focus-within {
+  border-color: var(--color-sunrise-gold);
+  background-color: var(--color-background-soft);
+}
+
+.addOnBox {
+  flex: none;
+  width: 16px;
+  height: 16px;
+
+  accent-color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.addOnThumb {
+  flex: none;
+
+  width: 36px;
+  height: 36px;
+
+  object-fit: contain;
+}
+
+/* Takes the slack, so the price stays pinned to the right edge. */
+.addOnName {
+  flex: 1 1 auto;
+  min-width: 0;
+
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--color-text-primary);
+}
+
+.addOnPrice {
+  flex: none;
+
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
