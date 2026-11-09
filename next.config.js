@@ -28,6 +28,24 @@ const nextConfig = {
         protocol: 'https',
         hostname: '**.supabase.co',
       },
+      // ── Production backend, by its Railway domain ─────────────────
+      //
+      // next/image refuses any host that is not listed here, and refusing
+      // looks exactly like a broken file: the gallery shows alt text while
+      // the same picture loads fine on a shop card, which uses a plain <img>.
+      //
+      // api.chakancha.com above is the intended name, but the service also
+      // answers on its railway.app domain, and that is what NEXT_PUBLIC_API_URL
+      // points at whenever the custom domain is not in front of it. Listing
+      // both means an upload is visible either way.
+      {
+        protocol: 'https',
+        hostname: '**.up.railway.app',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.railway.app',
+      },
       // ── Unsplash (placeholder images during dev) ──────────────────
       {
         protocol: 'https',
