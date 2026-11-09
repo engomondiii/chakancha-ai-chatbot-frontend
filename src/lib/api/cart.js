@@ -105,14 +105,48 @@ export async function clearServerCart() {
  * so a retry would otherwise double every line. Sequential because all the
  * writes race on the same get_or_create(user=...) row.
  *
- * @param {Array} items - local cartItems: [{ id, quantity }]
+ * A bundle's chosen teas travel with it. They are the difference between two
+ * Gold and one of each at the same price, and this sync is the only road they
+ * have from the browser to the order: the picker writes them into the local
+ * cart, this hands them to CartAddView, orders/services.py copies them onto
+ * the OrderItem, and the admin reads them off that. Drop them here and the
+ * server cart gets a bundle with nothing in it -- which CartAddView refuses
+ * with 400, so checkout fails outright rather than quietly shipping the wrong
+ * tea.
+ *
+ * @param {Array} items - local cartItems: [{ id, quantity, selections }]
  */
 export async function syncCartToServer(items = []) {
   await api.post(ENDPOINTS.CART.CLEAR);
-  for (const item of items) {
+
+  //
+  // Tea first, containers after.
+  //
+  // CartAddView refuses a container into a basket with no tea in it yet, and
+  // this loop rebuilds the basket from empty one request at a time. So the
+  // order the lines happen to sit in locally decides whether the sync works,
+  // which is not a thing the sync should depend on: a merge after signing in,
+  // a restored localStorage cart or any future reordering would break
+  // checkout with a 400 about an item the customer added perfectly legally.
+  //
+  // Sorting here makes the sequence valid by construction rather than by
+  // luck. It changes nothing about the basket -- the server cart is a set of
+  // lines, not a list.
+  //
+  const teaFirst = [...items].sort(
+    (a, b) =>
+      ((a?.kind || 'tea') === 'accessory' ? 1 : 0) -
+      ((b?.kind || 'tea') === 'accessory' ? 1 : 0),
+  );
+
+  for (const item of teaFirst) {
+    const teas = item?.selections?.teas;
+
     await api.post(ENDPOINTS.CART.ADD, {
       product_id: item.id,
       quantity:   item.quantity,
+      // Only a bundle sends this; CartAddView rejects teas on anything else.
+      ...(Array.isArray(teas) && teas.length > 0 ? { teas } : {}),
     });
   }
 }
