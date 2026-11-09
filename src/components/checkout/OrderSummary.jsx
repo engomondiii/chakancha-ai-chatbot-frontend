@@ -4,7 +4,7 @@
  * What changed from the original:
  *  - Currency: USD (was KES)
  *  - fmt() uses USD formatting
- *  - Tax label: "Est. Tax" (computed server-side at order creation)
+ *  - No tax or shipping row: both are inside the price of the tea
  *  - formatDeliveryEstimate import preserved; added fallback if function missing
  *  - Everything else unchanged
  */
@@ -27,7 +27,6 @@ function formatDeliveryEstimate(minDays, maxDays) {
 export function OrderSummary({ shippingCountry, quote = null, applyCredit = false }) {
   const cartItems     = useStore((s) => s.cartItems);
   const cartSubtotal  = useStore((s) => s.cartSubtotal);
-  const cartTax       = useStore((s) => s.cartTax);
   const cartTotal     = useStore((s) => s.cartTotal);
   const cartDiscount  = useStore((s) => s.cartDiscount);
   const appliedCoupon = useStore((s) => s.appliedCoupon);
@@ -110,11 +109,16 @@ export function OrderSummary({ shippingCountry, quote = null, applyCredit = fals
             green
           />
         )}
-        <Row label={quote ? 'Tax' : 'Est. Tax'}
-             value={(quote ? Number(quote.tax) : cartTax) > 0
-               ? fmt(quote ? Number(quote.tax) : cartTax)
-               : 'Calculated at order'}
-             small />
+        {/*
+          No tax row. Tax is inside the price (utils/constants.py,
+          TAX_INCLUDED_IN_PRICE), so the backend quote returns zero and there
+          is nothing to show. The row used to read "Est. Tax -- Calculated at
+          order", which is the worst of both: it charged nobody anything and
+          still told every customer a number was coming.
+
+          If tax is ever charged on top again, this comes back as a row, not as
+          a promise in a footnote.
+        */}
         <div style={{ height: 1, backgroundColor: 'var(--color-border)', margin: '4px 0' }} />
         <Row label="Total"
              value={fmt(quote ? Number(quote.total) : cartTotal)} bold />

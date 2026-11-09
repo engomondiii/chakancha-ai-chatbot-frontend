@@ -5,7 +5,7 @@
  *  - handleApplyCoupon() calls useCart().applyCoupon() which now hits the real
  *    backend (POST /api/v1/checkout/coupon/) with fallback to mock coupons
  *  - Currency display: USD (was KES)
- *  - FREE_SHIPPING_THRESHOLD: $50 USD (was 5,000 KES)
+ *  - Shipping and tax are inside the price; neither is shown or added.
  *  - fmt() uses USD formatting
  *  - Everything else unchanged
  */
@@ -19,7 +19,6 @@ import { useCart }  from '@/lib/hooks/useCart';
 import { formatCurrency } from '@/lib/utils/currency';
 import { syncCartToServer, fetchServerCart } from '@/lib/api/cart';
 
-const FREE_SHIPPING_THRESHOLD = 50; // USD
 
 export function CartSummary({ onCheckout, compact = false }) {
   const [couponInput,  setCouponInput]  = useState('');
@@ -30,7 +29,6 @@ export function CartSummary({ onCheckout, compact = false }) {
 
   const cartItems     = useStore((s) => s.cartItems);
   const cartSubtotal  = useStore((s) => s.cartSubtotal);
-  const cartTax       = useStore((s) => s.cartTax);
   const cartTotal     = useStore((s) => s.cartTotal);
   const cartDiscount  = useStore((s) => s.cartDiscount);
   const appliedCoupon = useStore((s) => s.appliedCoupon);
@@ -75,16 +73,15 @@ export function CartSummary({ onCheckout, compact = false }) {
 
   // Displayed figures: backend quote when available, local estimate otherwise.
   //
-  // The referral discount is shown as soon as the backend returns it: it depends
-  // only on the product subtotal and the buyer's referral eligibility, neither
-  // of which needs a shipping country. Shipping and tax DO need one, so until
-  // the buyer supplies it they are labelled as calculated at checkout and no
-  // final payable total is implied. /checkout remains the authoritative quote.
-  const countryKnown = Boolean(shippingCountry);
+  // Every figure here is final the moment there is an item in the cart. The
+  // referral discount needs only the subtotal and the buyer's eligibility;
+  // shipping and tax are inside the price, so neither waits on a country any
+  // more. /checkout remains the authoritative quote, but it has nothing left
+  // to add -- which is what lets this page state a total rather than an
+  // estimate.
   const num       = (v, fallback) => (v === undefined || v === null ? fallback : Number(v));
   const dSubtotal = quote ? num(quote.subtotal,      cartSubtotal) : cartSubtotal;
   const dDiscount = quote ? num(quote.discount,      cartDiscount) : cartDiscount;
-  const dTax      = quote ? num(quote.tax,           cartTax)      : cartTax;
   const dTotal    = quote ? num(quote.total,         cartTotal)    : cartTotal;
   const dLabel    = quote ? (quote.discount_label || 'Discount')
                           : `Discount${appliedCoupon?.code ? ` (${appliedCoupon.code})` : ''}`;
@@ -92,9 +89,6 @@ export function CartSummary({ onCheckout, compact = false }) {
   // Use the hook's applyCoupon which calls the real backend
   const { applyCoupon } = useCart();
 
-  const remaining       = Math.max(0, FREE_SHIPPING_THRESHOLD - cartSubtotal);
-  const hasFreeShipping = remaining === 0;
-  const progressPercent = Math.min(100, (cartSubtotal / FREE_SHIPPING_THRESHOLD) * 100);
 
   const handleApplyCoupon = async () => {
     if (!couponInput.trim()) return;
@@ -129,28 +123,24 @@ export function CartSummary({ onCheckout, compact = false }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
 
-      {/* Free shipping progress */}
+      {/*
+        Was a progress bar counting up to free shipping at $50. Shipping is
+        free from the first item now, so the bar was permanently full and the
+        "$20.00 more for free shipping" message it showed below the threshold
+        was simply untrue. A sentence says the same thing honestly and takes a
+        tenth of the room.
+      */}
       {!compact && (
-        <div style={{
-          backgroundColor: hasFreeShipping ? 'rgba(74,124,44,0.08)' : 'var(--color-warm-cream)',
-          border: `1px solid ${hasFreeShipping ? 'rgba(74,124,44,0.2)' : 'var(--color-border)'}`,
-          borderRadius: 'var(--radius-md)', padding: '10px 14px',
+        <p style={{
+          margin: 0, padding: '10px 14px',
+          backgroundColor: 'rgba(74,124,44,0.08)',
+          border: '1px solid rgba(74,124,44,0.2)',
+          borderRadius: 'var(--radius-md)',
+          fontFamily: 'var(--font-sans)', fontSize: 13,
+          color: 'var(--color-text-secondary)',
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-            <span style={smallTextStyle}>
-              {hasFreeShipping
-                ? '✓ You qualify for free shipping!'
-                : `$${remaining.toFixed(2)} more for free shipping`}
-            </span>
-          </div>
-          <div style={{ height: 4, backgroundColor: 'var(--color-border)', borderRadius: 2, overflow: 'hidden' }}>
-            <div style={{
-              height: '100%', width: `${progressPercent}%`,
-              backgroundColor: hasFreeShipping ? 'var(--color-tea-green)' : 'var(--color-sunrise-gold)',
-              borderRadius: 2, transition: 'width var(--transition-standard) var(--ease-out)',
-            }} />
-          </div>
-        </div>
+          Shipping is included on every order.
+        </p>
       )}
 
       {/* Coupon input */}
@@ -222,27 +212,19 @@ export function CartSummary({ onCheckout, compact = false }) {
           <TotalRow label={dLabel} value={`−${fmt(dDiscount)}`} valueColor="var(--color-success)" />
         )}
 
-        {countryKnown ? (
-          <>
-            <TotalRow label="Tax" value={dTax > 0 ? fmt(dTax) : 'Calculated at checkout'} small />
-            <TotalRow label="Total" value={fmt(dTotal)} bold />
-            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12,
-              color: 'var(--color-text-secondary)', margin: '2px 0 0' }}>
-              There is no extra charge beyond your total.
-            </p>
-          </>
-        ) : (
-          <>
-            <TotalRow label="Tax"      value="Calculated at checkout" small />
-            <TotalRow label="Estimated total" value={fmt(dSubtotal - dDiscount)} bold />
-            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12,
-              color: 'var(--color-text-secondary)', margin: '2px 0 0' }}>
-              Delivery is included in the price, so only tax is still to be
-              worked out — it needs your country. There is no extra charge
-              beyond your total.
-            </p>
-          </>
-        )}
+        {/*
+          One total, whether or not we know where the customer is. The split
+          that used to be here -- "Total" against "Estimated total" -- existed
+          because tax waited on a country. Nothing waits on a country now:
+          carriage and tax are both inside the price, so this figure is final
+          from the first item, and calling it an estimate would invite the
+          customer to expect it to move.
+        */}
+        <TotalRow label="Total" value={fmt(dTotal)} bold />
+        <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12,
+          color: 'var(--color-text-secondary)', margin: '2px 0 0' }}>
+          There is no extra charge beyond your total.
+        </p>
       </div>
 
       {onCheckout && (
