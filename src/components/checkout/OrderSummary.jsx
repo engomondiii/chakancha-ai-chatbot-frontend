@@ -157,17 +157,10 @@ export function OrderSummary({ shippingCountry, quote = null, applyCredit = fals
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px',
         backgroundColor: 'white', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
         <ShieldCheck size={14} color="var(--color-muted-olive)" />
-        <div>
-          <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600,
-            color: 'var(--color-text-primary)', margin: 0 }}>
-            No extra charges
-          </p>
-          <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11,
-            color: 'var(--color-text-secondary)', margin: 0 }}>
-            Delivery and tax are already inside the price. The total above is
-            what you pay.
-          </p>
-        </div>
+        <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600,
+          color: 'var(--color-text-primary)', margin: 0 }}>
+          No extra charges
+        </p>
       </div>
     </div>
   );
