@@ -58,11 +58,14 @@ function SuccessContent() {
         <p style={{ fontFamily: 'var(--font-sans)', fontSize: 20, fontWeight: 700, color: 'var(--color-earth-brown)', margin: 0, letterSpacing: '0.05em' }}>
           {order?.id || orderId}
         </p>
-        {order?.estimatedDelivery && (
-          <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--color-text-secondary)', margin: '8px 0 0' }}>
-            Estimated delivery: {new Date(order.estimatedDelivery).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-          </p>
-        )}
+        {/*
+          No delivery date here either. A single date under an order reference
+          reads as a commitment, and this one is made before the tea has been
+          packed, before a carrier has collected it and before a customs queue
+          anywhere has been joined. The step below already tells the customer
+          what will actually happen -- a tracking number by email once it is
+          dispatched -- which is a promise the warehouse can keep.
+        */}
       </div>
 
       {/* What's next */}
