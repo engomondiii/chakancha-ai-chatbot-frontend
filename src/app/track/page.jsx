@@ -46,7 +46,7 @@ function TrackForm() {
       return;
     }
     if (!LOOKS_LIKE_A_WAYBILL.test(trimmed)) {
-      setError('That does not look like a tracking number. A DHL one is ten digits.');
+      setError('That does not look like a tracking number. Check it against your dispatch email.');
       return;
     }
 
@@ -65,7 +65,7 @@ function TrackForm() {
       setError(
         err?.status === 404
           ? 'We could not find a parcel with that number. Check it against your dispatch email.'
-          : 'Live tracking is not switched on yet. Your dispatch email has a link straight to DHL.'
+          : 'Live tracking is not switched on yet. Your dispatch email has a link straight to the carrier.'
       );
     } finally {
       setLoading(false);
@@ -171,7 +171,7 @@ export default function TrackPage() {
           color: 'var(--color-text-secondary)', maxWidth: '58ch',
         }}>
           Put in the tracking number from your dispatch email. Every order leaves
-          Nandi Hills with DHL Express.
+          Nandi Hills on a tracked international service.
         </p>
       </header>
 

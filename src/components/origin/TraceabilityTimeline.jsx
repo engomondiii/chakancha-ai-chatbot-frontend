@@ -30,7 +30,7 @@ const STEPS = [
   {
     icon: Truck,
     title: "Dispatch",
-    desc: "DHL collects directly from the estate for international delivery.",
+    desc: "Collected directly from the estate for international delivery.",
   },
   {
     icon: Coffee,

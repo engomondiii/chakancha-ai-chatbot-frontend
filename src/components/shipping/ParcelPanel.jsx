@@ -31,7 +31,7 @@ import ParcelTimeline from './ParcelTimeline';
 const HEADLINES = {
   [PARCEL_STATUS.NOT_BOOKED]:       'Not dispatched yet',
   [PARCEL_STATUS.BOOKED]:           'Label made',
-  [PARCEL_STATUS.COLLECTED]:        'Collected by DHL',
+  [PARCEL_STATUS.COLLECTED]:        'Collected',
   [PARCEL_STATUS.IN_TRANSIT]:       'On its way',
   [PARCEL_STATUS.OUT_FOR_DELIVERY]: 'Out for delivery',
   [PARCEL_STATUS.DELIVERED]:        'Delivered',
@@ -283,12 +283,12 @@ export default function ParcelPanel({ parcel, compact = false }) {
       {isException ? (
         <CarrierNote
           tone="danger"
-          title={parcel.checkpoints[0]?.description || parcel.statusText || 'DHL has flagged this parcel.'}
+          title={parcel.checkpoints[0]?.description || parcel.statusText || 'This parcel has been flagged.'}
           body={parcel.statusRemark}
           nextSteps={parcel.nextSteps
             || 'Customs holds usually clear on their own within a day or two. If it '
              + 'has been longer, reply to your order email with the tracking number '
-             + 'and we will chase DHL for you.'}
+             + 'and we will chase the carrier for you.'}
         />
       ) : notBooked ? null : (
         <ParcelProgress status={parcel.status} />

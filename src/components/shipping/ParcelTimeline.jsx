@@ -31,7 +31,7 @@ export default function ParcelTimeline({ checkpoints = [] }) {
   if (!checkpoints.length) {
     return (
       <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'var(--color-text-secondary)', margin: 0 }}>
-        No checkpoints yet. DHL records the first one when the parcel is scanned
+        No checkpoints yet. The first one is recorded when the parcel is scanned
         at collection.
       </p>
     );
