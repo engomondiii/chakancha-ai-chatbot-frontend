@@ -380,7 +380,9 @@ export function ProductCard({
 
   return (
     <article
-      className={`${styles.card} ${video ? styles.cardWithVideo : ""}`}
+      className={`${styles.card} ${video ? styles.cardWithVideo : ""} ${
+        isBundle ? styles.cardBundle : ""
+      }`}
     >
       <div className={styles.content}>
         {displayNumber && (
@@ -526,6 +528,18 @@ export function ProductCard({
         {chosenPacks.length > 0 ? (
           <CombinationPreview
             items={chosenPacks}
+            /*
+              Playing whenever the card is on screen, like a single tea's.
+              This is the browsing page: the clip is selling the idea of the
+              tea to somebody scrolling past, and that is the one place it
+              earns the attention it takes. The product page behind "View tea"
+              asks for stills instead, because by then the question has become
+              which packs are in the box.
+
+              To hold them still until the panel is pointed at, hover has to
+              become state: the ref above is read inside callbacks and does
+              not re-render, and these packs are separate components.
+            */
             playing={onScreen}
             label={`${name}: ${chosenPacks
               .map((pack) => pack.name)

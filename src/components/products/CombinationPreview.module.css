@@ -30,7 +30,7 @@
  * sizes below only have to restate that one number.
  */
 .bundlePacks > * + * {
-  margin-left: calc(-1 * var(--pack-overlap, 44px));
+  margin-left: calc(-1 * var(--pack-overlap, 36%));
 }
 
 .bundlePack {
@@ -40,10 +40,17 @@
   display: block;
 
   /* Wider than half, which is what makes them overlap at all. */
-  flex: 0 1 58%;
+  flex: 0 1 var(--pack-width, 68%);
   min-width: 0;
 
-  max-height: 268px;
+  /*
+   * Height, not just a ceiling. A pack photo is tall and narrow, so width
+   * alone decides its size and it comes out fine; a clip is landscape, so
+   * width alone decides its size too -- and it came out a letterboxed strip
+   * about a finger tall. Giving the slot a real height lets each fill it.
+   */
+  height: 88%;
+  max-height: 340px;
 
   object-fit: contain;
 
@@ -68,6 +75,24 @@
   transition:
     transform 420ms cubic-bezier(0.2, 0.8, 0.2, 1),
     filter    320ms var(--ease-out);
+}
+
+/*
+ * A clip fills its frame instead of being letterboxed inside it, which is what
+ * the single-product card has always done with its video. A little of the edge
+ * is lost; the alternative is a strip of footage with bars above and below it,
+ * which is what this looked like at 110px wide.
+ *
+ * Shorter than a pack photo's slot, because the footage is landscape: at the
+ * full height the crop would be a vertical sliver through the middle of the
+ * shot.
+ */
+.bundlePackVideo {
+  height: 74%;
+
+  object-fit: cover;
+
+  border-radius: var(--radius-md);
 }
 
 /*
@@ -99,12 +124,18 @@
 }
 
 /* Past two the overlap has to tighten, or the stack walks off the panel. */
+/*
+ * Three or four have to sit closer and shorter, or the stack walks off the
+ * panel. Percentages, so this holds at every card width.
+ */
 .bundlePacks[data-count="3"] {
-  --pack-overlap: 56px;
+  --pack-width: 48%;
+  --pack-overlap: 22%;
 }
 
 .bundlePacks[data-count="4"] {
-  --pack-overlap: 64px;
+  --pack-width: 40%;
+  --pack-overlap: 20%;
 }
 
 .bundlePacks[data-count="3"] .bundlePack,
@@ -124,7 +155,7 @@
   align-items: center;
   justify-content: center;
 
-  flex: 0 1 58%;
+  flex: 0 1 var(--pack-width, 68%);
   min-width: 0;
 
   height: 70%;
@@ -147,7 +178,7 @@
 /* Narrow cards cannot afford the spread; the stack stays closed. */
 @media (max-width: 480px) {
   .bundlePacks {
-    --pack-overlap: 52px;
+    --pack-overlap: 28%;
   }
 
   .imageWrapper:hover .bundlePack,

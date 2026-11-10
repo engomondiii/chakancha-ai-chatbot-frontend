@@ -28,16 +28,29 @@ import styles from "./CombinationPreview.module.css";
  * extra is uploaded for a bundle: set a clip on Nandi Gold and it plays
  * wherever Nandi Gold appears.
  *
+ * While `playing` is false the element is paused, and a paused video shows its
+ * poster -- which is set to the tea's own photograph. So a caller that does not
+ * want motion gets the two pack shots, without needing a second code path for
+ * the still case.
+ *
  * `depth` is the slot's position in the stack. The packs overlap, so the first
  * sits in front at full size and each one behind is a little smaller and a
  * little higher -- the way two things actually look standing together, rather
  * than two pictures side by side in a row.
  */
-function BundlePack({ pack, depth, spread, playing }) {
+function BundlePack({ pack, depth, spread, playing, stills = false }) {
   const ref = useRef(null);
   const [deadVideo, setDeadVideo] = useState(false);
 
-  const video = deadVideo ? null : pack.video_url || pack.videoUrl || null;
+  //
+  // `stills` is not "paused". A paused video still carries its clip down the
+  // wire, decodes a frame and holds a decoder open, and on a page showing two
+  // of them that is a real cost for something nobody is going to watch. Asking
+  // for stills means the clip is never fetched at all; the photograph is the
+  // element.
+  //
+  const video =
+    stills || deadVideo ? null : pack.video_url || pack.videoUrl || null;
 
   useEffect(() => {
     const element = ref.current;
@@ -64,12 +77,17 @@ function BundlePack({ pack, depth, spread, playing }) {
     return (
       <video
         ref={ref}
-        className={styles.bundlePack}
+        className={`${styles.bundlePack} ${styles.bundlePackVideo}`}
         style={style}
         src={video}
         poster={pack.image || undefined}
         onError={() => setDeadVideo(true)}
-        autoPlay
+        /*
+          No autoPlay attribute: playback is the caller's decision, made in the
+          effect above. Left on, the clip would start the instant it mounted
+          and only then be paused, so a panel meant to open still would flicker
+          into motion first.
+        */
         muted
         loop
         playsInline
@@ -116,6 +134,7 @@ export function CombinationPreview({
   items = [],
   extra = [],
   playing = false,
+  stills = false,
   label = "",
 }) {
   const all = [...items, ...extra];
@@ -142,6 +161,7 @@ export function CombinationPreview({
           depth={slot}
           spread={slot - (all.length - 1) / 2}
           playing={playing}
+          stills={stills}
         />
       ))}
     </div>

@@ -35,6 +35,32 @@
     border-color var(--transition-fast) var(--ease-out);
 }
 
+/*
+ * A bundle's panel holds two teas, not one, and 180px between them left each
+ * about 110px wide -- small enough that a clip inside one was unreadable. The
+ * column is wider here for the same reason the panel exists at all: it is
+ * showing twice as much.
+ *
+ * Only the media column grows; the text column is minmax(0, 1fr) and simply
+ * takes what is left, so nothing wraps that did not wrap before.
+ */
+.cardBundle {
+  grid-template-columns: minmax(0, 1fr) 340px;
+
+  /* Taller as well as wider. The packs are sized as a share of the panel, so
+     height is half of how big they can get, and the text column has room to
+     spare -- a bundle's card carries a short name and two dropdowns. */
+  min-height: 380px;
+}
+
+@media (max-width: 720px) {
+  .cardBundle {
+    grid-template-columns: minmax(0, 1fr) 240px;
+
+    min-height: 340px;
+  }
+}
+
 .card:hover {
   transform: translateY(-3px);
 
