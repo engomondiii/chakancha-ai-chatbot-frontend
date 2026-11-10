@@ -22,7 +22,6 @@ import { useStripe, useElements, CardElement }   from '@stripe/react-stripe-js';
 import { Check, ChevronRight, ChevronLeft, Loader2 } from 'lucide-react';
 import { ShippingForm }       from './ShippingForm';
 import { PaymentForm }        from './PaymentForm';
-import { ShippingCalculator } from './ShippingCalculator';
 import { createOrder, initStripePayment, initPayPalPayment } from '@/lib/api/orders';
 import { syncCartToServer }   from '@/lib/api/cart';
 import { CreditOption }      from './CreditOption';
@@ -127,7 +126,6 @@ export function CheckoutForm({ quote = null, applyCredit = false,
   const [step,        setStep]        = useState('shipping');
   const [errors,      setErrors]      = useState({});
   const [submitting,  setSubmitting]  = useState(false);
-  const [shippingEst, setShippingEst] = useState(null);
 
   const [shipping, setShipping] = useState({
     firstName: '', lastName: '', email: '', phone: '',
@@ -396,12 +394,21 @@ export function CheckoutForm({ quote = null, applyCredit = false,
               }}
               errors={errors}
             />
-            <div style={{ marginTop: 'var(--spacing-lg)' }}>
-              <ShippingCalculator
-                orderSubtotal={cartTotal}
-                onEstimate={setShippingEst}
-              />
-            </div>
+            {/*
+              No shipping estimator here.
+
+              Carriage is inside the price of the tea, so the answer to "what
+              will delivery cost?" is the same for every country and every
+              basket: nothing. A control that asks the customer to pick a
+              country and press Calculate promises a figure that can change,
+              which is the one thing this checkout is trying to say it cannot
+              -- and it invited them to do work whose only possible result was
+              zero.
+
+              The component is left in the tree unimported rather than deleted,
+              since it is the thing to bring back if carriage is ever charged
+              separately again.
+            */}
           </>
         )}
 

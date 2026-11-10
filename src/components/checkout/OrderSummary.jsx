@@ -5,24 +5,16 @@
  *  - Currency: USD (was KES)
  *  - fmt() uses USD formatting
  *  - No tax or shipping row: both are inside the price of the tea
- *  - formatDeliveryEstimate import preserved; added fallback if function missing
+ *  - No delivery estimate: the dates were invented and the carrier was not ours to name
  *  - Everything else unchanged
  */
 
 'use client';
 
 import React        from 'react';
-import { Leaf, Truck } from 'lucide-react';
+import { Leaf, ShieldCheck } from 'lucide-react';
 import { useStore }    from '@/store';
 import { formatCurrency } from '@/lib/utils/currency';
-
-// Safe import with fallback
-function formatDeliveryEstimate(minDays, maxDays) {
-  const from = new Date(Date.now() + minDays * 86400000);
-  const to   = new Date(Date.now() + maxDays * 86400000);
-  const opts = { month: 'short', day: 'numeric' };
-  return `${from.toLocaleDateString('en-US', opts)} – ${to.toLocaleDateString('en-US', opts)}`;
-}
 
 export function OrderSummary({ shippingCountry, quote = null, applyCredit = false }) {
   const cartItems     = useStore((s) => s.cartItems);
@@ -124,21 +116,10 @@ export function OrderSummary({ shippingCountry, quote = null, applyCredit = fals
              value={fmt(quote ? Number(quote.total) : cartTotal)} bold />
 
         {/*
-          Shipping is included in the price of the tea, so there is no carriage
-          row to show and nothing is added after this point. The line says so
-          rather than leaving the customer to infer it from an absence --
-          people read a missing shipping row as "not calculated yet", which is
-          the opposite of what is true here.
+          The promise that nothing is added after this point used to be made
+          here, in grey, twelve pixels high. It is made in the panel below
+          instead -- once, where it can be seen -- rather than twice.
         */}
-        <p style={{
-          margin: 0,
-          fontFamily: 'var(--font-sans)',
-          fontSize: 12,
-          lineHeight: 1.4,
-          color: 'var(--color-text-secondary)',
-        }}>
-          There is no extra charge beyond your total.
-        </p>
 
         {/*
           Credit is shown BELOW the total, not as a discount above it. It does
@@ -158,18 +139,33 @@ export function OrderSummary({ shippingCountry, quote = null, applyCredit = fals
         )}
       </div>
 
-      {/* Estimated delivery */}
+      {/*
+        What the panel is for.
+
+        It held a delivery window and a carrier's name, both of which this page
+        was in no position to promise: the dates came from a constant five and
+        ten days from whenever the page happened to be open, not from anything
+        the warehouse or the carrier had said, and naming DHL committed us to a
+        carrier at the last screen before payment.
+
+        The space is better spent on the one thing about this total that is
+        certain and that customers most want to be told: nothing is added to
+        it. Said plainly here rather than left as a footnote under the figures,
+        because an absent shipping row reads as "not calculated yet", which is
+        the opposite of what is true.
+      */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px',
         backgroundColor: 'white', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
-        <Truck size={14} color="var(--color-muted-olive)" />
+        <ShieldCheck size={14} color="var(--color-muted-olive)" />
         <div>
           <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600,
             color: 'var(--color-text-primary)', margin: 0 }}>
-            Estimated delivery
+            No extra charges
           </p>
           <p style={{ fontFamily: 'var(--font-sans)', fontSize: 11,
             color: 'var(--color-text-secondary)', margin: 0 }}>
-            {formatDeliveryEstimate(5, 10)} · DHL International
+            Delivery and tax are already inside the price. The total above is
+            what you pay.
           </p>
         </div>
       </div>
