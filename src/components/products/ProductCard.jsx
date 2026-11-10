@@ -334,9 +334,24 @@ export function ProductCard({
   const chosenPacks =
     slotPacks.length > 0 && slotPacks.every(Boolean) ? slotPacks : [];
 
-  const productHref = slug
-    ? `/products/${slug}`
-    : "/products";
+  //
+  // The link carries the choice.
+  //
+  // A customer who picked Gold and Black here and then met two untouched
+  // dropdowns on the next page would reasonably conclude the first pair had
+  // not registered -- and would be half right, because nothing was carrying
+  // it. The slugs ride in the query string rather than in a store, because the
+  // query string is the part of a link that survives being copied, shared,
+  // bookmarked and reopened tomorrow: the page can be reached without passing
+  // through this card at all.
+  //
+  const productHref = !slug
+    ? "/products"
+    : chosenPacks.length > 0
+      ? `/products/${slug}?teas=${encodeURIComponent(
+          chosenPacks.map((pack) => pack.slug).join(","),
+        )}`
+      : `/products/${slug}`;
 
   const displayNumber =
     productNumber !== undefined &&

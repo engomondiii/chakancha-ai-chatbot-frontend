@@ -11,7 +11,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ShoppingCart,
   MessageCircle,
@@ -119,6 +119,9 @@ function normalizeProductImages(product) {
 
 export function ProductDetail({ product }) {
   const router = useRouter();
+
+  // The choice a shop card hands over in the link it was clicked through.
+  const searchParams = useSearchParams();
 
   const [qty, setQty] = useState(1);
 
@@ -246,6 +249,21 @@ export function ProductDetail({ product }) {
   const firstOption = bundleOptions[0]?.slug || "";
 
   //
+  // What the card was showing when it was clicked, read back out of the link.
+  //
+  // Checked against the options rather than trusted: a URL is typed, edited and
+  // kept, and a slug that is no longer offered -- a tea since taken out of
+  // stock, or a word somebody invented -- must fall through to the default
+  // rather than put a choice on screen that cannot be bought. Anything the
+  // customer picks here outranks it, which is why it sits between the picks and
+  // the default and not in the state itself.
+  //
+  const requestedTeas = (searchParams?.get("teas") || "")
+    .split(",")
+    .map((slug) => slug.trim())
+    .filter((slug) => bundleOptions.some((option) => option.slug === slug));
+
+  //
   // Accessories this page may offer. The backend decides what they are (a
   // container is the only one today) and refuses to offer any on an
   // accessory's own page, so there is no rule to repeat here.
@@ -266,7 +284,7 @@ export function ProductDetail({ product }) {
   const chosenTeas = isBundle
     ? Array.from(
         { length: bundleSize },
-        (_, slot) => picks[slot] || firstOption,
+        (_, slot) => picks[slot] || requestedTeas[slot] || firstOption,
       ).filter(Boolean)
     : [];
 
@@ -502,7 +520,7 @@ export function ProductDetail({ product }) {
 
                     <select
                       className={styles.bundleSelect}
-                      value={picks[slot] || firstOption}
+                      value={picks[slot] || requestedTeas[slot] || firstOption}
                       onChange={(event) => {
                         const chosen = event.target.value;
                         setPicks((current) => {
