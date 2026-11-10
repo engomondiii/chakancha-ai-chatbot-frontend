@@ -647,8 +647,14 @@ export function ProductDetail({ product }) {
             Ask Chakancha about this tea
           </button>
 
-          {/* ── Product preparation and source ────────────────────────────── */}
-          <BrewingGuide product={product} />
+          {/*
+            ── Product preparation ──────────────────────────────────────────
+            How to brew it, for the things that are brewed. A container is not
+            one: steeped in hot water it gives "0x RESTEEPS", which is not a
+            fact about the caddy so much as the absence of one, and reading it
+            beside a lidded jar makes the whole panel look automatic.
+          */}
+          {!isAccessory && <BrewingGuide product={product} />}
 
           <OriginStory product={product} />
         </div>
