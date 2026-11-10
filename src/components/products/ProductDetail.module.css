@@ -598,7 +598,16 @@
   justify-content: center;
 
   width: 100%;
-  min-height: 420px;
+
+  /*
+   * A definite height, not a minimum. The frames inside size themselves as a
+   * share of this panel, and a percentage of a height that is only a minimum
+   * has nothing firm to resolve against -- so the pictures would fall back to
+   * their own pixel size, which is whatever the photographer's file happened
+   * to be. This is also what the gallery it stands in for does: a window of a
+   * known size that the picture fits inside.
+   */
+  height: clamp(320px, 42vw, 460px);
 
   padding: var(--spacing-lg);
 

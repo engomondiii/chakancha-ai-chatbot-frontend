@@ -36,28 +36,53 @@
 }
 
 /*
- * A bundle's panel holds two teas, not one, and 180px between them left each
- * about 110px wide -- small enough that a clip inside one was unreadable. The
- * column is wider here for the same reason the panel exists at all: it is
- * showing twice as much.
+ * A bundle's panel holds two teas, not one, so it is given more of the card
+ * than a single tea's 180px -- but as a share of the card, never as a fixed
+ * width.
  *
- * Only the media column grows; the text column is minmax(0, 1fr) and simply
- * takes what is left, so nothing wraps that did not wrap before.
+ * A fixed 340px was wrong for a reason worth writing down: this grid sits
+ * inside a cell of the shop's own grid, so the card is a fraction of the
+ * screen, not the screen. On a 1200px display a card is about 560px wide, and
+ * 340px of that is most of it -- which is how the dropdowns lost their
+ * chevrons off the right edge, the title broke across two lines and "View tea"
+ * landed on top of the price. A viewport media query cannot fix that, because
+ * the viewport was never the thing that was narrow.
+ *
+ * So: proportional tracks, with a floor under the *text* column. When the card
+ * is tight the panel gives way and the words keep their room, which is the
+ * opposite of what happened before.
+ *
+ * Written as .card.cardBundle rather than .cardBundle so it outranks the
+ * single-class .card rules in the responsive section below, which come later in
+ * the file and would otherwise win on source order alone.
  */
-.cardBundle {
-  grid-template-columns: minmax(0, 1fr) 340px;
+.card.cardBundle {
+  grid-template-columns: minmax(16rem, 1fr) minmax(0, 0.9fr);
 
-  /* Taller as well as wider. The packs are sized as a share of the panel, so
-     height is half of how big they can get, and the text column has room to
-     spare -- a bundle's card carries a short name and two dropdowns. */
+  /* Taller as well, since the frames are sized as a share of the panel and
+     height is half of how big they can get. */
   min-height: 380px;
 }
 
-@media (max-width: 720px) {
-  .cardBundle {
-    grid-template-columns: minmax(0, 1fr) 240px;
+/*
+ * One card per row by now, so side by side is no longer the better shape: the
+ * panel takes the full width above the text instead of splitting it with it.
+ */
+@media (max-width: 767px) {
+  .card.cardBundle {
+    grid-template-columns: minmax(0, 1fr);
 
-    min-height: 340px;
+    min-height: 0;
+  }
+
+  .cardBundle .imageWrapper {
+    /* The panel is the second child in the markup; on top when stacked. */
+    order: -1;
+
+    min-height: 200px;
+
+    border-left: none;
+    border-bottom: 1px solid var(--color-divider-soft);
   }
 }
 
@@ -153,6 +178,11 @@
   align-items: center;
   justify-content: space-between;
 
+  /* Two short things on one line while they fit, and two lines when they do
+     not. Without this the row stayed one line and the link broke inside
+     itself, so "View tea" read as "View" above "tea" beside the price. */
+  flex-wrap: wrap;
+
   width: 100%;
 
   gap: var(--space-2);
@@ -175,6 +205,9 @@
 .viewLink {
   display: inline-flex;
   align-items: center;
+
+  /* Three words that mean one thing. It wraps as a whole or not at all. */
+  white-space: nowrap;
 
   gap: var(--spacing-xs);
 
@@ -662,6 +695,10 @@
 .bundleSelect {
   flex: 1;
   min-width: 0;
+
+  /* A select sizes itself to its longest option unless told otherwise, and a
+     long tea name was carrying the chevron off the edge of the card. */
+  max-width: 100%;
 
   padding: 7px 10px;
 

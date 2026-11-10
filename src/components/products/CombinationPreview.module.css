@@ -1,210 +1,159 @@
-/* ── A bundle's panel: the teas that are actually in it ──────────────────── */
-
 /*
- * The packs overlap and stand at different depths rather than sitting side by
- * side in a row. Two teas in a bundle are one thing you buy, and a row of two
- * pictures reads as two things you are choosing between -- which is exactly
- * the misunderstanding a bundle has to avoid.
+ * src/components/products/CombinationPreview.module.css
  *
- * Each pack carries --pack-depth (0 at the front) and --pack-spread (its
- * distance from the middle of the stack, negative to the left). All the
- * arithmetic is here, so three or four packs need no new rules.
+ * The composed preview: one frame per distinct thing, sharing the width.
+ *
+ * The earlier version stacked the packs with negative margins and a scale
+ * ramp, which was meant to read as depth and read instead as a mistake --
+ * especially with two of the same tea, where two identical pictures half
+ * covering each other look like a frame that failed to repaint. Even frames,
+ * a real gap between them, and a count for repeats: nothing overlaps, so
+ * nothing can look broken.
  */
-.bundlePacks {
-  position: relative;
 
+.preview {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 10px;
 
   width: 100%;
   height: 100%;
-
-  /* No gap: the packs overlap, and `gap` cannot go negative -- a negative
-     value makes the whole declaration invalid and the browser drops it. */
-}
-
-/*
- * The overlap itself, as a pull on every pack after the first. --pack-overlap
- * is declared on the container above and inherits down, so the three screen
- * sizes below only have to restate that one number.
- */
-.bundlePacks > * + * {
-  margin-left: calc(-1 * var(--pack-overlap, 36%));
-}
-
-.bundlePack {
-  --pack-depth: 0;
-  --pack-spread: 0;
-
-  display: block;
-
-  /* Wider than half, which is what makes them overlap at all. */
-  flex: 0 1 var(--pack-width, 68%);
   min-width: 0;
-
-  /*
-   * Height, not just a ceiling. A pack photo is tall and narrow, so width
-   * alone decides its size and it comes out fine; a clip is landscape, so
-   * width alone decides its size too -- and it came out a letterboxed strip
-   * about a finger tall. Giving the slot a real height lets each fill it.
-   */
-  height: 88%;
-  max-height: 340px;
-
-  object-fit: contain;
-
-  /* Front pack first. Without this the later ones paint on top and the stack
-     reads backwards. */
-  z-index: calc(10 - var(--pack-depth));
-
-  /* Each step back: a little higher, a little smaller. A drop-shadow rather
-     than a box-shadow, so it follows the pack's own silhouette instead of
-     drawing a rectangle around a transparent PNG. */
-  transform:
-    translate(
-      calc(var(--pack-spread) * 10px),
-      calc(var(--pack-depth) * -14px)
-    )
-    scale(calc(1 - var(--pack-depth) * 0.08));
-
-  filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.16));
-
-  animation: bundlePackIn 420ms var(--ease-out) both;
-
-  transition:
-    transform 420ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    filter    320ms var(--ease-out);
 }
 
-/*
- * A clip fills its frame instead of being letterboxed inside it, which is what
- * the single-product card has always done with its video. A little of the edge
- * is lost; the alternative is a strip of footage with bars above and below it,
- * which is what this looked like at 110px wide.
- *
- * Shorter than a pack photo's slot, because the footage is landscape: at the
- * full height the crop would be a vertical sliver through the middle of the
- * shot.
- */
-.bundlePackVideo {
-  height: 74%;
+.frame {
+  position: relative;
 
-  object-fit: cover;
-
-  border-radius: var(--radius-md);
-}
-
-/*
- * Hovering opens the stack: the packs slide apart and level off, so both are
- * fully visible and the customer can see exactly what they picked. This is
- * also what the panel does instead of the single-product card's video/photo
- * swap -- a bundle has no one photo to swap to.
- */
-.bundlePacks:hover .bundlePack,
-.bundlePacks:focus-within .bundlePack {
-  transform:
-    translate(calc(var(--pack-spread) * 26px), 0)
-    scale(1);
-
-  filter: drop-shadow(0 18px 24px rgba(0, 0, 0, 0.2));
-}
-
-/* A newly chosen tea arrives rather than appearing. */
-@keyframes bundlePackIn {
-  from {
-    opacity: 0;
-    transform:
-      translate(
-        calc(var(--pack-spread) * 10px),
-        calc(var(--pack-depth) * -14px + 10px)
-      )
-      scale(calc(0.94 - var(--pack-depth) * 0.08));
-  }
-}
-
-/* Past two the overlap has to tighten, or the stack walks off the panel. */
-/*
- * Three or four have to sit closer and shorter, or the stack walks off the
- * panel. Percentages, so this holds at every card width.
- */
-.bundlePacks[data-count="3"] {
-  --pack-width: 48%;
-  --pack-overlap: 22%;
-}
-
-.bundlePacks[data-count="4"] {
-  --pack-width: 40%;
-  --pack-overlap: 20%;
-}
-
-.bundlePacks[data-count="3"] .bundlePack,
-.bundlePacks[data-count="4"] .bundlePack {
-  max-height: 210px;
-}
-
-/*
- * A chosen tea with neither photograph nor clip. It still holds its slot, so
- * the row keeps saying how many teas are in the bundle.
- */
-.bundlePackName {
-  --pack-depth: 0;
-  --pack-spread: 0;
+  /* Even shares of whatever width the card gives us, and `0` as the basis so
+     a wide picture cannot push its neighbour out of the panel. */
+  flex: 1 1 0;
+  min-width: 0;
 
   display: flex;
   align-items: center;
   justify-content: center;
 
-  flex: 0 1 var(--pack-width, 68%);
-  min-width: 0;
+  height: 100%;
+  margin: 0;
 
-  height: 70%;
-  max-height: 268px;
-
-  padding: var(--space-1);
-
-  font-family: var(--font-family-primary);
-  font-size: var(--font-size-small);
-  line-height: 1.3;
-  text-align: center;
-  color: var(--color-text-secondary);
-
-  background-color: var(--color-background-muted);
-  border-radius: var(--radius-sm);
-
-  z-index: calc(10 - var(--pack-depth));
+  animation: frameIn 380ms var(--ease-out, cubic-bezier(0.2, 0.8, 0.2, 1)) both;
 }
 
-/* Narrow cards cannot afford the spread; the stack stays closed. */
+.media {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+
+  /* A pack shot is a photograph of an object, so it is shown whole. */
+  object-fit: contain;
+
+  filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.16));
+  transition: transform 320ms var(--ease-out, cubic-bezier(0.2, 0.8, 0.2, 1));
+}
+
+.mediaVideo {
+  /* Footage has no edges to protect, so it fills its frame instead. */
+  height: 92%;
+  object-fit: cover;
+  border-radius: var(--radius-md, 10px);
+  filter: none;
+}
+
+/* One frame is the whole panel: a single tea, or two of the same. */
+.preview[data-frames="1"] .media {
+  width: auto;
+  max-width: 100%;
+}
+
+.preview[data-frames="1"] .mediaVideo {
+  width: 100%;
+  height: 100%;
+}
+
+.frame:hover .media,
+.frame:focus-within .media {
+  transform: scale(1.03);
+}
+
+/*
+ * How many of this one. Sits on the frame rather than beside the panel, so
+ * with a container added the count still reads against the tea it counts.
+ */
+.count {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+
+  padding: 2px 7px;
+  border-radius: 999px;
+
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+
+  color: #fff;
+  background: rgba(23, 26, 24, 0.82);
+  backdrop-filter: blur(4px);
+}
+
+/* Neither picture nor clip: the thing still occupies its frame, by name. */
+.mediaName {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+
+  width: 100%;
+  height: 86%;
+  padding: 10px;
+
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.1));
+  border-radius: var(--radius-md, 10px);
+  background: var(--color-surface-2, rgba(0, 0, 0, 0.04));
+
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--color-text-secondary, #5a615c);
+}
+
+@keyframes frameIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @media (max-width: 480px) {
-  .bundlePacks {
-    --pack-overlap: 28%;
+  .preview {
+    gap: 8px;
   }
 
-  .imageWrapper:hover .bundlePack,
-  .imageWrapper:focus-visible .bundlePack {
-    transform:
-      translate(
-        calc(var(--pack-spread) * 10px),
-        calc(var(--pack-depth) * -14px)
-      )
-      scale(calc(1 - var(--pack-depth) * 0.08));
+  .count {
+    font-size: 11px;
+    padding: 1px 6px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bundlePack {
+  .frame {
     animation: none;
-    transition: none;
   }
 
-  .imageWrapper:hover .bundlePack,
-  .imageWrapper:focus-visible .bundlePack {
-    transform:
-      translate(
-        calc(var(--pack-spread) * 10px),
-        calc(var(--pack-depth) * -14px)
-      )
-      scale(calc(1 - var(--pack-depth) * 0.08));
+  .media,
+  .frame:hover .media,
+  .frame:focus-within .media {
+    transition: none;
+    transform: none;
   }
 }
