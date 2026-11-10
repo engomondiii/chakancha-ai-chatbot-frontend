@@ -59,6 +59,10 @@ export async function createOrder(payload) {
     // creating the order. Dropping them silently skips verification.
     paypal_order_id:          payload.paypal_order_id          || '',
     stripe_payment_intent_id: payload.stripe_payment_intent_id || '',
+    // An instruction for the packing bench, not a thing being bought. It is
+    // free, so it appears in none of the figures and needs no server-side
+    // guard against a client inflating it -- there is no amount to inflate.
+    gift_wrapping:            Boolean(payload.gift_wrapping),
   };
 
   try {

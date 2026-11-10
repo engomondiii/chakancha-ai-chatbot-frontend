@@ -19,7 +19,7 @@
 import React, { useState }                      from 'react';
 import { useRouter }                             from 'next/navigation';
 import { useStripe, useElements, CardElement }   from '@stripe/react-stripe-js';
-import { Check, ChevronRight, ChevronLeft, Loader2 } from 'lucide-react';
+import { Check, ChevronRight, ChevronLeft, Loader2, Gift } from 'lucide-react';
 import { ShippingForm }       from './ShippingForm';
 import { PaymentForm }        from './PaymentForm';
 import { createOrder, initStripePayment, initPayPalPayment } from '@/lib/api/orders';
@@ -126,6 +126,13 @@ export function CheckoutForm({ quote = null, applyCredit = false,
   const [step,        setStep]        = useState('shipping');
   const [errors,      setErrors]      = useState({});
   const [submitting,  setSubmitting]  = useState(false);
+
+  //
+  // Asked at the top of the first step, which is where somebody buying a
+  // present knows it is one. Asked at the end, after an address and a card, it
+  // arrives as an interruption to a decision already made.
+  //
+  const [giftWrapping, setGiftWrapping] = useState(false);
 
   const [shipping, setShipping] = useState({
     firstName: '', lastName: '', email: '', phone: '',
@@ -236,6 +243,7 @@ export function CheckoutForm({ quote = null, applyCredit = false,
             coupon_code:    appliedCoupon?.code || '',
             country:        shipping.country || 'US',
             apply_credit:   true,
+            gift_wrapping:  giftWrapping,
           });
 
             //
@@ -284,6 +292,7 @@ export function CheckoutForm({ quote = null, applyCredit = false,
           country:                  shipping.country || 'US',
           stripe_payment_intent_id: paymentIntent.id,
           apply_credit:             applyCredit,
+          gift_wrapping:            giftWrapping,
         });
 
           //
@@ -335,6 +344,10 @@ export function CheckoutForm({ quote = null, applyCredit = false,
           // The order is created on the return page, which must apply the same
           // credit the PayPal charge was reduced by, or the amounts disagree.
           sessionStorage.setItem('chakancha_checkout_credit', applyCredit ? '1' : '');
+          // The order is created after PayPal sends the customer back, by which
+          // time this component is gone. Anything chosen here and not handed
+          // over now is simply lost.
+          sessionStorage.setItem('chakancha_checkout_gift', giftWrapping ? '1' : '');
         }
 
         // Step 3: Redirect buyer to PayPal — they return to /checkout/paypal/success
@@ -353,6 +366,7 @@ export function CheckoutForm({ quote = null, applyCredit = false,
           coupon_code:    appliedCoupon?.code || '',
           country:        shipping.country || 'US',
           apply_credit:   applyCredit,
+          gift_wrapping:  giftWrapping,
         });
 
           //
@@ -384,6 +398,42 @@ export function CheckoutForm({ quote = null, applyCredit = false,
       <div className={styles.stepContent}>
         {step === 'shipping' && (
           <>
+            {/*
+              First thing on the first step.
+
+              A present is a present before it is an address, and somebody
+              sending one wants to know early that we can wrap it -- not after
+              they have typed a card number. It costs nothing, so there is no
+              decision to weigh and nothing to go back and reconsider.
+            */}
+            <label
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '12px 14px', marginBottom: 'var(--spacing-lg)',
+                backgroundColor: 'var(--color-warm-cream)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-md)',
+                cursor: 'pointer',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={giftWrapping}
+                onChange={(e) => setGiftWrapping(e.target.checked)}
+                style={{ width: 16, height: 16, accentColor: 'var(--color-tea-green)',
+                  cursor: 'pointer', flexShrink: 0 }}
+              />
+              <Gift size={16} color="var(--color-muted-olive)" aria-hidden="true" />
+              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 14,
+                color: 'var(--color-text-primary)', flex: 1 }}>
+                Include gift wrapping
+              </span>
+              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13,
+                fontWeight: 600, color: 'var(--color-muted-olive)' }}>
+                Free
+              </span>
+            </label>
+
             <ShippingForm
               data={shipping}
               onChange={(next) => {

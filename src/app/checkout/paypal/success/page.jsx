@@ -47,6 +47,7 @@ function PayPalSuccessContent() {
         // order would be refused after the buyer had already paid.
         //
         const applyCredit = sessionStorage.getItem('chakancha_checkout_credit') === '1';
+        const giftWrapping = sessionStorage.getItem('chakancha_checkout_gift') === '1';
 
         if (!rawShipping) {
           throw new Error('Checkout session expired. Please try again.');
@@ -62,12 +63,14 @@ function PayPalSuccessContent() {
           country:        shippingPayload.country || 'US',
           paypal_order_id: token,
           apply_credit:    applyCredit,
+          gift_wrapping:   giftWrapping,
         });
 
         // Clean up sessionStorage
         sessionStorage.removeItem('chakancha_checkout_shipping');
         sessionStorage.removeItem('chakancha_checkout_coupon');
         sessionStorage.removeItem('chakancha_checkout_credit');
+        sessionStorage.removeItem('chakancha_checkout_gift');
 
         clearCart();
         setStatus('success');
