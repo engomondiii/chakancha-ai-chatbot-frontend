@@ -74,7 +74,7 @@ function SuccessContent() {
         {[
           'You\'ll receive an email confirmation with your order details.',
           'Your tea is carefully packed at our Nandi Hills estate.',
-          'DHL Express will collect and ship your order internationally.',
+          'Your parcel is collected from the estate and shipped internationally.',
           'We\'ll email you a tracking number once dispatched.',
         ].map((step, i) => (
           <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 8, alignItems: 'flex-start' }}>
