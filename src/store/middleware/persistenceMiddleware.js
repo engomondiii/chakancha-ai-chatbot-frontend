@@ -18,7 +18,7 @@ const SESSION_ID_KEY      = 'chakancha_session_id';
 
 // ─── Cart persistence ─────────────────────────────────────────────────────────
 
-const CART_KEYS = ['cartItems', 'appliedCoupon'];
+const CART_KEYS = ['cartItems', 'appliedCoupon', 'giftWrapping'];
 
 export function saveCartToStorage(state) {
   if (typeof window === 'undefined') return;

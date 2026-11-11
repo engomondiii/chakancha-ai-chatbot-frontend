@@ -47,6 +47,10 @@ export const useStore = create((set, get) => {
   if (persistedCart?.cartItems?.length > 0) {
     slices.cartItems     = persistedCart.cartItems;
     slices.appliedCoupon = persistedCart.appliedCoupon || null;
+    // Restored with the basket it was asked for. A customer who ticks it,
+    // closes the tab and comes back tomorrow finds the same basket, and the
+    // wrapping is part of what they decided about it.
+    slices.giftWrapping  = Boolean(persistedCart.giftWrapping);
 
     const coupon   = persistedCart.appliedCoupon;
     const items    = persistedCart.cartItems;
@@ -139,6 +143,7 @@ export function useCartState() {
   return useStore((s) => ({
     cartItems:     s.cartItems,
     appliedCoupon: s.appliedCoupon,
+    giftWrapping:  s.giftWrapping,
     cartSubtotal:  s.cartSubtotal,
     cartTax:       s.cartTax,
     cartShipping:  s.cartShipping,

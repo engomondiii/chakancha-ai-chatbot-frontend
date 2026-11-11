@@ -19,12 +19,13 @@
 import React, { useState }                      from 'react';
 import { useRouter }                             from 'next/navigation';
 import { useStripe, useElements, CardElement }   from '@stripe/react-stripe-js';
-import { Check, ChevronRight, ChevronLeft, Loader2, Gift } from 'lucide-react';
+import { Check, ChevronRight, ChevronLeft, Loader2 } from 'lucide-react';
 import { ShippingForm }       from './ShippingForm';
 import { PaymentForm }        from './PaymentForm';
 import { createOrder, initStripePayment, initPayPalPayment } from '@/lib/api/orders';
 import { syncCartToServer }   from '@/lib/api/cart';
 import { CreditOption }      from './CreditOption';
+import { GiftWrapOption }    from '@/components/common/GiftWrapOption';
 import { validateShipping, validatePayment } from './validation';
 import { useStore }           from '@/store';
 import styles                 from './CheckoutForm.module.css';
@@ -132,7 +133,12 @@ export function CheckoutForm({ quote = null, applyCredit = false,
   // present knows it is one. Asked at the end, after an address and a card, it
   // arrives as an interruption to a decision already made.
   //
-  const [giftWrapping, setGiftWrapping] = useState(false);
+  // Read from the cart rather than held here, because the same question is
+  // asked in the basket. Two checkboxes with one answer between them is the
+  // only arrangement in which they cannot contradict each other -- and the
+  // one the customer ticked first is the one still ticked here.
+  //
+  const giftWrapping = useStore((s) => s.giftWrapping);
 
   const [shipping, setShipping] = useState({
     firstName: '', lastName: '', email: '', phone: '',
@@ -404,35 +410,10 @@ export function CheckoutForm({ quote = null, applyCredit = false,
               A present is a present before it is an address, and somebody
               sending one wants to know early that we can wrap it -- not after
               they have typed a card number. It costs nothing, so there is no
-              decision to weigh and nothing to go back and reconsider.
+              decision to weigh and nothing to go back and reconsider. Offered
+              in the basket too, for the ones it occurs to later.
             */}
-            <label
-              style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '12px 14px', marginBottom: 'var(--spacing-lg)',
-                backgroundColor: 'var(--color-warm-cream)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius-md)',
-                cursor: 'pointer',
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={giftWrapping}
-                onChange={(e) => setGiftWrapping(e.target.checked)}
-                style={{ width: 16, height: 16, accentColor: 'var(--color-tea-green)',
-                  cursor: 'pointer', flexShrink: 0 }}
-              />
-              <Gift size={16} color="var(--color-muted-olive)" aria-hidden="true" />
-              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 14,
-                color: 'var(--color-text-primary)', flex: 1 }}>
-                Include gift wrapping
-              </span>
-              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13,
-                fontWeight: 600, color: 'var(--color-muted-olive)' }}>
-                Free
-              </span>
-            </label>
+            <GiftWrapOption style={{ marginBottom: 'var(--spacing-lg)' }} />
 
             <ShippingForm
               data={shipping}

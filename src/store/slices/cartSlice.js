@@ -128,6 +128,18 @@ function lineKey(productId, selections) {
 export const createCartSlice = (set, get) => ({
   cartItems:     [],
   appliedCoupon: null,
+
+  //
+  // Pack this order as a gift. Free, so it is deliberately not part of
+  // computeTotals: there is no figure for it to move, and giving it one
+  // would be the first step towards charging for it.
+  //
+  // It lives here rather than in the checkout form because it is offered in
+  // two places -- the basket and the first step of checkout -- and two
+  // checkboxes sharing one answer is the only arrangement in which they
+  // cannot contradict each other.
+  //
+  giftWrapping:  false,
   isCartOpen:    false,
   // Shipping country, shared so /cart and /checkout request the SAME backend
   // quote. Empty until the buyer picks one, in which case the backend applies
@@ -219,8 +231,16 @@ export const createCartSlice = (set, get) => ({
     });
   },
 
+  setGiftWrapping: (wanted) => set({ giftWrapping: Boolean(wanted) }),
+
   clearCart: () => {
-    set({ cartItems: [], appliedCoupon: null, ...computeTotals([], null) });
+    // Including the wrapping. It is an instruction about this basket, and
+    // keeping it past the order it belonged to would quietly wrap the next
+    // one -- which nobody asked for and nobody would see until it arrived.
+    set({
+      cartItems: [], appliedCoupon: null, giftWrapping: false,
+      ...computeTotals([], null),
+    });
   },
 
   applyCoupon: (coupon) => {
@@ -258,6 +278,7 @@ export const createCartSlice = (set, get) => ({
       total:                 s.cartTotal,
       itemCount:             s.cartItemCount,
       appliedCoupon:         s.appliedCoupon,
+      giftWrapping:          s.giftWrapping,
       // Nothing left to reach: shipping is free from the first item.
       freeShippingRemaining: 0,
       hasFreeShipping:       true,

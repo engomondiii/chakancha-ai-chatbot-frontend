@@ -18,6 +18,7 @@ import { useStore } from '@/store';
 import { useCart }  from '@/lib/hooks/useCart';
 import { formatCurrency } from '@/lib/utils/currency';
 import { syncCartToServer, fetchServerCart } from '@/lib/api/cart';
+import { GiftWrapOption } from '@/components/common/GiftWrapOption';
 
 
 export function CartSummary({ onCheckout, compact = false }) {
@@ -226,6 +227,16 @@ export function CartSummary({ onCheckout, compact = false }) {
           There is no extra charge beyond your total.
         </p>
       </div>
+
+      {/*
+        The same question as the first step of checkout, asked here as well.
+
+        Somebody buying a present usually knows it is one while they are still
+        looking at the basket, and the ones it occurs to later should not have
+        to go back a page for it. One control and one answer, so whichever
+        they tick, the other is already ticked when they get to it.
+      */}
+      <GiftWrapOption />
 
       {onCheckout && (
         <button type="button" onClick={onCheckout}
