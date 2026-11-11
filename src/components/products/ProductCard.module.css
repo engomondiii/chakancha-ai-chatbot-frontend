@@ -36,32 +36,41 @@
 }
 
 /*
- * A bundle's panel holds two teas, not one, so it is given more of the card
- * than a single tea's 180px -- but as a share of the card, never as a fixed
- * width.
+ * A bundle's panel is the width of any other product's photograph, until it
+ * has two different teas to show.
  *
- * A fixed 340px was wrong for a reason worth writing down: this grid sits
- * inside a cell of the shop's own grid, so the card is a fraction of the
- * screen, not the screen. On a 1200px display a card is about 560px wide, and
- * 340px of that is most of it -- which is how the dropdowns lost their
- * chevrons off the right edge, the title broke across two lines and "View tea"
- * landed on top of the price. A viewport media query cannot fix that, because
- * the viewport was never the thing that was narrow.
+ * Two of the same tea is one picture and a count -- no more to look at than a
+ * single tea, and taking more room would make the bundle's card sit oddly
+ * beside the ones it is listed among. Two different teas is two pictures, and
+ * at the ordinary 180px they come out around eighty pixels each: a thumbnail
+ * of a pouch rather than a look at one. So the card widens, and only then.
  *
- * So: proportional tracks, with a floor under the *text* column. When the card
- * is tight the panel gives way and the words keep their room, which is the
- * opposite of what happened before.
+ * A fixed pixel width was the wrong tool and worth recording why. This grid
+ * sits inside a cell of the shop's own grid, so the card is a fraction of the
+ * screen and not the screen: on a 1200px display it is about 560px wide, and a
+ * 340px panel was most of it -- which is how the dropdowns lost their chevrons
+ * off the right edge, the title broke in two and "View tea" landed on the
+ * price. No viewport media query could have fixed that, because the viewport
+ * was never the narrow thing. Proportional tracks with a floor under the TEXT
+ * column mean the panel gives way first and the words keep their room.
  *
- * Written as .card.cardBundle rather than .cardBundle so it outranks the
- * single-class .card rules in the responsive section below, which come later in
- * the file and would otherwise win on source order alone.
+ * Written as .card.cardBundleWide so it outranks the single-class .card rules
+ * in the responsive section below, which come later in the file and would
+ * otherwise win on source order alone.
  */
-.card.cardBundle {
-  grid-template-columns: minmax(16rem, 1fr) minmax(0, 0.9fr);
+.card.cardBundleWide {
+  grid-template-columns: minmax(14rem, 1fr) minmax(0, 0.85fr);
 
-  /* Taller as well, since the frames are sized as a share of the panel and
-     height is half of how big they can get. */
-  min-height: 380px;
+  min-height: 360px;
+
+  /* The widening is a response to something the customer just did, so it
+     should read as a response and not as a reload. Browsers that will not
+     interpolate these tracks simply snap, which is what used to happen. */
+  transition:
+    grid-template-columns var(--transition-standard) var(--ease-out),
+    transform var(--transition-standard) var(--ease-out),
+    box-shadow var(--transition-standard) var(--ease-out),
+    border-color var(--transition-fast) var(--ease-out);
 }
 
 /*
@@ -69,13 +78,13 @@
  * panel takes the full width above the text instead of splitting it with it.
  */
 @media (max-width: 767px) {
-  .card.cardBundle {
+  .card.cardBundleWide {
     grid-template-columns: minmax(0, 1fr);
 
     min-height: 0;
   }
 
-  .cardBundle .imageWrapper {
+  .cardBundleWide .imageWrapper {
     /* The panel is the second child in the markup; on top when stacked. */
     order: -1;
 

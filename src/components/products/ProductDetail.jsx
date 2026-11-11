@@ -386,17 +386,6 @@ export function ProductDetail({ product }) {
               <CombinationPreview
                 items={chosenPacks}
                 extra={pickedAddOns}
-                /*
-                  Pictures, not footage. The shop card is where a clip earns
-                  its place -- it is selling the idea of the tea to somebody
-                  scrolling past. By the time the customer has clicked through
-                  to this page they have stopped browsing and started deciding,
-                  and the question is which packs are in the box: two Gold, two
-                  Black, one of each, with or without the container. A pack
-                  shot answers that; a pouring clip does not, and two of them
-                  running side by side answer it less well than one would.
-                */
-                stills
                 label={`${name}: ${[...chosenPacks, ...pickedAddOns]
                   .map((thing) => thing.name)
                   .join(" and ")}`}

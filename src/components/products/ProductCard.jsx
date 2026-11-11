@@ -16,7 +16,7 @@ import { ShoppingCart, ArrowRight } from "lucide-react";
 
 import { useStore } from "@/store";
 import { LogoMark } from "@/components/common/Logo";
-import { CombinationPreview } from "./CombinationPreview";
+import { CombinationPreview, frameCount } from "./CombinationPreview";
 
 import styles from "./ProductCard.module.css";
 
@@ -115,7 +115,6 @@ export function ProductCard({
   // a bundle's packs are separate components that have to re-render when it
   // changes. The ref stays: it is read inside callbacks that must not close
   // over a stale value.
-  const [onScreen, setOnScreen] = useState(false);
 
   //
   // One slug per slot in the bundle. Empty for anything that is not one.
@@ -191,7 +190,6 @@ export function ProductCard({
     const playback = new IntersectionObserver(
       ([entry]) => {
         visibleRef.current = entry.isIntersecting;
-        setOnScreen(entry.isIntersecting);
         if (!entry.isIntersecting) {
           videoRef.current?.pause();
         } else {
@@ -335,6 +333,21 @@ export function ProductCard({
     slotPacks.length > 0 && slotPacks.every(Boolean) ? slotPacks : [];
 
   //
+  // Wider only when there is genuinely more to show.
+  //
+  // Two of the same tea is one picture and a count, which needs no more room
+  // than any other product's photograph -- and taking more would make the
+  // bundle's card sit oddly beside the single teas it is listed among. Two
+  // different teas is two pictures, and at the ordinary width they would each
+  // be about eighty pixels, which is a thumbnail of a pouch rather than a look
+  // at it.
+  //
+  // Counted by the preview's own grouping rather than by the dropdowns, so
+  // the card and the panel cannot disagree about what "two" means.
+  //
+  const wideBundle = isBundle && frameCount(chosenPacks) > 1;
+
+  //
   // The link carries the choice.
   //
   // A customer who picked Gold and Black here and then met two untouched
@@ -396,7 +409,7 @@ export function ProductCard({
   return (
     <article
       className={`${styles.card} ${video ? styles.cardWithVideo : ""} ${
-        isBundle ? styles.cardBundle : ""
+        wideBundle ? styles.cardBundleWide : ""
       }`}
     >
       <div className={styles.content}>
@@ -543,19 +556,6 @@ export function ProductCard({
         {chosenPacks.length > 0 ? (
           <CombinationPreview
             items={chosenPacks}
-            /*
-              Playing whenever the card is on screen, like a single tea's.
-              This is the browsing page: the clip is selling the idea of the
-              tea to somebody scrolling past, and that is the one place it
-              earns the attention it takes. The product page behind "View tea"
-              asks for stills instead, because by then the question has become
-              which packs are in the box.
-
-              To hold them still until the panel is pointed at, hover has to
-              become state: the ref above is read inside callbacks and does
-              not re-render, and these packs are separate components.
-            */
-            playing={onScreen}
             label={`${name}: ${chosenPacks
               .map((pack) => pack.name)
               .join(" and ")}`}

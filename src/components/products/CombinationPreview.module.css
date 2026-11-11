@@ -3,6 +3,10 @@
  *
  * The composed preview: one frame per distinct thing, sharing the width.
  *
+ * Photographs only -- the video rules that used to live here went with the
+ * clips themselves. What is being chosen here is which pack is which, and a
+ * moving image is worst at exactly that.
+ *
  * The earlier version stacked the packs with negative margins and a scale
  * ramp, which was meant to read as depth and read instead as a mistake --
  * especially with two of the same tea, where two identical pictures half
@@ -54,23 +58,10 @@
   transition: transform 320ms var(--ease-out, cubic-bezier(0.2, 0.8, 0.2, 1));
 }
 
-.mediaVideo {
-  /* Footage has no edges to protect, so it fills its frame instead. */
-  height: 92%;
-  object-fit: cover;
-  border-radius: var(--radius-md, 10px);
-  filter: none;
-}
-
 /* One frame is the whole panel: a single tea, or two of the same. */
 .preview[data-frames="1"] .media {
   width: auto;
   max-width: 100%;
-}
-
-.preview[data-frames="1"] .mediaVideo {
-  width: 100%;
-  height: 100%;
 }
 
 .frame:hover .media,
