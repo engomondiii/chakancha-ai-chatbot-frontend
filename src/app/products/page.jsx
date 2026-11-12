@@ -298,6 +298,7 @@ function ProductCatalog() {
         blurb="Two teas together, at less than two teas."
         products={bundles}
         isLoading={isLoading}
+        roomy
       />
       <ShopSection
         title="Keep it fresh"

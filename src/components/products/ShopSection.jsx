@@ -17,7 +17,19 @@ import { ProductCard } from "./ProductCard";
 
 import styles from "./ShopSection.module.css";
 
-export function ShopSection({ title, blurb, products, isLoading = false }) {
+export function ShopSection({
+  title,
+  blurb,
+  products,
+  isLoading = false,
+  //
+  // Whether a single card in this section gets a little more of the row than
+  // half. Off by default, and asked for by the section rather than taken by
+  // any card that happens to be alone: the bundle has two dropdowns and two
+  // pouches to fit, a tea caddy has a photograph and a price.
+  //
+  roomy = false,
+}) {
   const items = Array.isArray(products) ? products : [];
 
   // Nothing to say while the catalogue is still arriving, and nothing to say
@@ -35,7 +47,7 @@ export function ShopSection({ title, blurb, products, isLoading = false }) {
         {blurb && <p className={styles.blurb}>{blurb}</p>}
       </div>
 
-      <div className={styles.grid}>
+      <div className={`${styles.grid} ${roomy ? styles.gridRoomy : ""}`}>
         {items.map((product, index) => (
           <ProductCard
             key={product?.id ?? product?.slug ?? `${title}-${index}`}

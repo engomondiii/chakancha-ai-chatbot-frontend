@@ -58,15 +58,17 @@
    * as two dropdowns. Sideways only: the card's height is untouched, which is
    * the whole point, since a wider panel used to mean a taller one.
    *
-   * Written as :only-child so it cannot reach a section that has a second
-   * card to put in that column.
+   * Written as :only-child, and only inside a section that asked for it, so
+   * it reaches neither a section with a second card to put in that column nor
+   * one whose single card never needed the room -- the tea caddy below is a
+   * photograph and a price, and at this width it just looked stretched.
    *
    * 55%, not 68 and not 50. Two thirds of the row read as the shop making a
    * feature of the bundle, which it is not -- it is one more thing on the
    * shelf. Five points over half is the smallest step that still reads as
    * deliberate rather than as a card that failed to fill its column.
    */
-  .grid > :only-child {
+  .gridRoomy > :only-child {
     grid-column: span 2;
 
     max-width: 55%;
