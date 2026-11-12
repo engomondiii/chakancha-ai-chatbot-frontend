@@ -26,6 +26,10 @@
 }
 
 .blurb {
+  /* A newline in the copy is a line break on the page. Only the copy puts one
+     there; everything else wraps as it always did. */
+  white-space: pre-line;
+
   margin: 0;
 
   font-family: var(--font-sans);
