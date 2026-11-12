@@ -6,7 +6,7 @@
  *  - Page title changed from "Our Teas" to more compelling "Discover Exceptional Teas"
  *  - Added a rich hero section with origin badge, headline, and a strong
  *    call-to-action description driving the user to shop
- *  - Added 3 trust badges (Free shipping, Ethical sourcing, Satisfaction guarantee)
+ *  - Added 3 trust badges (No added costs, Ethical sourcing, Satisfaction guarantee)
  *  - Subtitle rewritten to be more evocative and purchase-driving
  *  - All product grid logic unchanged
  */
@@ -16,7 +16,7 @@
 import React from "react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import { Truck, Heart, Star, ShieldCheck } from "lucide-react";
+import { Tag, Heart, Star, ShieldCheck } from "lucide-react";
 import { ProductGrid } from "@/components/products/ProductGrid";
 import { ShopSection } from "@/components/products/ShopSection";
 import { useProducts, useProductCategories } from "@/lib/hooks/useProducts";
@@ -164,7 +164,14 @@ function ProductCatalog() {
           }}
         >
           {[
-            { icon: Truck, text: "Free shipping over $50" },
+            //
+            // No figure and no carrier. The old badge promised free shipping
+            // over $50, which made a customer under $50 wonder what shipping
+            // would cost them -- a question this shop does not want asked,
+            // because the answer is nothing at any basket size. So it says
+            // the thing itself instead of the condition on it.
+            //
+            { icon: Tag, text: "No added costs" },
             { icon: Heart, text: "Ethical, farmer-first teas" },
             { icon: ShieldCheck, text: "30-day satisfaction guarantee" },
           ].map(({ icon: Icon, text }) => (
