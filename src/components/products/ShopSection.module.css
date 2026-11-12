@@ -61,14 +61,14 @@
    * Written as :only-child so it cannot reach a section that has a second
    * card to put in that column.
    *
-   * 60%, not 68 and not 50. Two thirds of the row read as the shop making a
+   * 55%, not 68 and not 50. Two thirds of the row read as the shop making a
    * feature of the bundle, which it is not -- it is one more thing on the
-   * shelf. This is a card that is slightly roomier than its neighbours, and
-   * nothing more than that.
+   * shelf. Five points over half is the smallest step that still reads as
+   * deliberate rather than as a card that failed to fill its column.
    */
   .grid > :only-child {
     grid-column: span 2;
 
-    max-width: 60%;
+    max-width: 55%;
   }
 }
