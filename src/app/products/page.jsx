@@ -16,7 +16,7 @@
 import React from "react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import { Tag, Heart, Star } from "lucide-react";
+import { Tag, Heart } from "lucide-react";
 import { ProductGrid } from "@/components/products/ProductGrid";
 import { ShopSection } from "@/components/products/ShopSection";
 import { useProducts, useProductCategories } from "@/lib/hooks/useProducts";
@@ -241,40 +241,36 @@ function ProductCatalog() {
               margin: 0,
             }}
           >
+            {/*
+              Was "... — order by noon for same-day dispatch", which nothing
+              in this shop can keep: the tea ships from Kenya, there is no
+              cut-off anywhere in the order pipeline, and no dispatch SLA the
+              warehouse has agreed to. The count is real, so the count is
+              what it says.
+            */}
             {isLoading
               ? "Loading teas…"
-              : `${teas.length} teas available — order by noon for same-day dispatch`}
+              : `${teas.length} teas available`}
           </p>
         </div>
 
-        {/* Star rating social proof */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            backgroundColor: "rgba(212,160,23,0.08)",
-            border: "1px solid rgba(212,160,23,0.2)",
-            borderRadius: "999px",
-            padding: "8px 16px",
-          }}
-        >
-          <div style={{ display: "flex", gap: 2 }}>
-            {[1, 2, 3, 4, 5].map((s) => (
-              <Star key={s} size={13} fill="#D4A017" color="#D4A017" />
-            ))}
-          </div>
-          <span
-            style={{
-              fontFamily: "var(--font-sans)",
-              fontSize: 13,
-              fontWeight: 600,
-              color: "#7a5800",
-            }}
-          >
-            4.9 · Loved by 2,000+ tea drinkers
-          </span>
-        </div>
+        {/*
+          A five-star badge reading "4.9 · Loved by 2,000+ tea drinkers" stood
+          here. Both figures were typed into this file. Nothing computed them
+          and nothing could: the reviews table is empty, and this badge was
+          never wired to it in the first place -- it was a string beside five
+          hard-coded stars.
+
+          That is a fabricated review score on a live shop, which is a
+          different kind of wrong from an over-written slogan. It is the
+          claim regulators read first, in Korea and in every market this
+          ships to, and the one a customer feels most cheated by when they
+          find the shop has no reviews at all.
+
+          It comes back when there is something to show: Review already
+          carries a per-product rating, so when the products endpoint serves
+          an average and a count, this renders them. Not before.
+        */}
       </div>
 
       {/* ── The teas ─────────────────────────────────────────────────────── */}
