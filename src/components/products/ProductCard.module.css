@@ -36,66 +36,63 @@
 }
 
 /*
- * A bundle's panel starts wider than a single tea's.
+ * A bundle card is a long one: the whole row, and seven tenths of it given to
+ * the pictures.
  *
- * It is carrying more than a photograph: one pouch and a count, or two
- * pouches that have to be told apart. At the 180px every other card uses, a
- * pack came out about 130px across -- small enough that the picture stopped
- * doing the job the panel is there for. The card's height is unchanged; the
- * room a photograph needs here is across, not down.
+ * It is carrying more than a photograph -- one pouch and a count, or two
+ * pouches that have to be told apart -- and inside half a row there was
+ * nowhere to find that width except out of the words beside it, which is how
+ * the title broke in two and the dropdowns lost their chevrons the first time
+ * round. So it stops competing with its own text column and takes the room
+ * from the grid: one card across where the shop runs two.
+ *
+ * 0.3fr of a full row is around 330px, comfortably past the 16rem floor the
+ * text needs, so the words are no worse off than they were in half a row --
+ * and the pictures are better off by more than double.
  */
 .card.cardBundle {
-  grid-template-columns: minmax(0, 1fr) 215px;
+  grid-column: 1 / -1;
+
+  grid-template-columns: minmax(16rem, 0.3fr) minmax(0, 0.7fr);
 }
 
-/* The panel's own padding was 24px a side, which at this size is most of
-   what the step above bought. The pictures get it back. */
+/*
+ * The height is an ordinary card's.
+ *
+ * The panel asked for 320px of its own and a portrait pouch filled whatever
+ * it was given, so the card grew downwards when what it wanted was to grow
+ * across. Nothing here sets a height now: the row is as tall as the title,
+ * the two dropdowns and the button need it to be, and the picture fits itself
+ * into that. Its padding drops to 16px a side for the same reason -- at this
+ * width the border is the frame, not the whitespace.
+ */
 .cardBundle .imageWrapper {
+  min-height: 0;
+
   padding: var(--space-2);
 }
 
 /*
- * And it widens again when it has two different teas to show.
- *
- * Two of the same tea is one picture and a count -- no more to look at than a
- * single tea, so it keeps the width above. Two different teas is two pictures
- * sharing that width, which left each pouch a thumbnail rather than a look at
- * one. So the card takes the whole row and splits it evenly, and only then.
- *
- * A fixed pixel width was the wrong tool and worth recording why. This grid
- * sits inside a cell of the shop's own grid, so the card is a fraction of the
- * screen and not the screen: on a 1200px display it is about 560px wide, and a
- * 340px panel was most of it -- which is how the dropdowns lost their chevrons
- * off the right edge, the title broke in two and "View tea" landed on the
- * price. No viewport media query could have fixed that, because the viewport
- * was never the narrow thing. Proportional tracks with a floor under the TEXT
- * column mean the panel gives way first and the words keep their room.
- *
- * Written as .card.cardBundleWide so it outranks the single-class .card rules
- * in the responsive section below, which come later in the file and would
- * otherwise win on source order alone.
+ * A fixed pixel width was the wrong tool here and it is worth recording why.
+ * This grid sits inside a cell of the shop's own grid, so the card is a
+ * fraction of the screen and not the screen: a 340px panel was most of a
+ * half-row card, which is how the dropdowns lost their chevrons off the right
+ * edge and "View tea" landed on the price. No viewport media query could have
+ * fixed it, because the viewport was never the narrow thing. Proportional
+ * tracks with a floor under the TEXT column are what keep the words safe at
+ * any width.
  */
 .card.cardBundleWide {
   /*
-   * The whole row, rather than half of it.
+   * Two different teas no longer change the shape, because the shape above
+   * already fits them: seven tenths of a full row is around 770px, and two
+   * pouches sharing it get roughly 380px each.
    *
-   * Two pouches side by side inside half a row is the problem this card kept
-   * running into: the panel can only take width from the words beside it, and
-   * past a point there is nothing left to take -- that is how the title broke
-   * in two and the dropdowns lost their chevrons the first time. So the card
-   * stops competing with its own text column and takes the room from the grid
-   * instead. On a display where the shop runs two across, the bundle runs one
-   * across; where the shop is already one across, this changes nothing.
+   * The class stays because the card still moves when the second tea is
+   * chosen -- one picture becomes two inside the same panel -- and that
+   * should read as a response to what the customer just did rather than as a
+   * reload.
    */
-  grid-column: 1 / -1;
-
-  grid-template-columns: minmax(14rem, 1fr) minmax(0, 1fr);
-
-  min-height: 360px;
-
-  /* The widening is a response to something the customer just did, so it
-     should read as a response and not as a reload. Browsers that will not
-     interpolate these tracks simply snap, which is what used to happen. */
   transition:
     grid-template-columns var(--transition-standard) var(--ease-out),
     transform var(--transition-standard) var(--ease-out),
