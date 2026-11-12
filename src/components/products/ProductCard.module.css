@@ -36,20 +36,16 @@
 }
 
 /*
- * A bundle's panel starts wider than a single tea's, and the card is a little
- * taller to match.
+ * A bundle's panel starts wider than a single tea's.
  *
  * It is carrying more than a photograph: one pouch and a count, or two
  * pouches that have to be told apart. At the 180px every other card uses, a
- * pack came out about 130px across and a pair came out at 90 -- small enough
- * that the pictures stopped doing the job the panel is there for. This is a
- * modest step, not a different layout: the text column still holds the title
- * on one line, and the card still sits in the row with its neighbours.
+ * pack came out about 130px across -- small enough that the picture stopped
+ * doing the job the panel is there for. The card's height is unchanged; the
+ * room a photograph needs here is across, not down.
  */
 .card.cardBundle {
   grid-template-columns: minmax(0, 1fr) 215px;
-
-  min-height: 345px;
 }
 
 /* The panel's own padding was 24px a side, which at this size is most of
@@ -64,7 +60,7 @@
  * Two of the same tea is one picture and a count -- no more to look at than a
  * single tea, so it keeps the width above. Two different teas is two pictures
  * sharing that width, which left each pouch a thumbnail rather than a look at
- * one. So the panel takes an equal share of the card, and only then.
+ * one. So the card takes the whole row and splits it evenly, and only then.
  *
  * A fixed pixel width was the wrong tool and worth recording why. This grid
  * sits inside a cell of the shop's own grid, so the card is a fraction of the
@@ -80,9 +76,22 @@
  * otherwise win on source order alone.
  */
 .card.cardBundleWide {
+  /*
+   * The whole row, rather than half of it.
+   *
+   * Two pouches side by side inside half a row is the problem this card kept
+   * running into: the panel can only take width from the words beside it, and
+   * past a point there is nothing left to take -- that is how the title broke
+   * in two and the dropdowns lost their chevrons the first time. So the card
+   * stops competing with its own text column and takes the room from the grid
+   * instead. On a display where the shop runs two across, the bundle runs one
+   * across; where the shop is already one across, this changes nothing.
+   */
+  grid-column: 1 / -1;
+
   grid-template-columns: minmax(14rem, 1fr) minmax(0, 1fr);
 
-  min-height: 385px;
+  min-height: 360px;
 
   /* The widening is a response to something the customer just did, so it
      should read as a response and not as a reload. Browsers that will not
@@ -100,11 +109,10 @@
  */
 @media (max-width: 767px) {
   /* A phone has no room to spend on a wider panel: the bundle card goes back
-     to the proportions of every other card here. */
+     to the proportions of every other card here. Spelled out rather than left
+     to .card, which this rule outranks. */
   .card.cardBundle {
     grid-template-columns: minmax(0, 1fr) 150px;
-
-    min-height: 280px;
   }
 
   .card.cardBundleWide {
@@ -631,6 +639,10 @@
     grid-template-columns: minmax(0, 1fr) 120px;
 
     min-height: 250px;
+  }
+
+  .card.cardBundle {
+    grid-template-columns: minmax(0, 1fr) 120px;
   }
 
   .content {
