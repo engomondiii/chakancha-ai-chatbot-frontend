@@ -193,6 +193,8 @@
 .needsTeaNote {
   margin: 0 0 var(--space-3);
 
+  transition: color var(--transition-fast) var(--ease-out);
+
   font-family: var(--font-family-primary);
   font-size: var(--font-size-caption);
   font-weight: var(--font-weight-regular);
@@ -332,6 +334,57 @@
   border-color: var(--color-border-soft);
 
   cursor: not-allowed;
+}
+
+/*
+ * The one disabled state that is a rule rather than a dead end.
+ *
+ * Out of stock is final -- there is nothing the customer can do about it, so
+ * the button stays still. "Add a tea first" is not: it is a step they have
+ * not taken yet, and the cursor arriving on the button is the exact moment
+ * they are trying to take the one after it. So the button answers.
+ *
+ * A short nudge, not a flash or a bounce: it moves far enough to catch the
+ * eye and reads as a head shake rather than as something broken. The border
+ * warms to gold at the same time, which carries the same message to anybody
+ * whose eye does not follow movement, and the sentence above it lifts out of
+ * grey so the two are obviously one answer. Hover only, because a disabled
+ * button takes no focus: a keyboard never reaches it, which is why the reason
+ * is written above it in text rather than left to this.
+ *
+ * The whole thing is over in 420ms and replays on every fresh hover, because
+ * a customer who tries twice is asking twice.
+ */
+@keyframes cartBtnNudge {
+  0%, 100% { transform: translateX(0); }
+  18%      { transform: translateX(-4px); }
+  38%      { transform: translateX(4px); }
+  58%      { transform: translateX(-3px); }
+  78%      { transform: translateX(2px); }
+}
+
+.cartBtnNeedsTea:disabled:hover {
+  border-color: var(--color-accent-muted-gold);
+  background-color: var(--color-accent-sand);
+
+  animation: cartBtnNudge 420ms var(--ease-out) both;
+}
+
+/* The sentence that says why, lit from the same hover. :has() is what lets a
+   button reach backwards to the line above it; where it is not supported the
+   button still nudges on its own. */
+.content:has(.cartBtnNeedsTea:disabled:hover) .needsTeaNote {
+  color: var(--color-text-primary);
+}
+
+/*
+ * A customer who has asked the browser to stop moving things gets the colour
+ * and not the movement. The message does not depend on the animation.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .cartBtnNeedsTea:disabled:hover {
+    animation: none;
+  }
 }
 
 .cartBtnInCart {

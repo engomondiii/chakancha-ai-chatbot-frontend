@@ -503,7 +503,7 @@ export function ProductCard({
           type="button"
           className={`${styles.cartBtn} ${
             isInCart ? styles.cartBtnInCart : ""
-          }`}
+          } ${needsTeaFirst ? styles.cartBtnNeedsTea : ""}`}
           onClick={handleAddToCart}
           disabled={!inStock || adding || needsTeaFirst}
           aria-label={
