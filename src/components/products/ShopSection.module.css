@@ -48,4 +48,22 @@
   .grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  /*
+   * A section holding one card gives it a little more of the row than half.
+   *
+   * Bundles is that section: one card, and an empty column beside it. Half a
+   * row was never a decision, it was what the two-column rule happened to
+   * leave -- and it is tight for a card that has to show two pouches as well
+   * as two dropdowns. Sideways only: the card's height is untouched, which is
+   * the whole point, since a wider panel used to mean a taller one.
+   *
+   * Written as :only-child so it cannot reach a section that has a second
+   * card to put in that column.
+   */
+  .grid > :only-child {
+    grid-column: span 2;
+
+    max-width: 68%;
+  }
 }
