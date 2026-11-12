@@ -1,7 +1,12 @@
 /**
  * src/components/common/GiftWrapOption.jsx
  *
- * "Include gift wrapping", wherever the customer happens to think of it.
+ * "Include a gift bag", wherever the customer happens to think of it.
+ *
+ * It says bag rather than wrapping because a bag is what arrives: a carrier
+ * the tea is handed over in, not paper folded round it. The two set a
+ * customer up for different parcels, and the one who expected the other is
+ * disappointed by something that was free.
  *
  * Offered in two places: the basket, and the first step of checkout. Somebody
  * buying a present usually knows it is one while they are still choosing the
@@ -14,15 +19,15 @@
  * have had to guess which one the warehouse was going to read. The answer
  * lives in the cart store; this is only a way of looking at it.
  *
- * Free, and the price slot says so. A wrap normally costs money, so leaving it
- * unsaid turns a choice into a hesitation; it reads "Free" where the tea
- * container's row reads "+$30.00".
+ * Free, and the price slot says so. A gift bag normally costs money, so
+ * leaving it unsaid turns a choice into a hesitation; it reads "Free" where
+ * the tea container's row reads "+$30.00".
  */
 
 'use client';
 
 import React from 'react';
-import { Gift } from 'lucide-react';
+import { ShoppingBag } from 'lucide-react';
 
 import { useStore } from '@/store';
 
@@ -54,14 +59,14 @@ export function GiftWrapOption({ style = {} }) {
         }}
       />
 
-      <Gift size={16} color="var(--color-muted-olive)" aria-hidden="true" />
+      <ShoppingBag size={16} color="var(--color-muted-olive)" aria-hidden="true" />
 
       <span style={{
         flex: 1,
         fontFamily: 'var(--font-sans)', fontSize: 14,
         color: 'var(--color-text-primary)',
       }}>
-        Include gift wrapping
+        Include a gift bag
       </span>
 
       <span style={{

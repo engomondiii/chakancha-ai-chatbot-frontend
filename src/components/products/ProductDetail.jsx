@@ -582,7 +582,7 @@ export function ProductDetail({ product }) {
           )}
 
           {/*
-            Gift wrapping, offered here as well as in the basket and at
+            The gift bag, offered here as well as in the basket and at
             checkout.
 
             Somebody buying a present often decides it is one on the page
