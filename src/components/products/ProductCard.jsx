@@ -409,8 +409,8 @@ export function ProductCard({
   return (
     <article
       className={`${styles.card} ${video ? styles.cardWithVideo : ""} ${
-        isBundle ? styles.cardBundle : ""
-      } ${wideBundle ? styles.cardBundleWide : ""}`}
+        wideBundle ? styles.cardBundleWide : ""
+      }`}
     >
       <div className={styles.content}>
         {displayNumber && (
