@@ -61,7 +61,10 @@
 .card.cardBundleWide {
   grid-template-columns: minmax(14rem, 1fr) minmax(0, 0.85fr);
 
-  min-height: 360px;
+  /* The same floor as every other card. A bundle that stands taller than the
+     teas it is made of breaks the row it is listed in, and there is nothing
+     in it that needs the extra 40px. */
+  min-height: 320px;
 
   /* The widening is a response to something the customer just did, so it
      should read as a response and not as a reload. Browsers that will not

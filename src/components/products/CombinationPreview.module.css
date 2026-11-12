@@ -44,12 +44,29 @@
   animation: frameIn 380ms var(--ease-out, cubic-bezier(0.2, 0.8, 0.2, 1)) both;
 }
 
+/*
+ * The same ceiling a single tea's photograph has: 270px, from .image in
+ * ProductCard.module.css.
+ *
+ * Without it this picture sets the card's height instead of fitting into it.
+ * `height: 100%` has nothing definite to resolve against -- no ancestor up to
+ * the card has a fixed height -- so it falls back to auto, and a portrait
+ * pouch drawn at the panel's full width comes out as tall as its own
+ * proportions say, which was about 390px against a tea card's 330. That is
+ * why the bundle sat lower than the two teas above it, and why widening the
+ * panel made it taller still: with the height following the width, there was
+ * no way to give the picture room sideways without the card growing downwards
+ * to match.
+ *
+ * Capped here, the three cards in the shop are the same height, and they stay
+ * the same height whatever the panel does next.
+ */
 .media {
   display: block;
 
   width: 100%;
   height: 100%;
-  max-height: 100%;
+  max-height: 270px;
 
   /* A pack shot is a photograph of an object, so it is shown whole. */
   object-fit: contain;
