@@ -302,7 +302,7 @@ function ProductCatalog() {
       />
       <ShopSection
         title="Keep it fresh"
-        blurb="Somewhere dark and airtight for the leaves to live."
+        blurb="This airtight container locks in the aroma to keep your tea fresher for longer. It’s the best way to preserve your leaves. Give it a try and experience the difference."
         products={accessories}
         isLoading={isLoading}
       />
