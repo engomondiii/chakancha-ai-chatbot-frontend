@@ -23,6 +23,7 @@ import { useStore } from "@/store";
 
 import { ProductGallery } from "./ProductGallery";
 import { CombinationPreview } from "./CombinationPreview";
+import { GiftWrapOption } from "@/components/common/GiftWrapOption";
 import { TastingNotes } from "./TastingNotes";
 import { BrewingGuide } from "./BrewingGuide";
 import { OriginStory } from "./OriginStory";
@@ -579,6 +580,22 @@ export function ProductDetail({ product }) {
               })}
             </div>
           )}
+
+          {/*
+            Gift wrapping, offered here as well as in the basket and at
+            checkout.
+
+            Somebody buying a present often decides it is one on the page
+            where they decide what to send, and the alternative was finding
+            out two screens later that they could have said so. The same
+            control and the same answer all three times, so ticking it here
+            is already ticked at checkout -- and unticking it there unticks
+            it here.
+
+            Free, so it changes none of the figures below it and there is
+            nothing to reconsider.
+          */}
+          <GiftWrapOption style={{ marginBottom: 'var(--spacing-lg)' }} />
 
           {/* ── Purchasing actions ────────────────────────────────────────── */}
           <div className={styles.ctas}>
