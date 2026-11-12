@@ -6,7 +6,7 @@
  *  - Page title changed from "Our Teas" to more compelling "Discover Exceptional Teas"
  *  - Added a rich hero section with origin badge, headline, and a strong
  *    call-to-action description driving the user to shop
- *  - Two trust badges: no added costs, and how the tea is bought
+ *  - Two trust badges: no added costs, and what the farmers are paid
  *  - Subtitle rewritten to be more evocative and purchase-driving
  *  - All product grid logic unchanged
  */
@@ -177,7 +177,14 @@ function ProductCatalog() {
             // finds out there is nothing there.
             //
             { icon: Tag, text: "No added costs" },
-            { icon: Heart, text: "Ethical, farmer-first teas" },
+            //
+            // "Ethical, farmer-first teas" was two adjectives and no fact --
+            // the sort of line every tea shop has and no customer believes,
+            // because anybody can type it. The paragraph above it already
+            // says the true version in plain words, so the badge says that
+            // instead: a wage is something a farmer is either paid or not.
+            //
+            { icon: Heart, text: "Farmers paid a living wage" },
           ].map(({ icon: Icon, text }) => (
             <div
               key={text}
