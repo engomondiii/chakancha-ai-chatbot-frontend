@@ -183,6 +183,24 @@
   -webkit-line-clamp: 4;
 }
 
+/*
+ * The line that explains a button a customer cannot press yet.
+ *
+ * The caddy has no description, so this sits in the space one would have
+ * occupied -- which is where somebody looks when the button under it is
+ * greyed out and they want to know why.
+ */
+.needsTeaNote {
+  margin: 0 0 var(--space-3);
+
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-body);
+
+  color: var(--color-text-muted);
+}
+
 /* ── Price and detail link ───────────────────────────────────────────────── */
 
 .productActions {
@@ -298,13 +316,22 @@
   transform: translateY(0);
 }
 
+/*
+ * Disabled, but still readable.
+ *
+ * Muted text on a muted fill, faded again by an opacity, left "Add a tea
+ * first" and its trolley as grey on grey -- and that line is not decoration,
+ * it is the one instruction on the card. A button nobody can read is a
+ * button nobody can follow. The fill stays pale and the cursor stays barred,
+ * which is what says "not yet"; the words go black, which is what says what
+ * to do about it.
+ */
 .cartBtn:disabled {
-  color: var(--color-text-muted);
+  color: var(--color-text-primary);
   background-color: var(--color-background-muted);
   border-color: var(--color-border-soft);
 
   cursor: not-allowed;
-  opacity: 0.75;
 }
 
 .cartBtnInCart {

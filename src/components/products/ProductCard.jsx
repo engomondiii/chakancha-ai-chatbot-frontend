@@ -434,6 +434,18 @@ export function ProductCard({
         )}
 
         {/*
+          Why the button below is not pressable yet. Said here rather than
+          only in the button, because a greyed-out control answers "no" and
+          leaves "why not" to the customer.
+        */}
+        {needsTeaFirst && (
+          <p className={styles.needsTeaNote}>
+            Please add a tea to your cart first, then you can add the
+            container to go with it.
+          </p>
+        )}
+
+        {/*
           The pickers, one per slot. Shown only on a bundle that actually has
           teas to offer: a bundle whose every tea is out of stock has nothing
           to ask about, and an empty dropdown is worse than none.
