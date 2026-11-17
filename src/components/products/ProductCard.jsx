@@ -291,6 +291,17 @@ export function ProductCard({
 
   // Addable only once there is tea to keep in it.
   const needsTeaFirst = isAccessory && !cartHasTea;
+
+  //
+  // The link under the price names what it opens. "View tea" on a card for
+  // a steel container is wrong on the one card where the customer is most
+  // likely to be unsure what they are looking at.
+  //
+  const viewLabel = isAccessory
+    ? "View container"
+    : isBundle
+      ? "View bundle"
+      : "View tea";
   const bundleSize = Number(product.bundleSize ?? product.bundle_size) || 0;
   const bundleOptions = Array.isArray(product.bundleOptions)
     ? product.bundleOptions
@@ -491,7 +502,7 @@ export function ProductCard({
             href={productHref}
             className={styles.viewLink}
           >
-            View tea
+            {viewLabel}
             <ArrowRight
               size={14}
               aria-hidden="true"
