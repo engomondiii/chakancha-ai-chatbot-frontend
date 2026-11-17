@@ -344,6 +344,64 @@
   opacity: 0.8;
 }
 
+/*
+ * "Add a tea first" is the one disabled state that is not a dead end: the
+ * customer can fix it in one step, and the button is the only place they are
+ * likely to find that out. So the one control they just tried to press
+ * answers back -- it shifts, warms to the gold, and lights the sentence
+ * above it, which is where the actual instruction is.
+ *
+ * The same treatment as the product grid, deliberately: somebody who met it
+ * on a card should meet the same thing here rather than learn it twice.
+ */
+@keyframes addToCartNudge {
+  0%, 100% { transform: translateX(0); }
+  18%      { transform: translateX(-4px); }
+  38%      { transform: translateX(4px); }
+  58%      { transform: translateX(-3px); }
+  78%      { transform: translateX(2px); }
+}
+
+.addToCartNeedsTea:disabled:hover {
+  color: var(--color-text-primary);
+  border-color: var(--color-accent-muted-gold);
+  background-color: var(--color-accent-sand);
+
+  opacity: 1;
+
+  animation: addToCartNudge 420ms var(--ease-out) both;
+}
+
+.needsTeaNote {
+  margin: 0 0 var(--space-3);
+
+  transition: color var(--transition-fast) var(--ease-out);
+
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-body);
+
+  color: var(--color-text-muted);
+}
+
+/* The sentence lit from the same hover. :has() is what lets a button reach
+   backwards to the line above it; where it is unsupported the button still
+   nudges on its own, so nothing is lost. */
+.infoCol:has(.addToCartNeedsTea:disabled:hover) .needsTeaNote {
+  color: var(--color-text-primary);
+}
+
+/*
+ * A customer who has asked the browser to stop moving things gets the colour
+ * and not the movement. The message does not depend on the animation.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .addToCartNeedsTea:disabled:hover {
+    animation: none;
+  }
+}
+
 .addToCartInCart {
   color: var(--color-text-inverse);
   background-color: var(--color-background-charcoal);

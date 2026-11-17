@@ -597,6 +597,19 @@ export function ProductDetail({ product }) {
           */}
           <GiftWrapOption style={{ marginBottom: 'var(--spacing-lg)' }} />
 
+          {/*
+            Why the button below is not pressable yet. Said here rather than
+            only inside the button, because a greyed-out control answers "no"
+            and leaves "why not" to the customer -- and this is the page they
+            reached by deciding they wanted this caddy.
+          */}
+          {needsTeaFirst && (
+            <p className={styles.needsTeaNote}>
+              Please add a tea to your cart first, then you can add the
+              container to go with it.
+            </p>
+          )}
+
           {/* ── Purchasing actions ────────────────────────────────────────── */}
           <div className={styles.ctas}>
             <button
@@ -605,9 +618,16 @@ export function ProductDetail({ product }) {
                 isInCart
                   ? styles.addToCartInCart
                   : ""
-              }`}
+              } ${needsTeaFirst ? styles.addToCartNeedsTea : ""}`}
               onClick={handleAddToCart}
               disabled={!inStock || adding || needsTeaFirst}
+              aria-label={
+                !inStock
+                  ? `${name} is out of stock`
+                  : needsTeaFirst
+                    ? `${name} is sold with tea; add a tea first`
+                    : undefined
+              }
             >
               <ShoppingCart
                 size={18}
